@@ -1,0 +1,27 @@
+{
+  "name": "earth-wonders",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tellux 地球八大奇迹演示：新世界七大奇迹 + 吉萨金字塔",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173"
+  },
+  "dependencies": {
+    "3d-tiles-renderer": "^0.4.27",
+    "@takram/three-atmosphere": "0.19.1",
+    "@takram/three-clouds": "0.7.6",
+    "@takram/three-geospatial": "0.9.1",
+    "@takram/three-geospatial-effects": "0.6.4",
+    "postprocessing": "6.39.1",
+    "tellux": "0.3.0",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.184.1",
+    "typescript": "~5.6.3",
+    "vite": "^5.4.19"
+  }
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>地球八大奇迹 · Tellux</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="viewer"></div>
+
+      <header class="hud">
+        <h1>地球八大奇迹</h1>
+        <p class="sub">New 7 Wonders + Giza · Tellux 3D Earth</p>
+      </header>
+
+      <aside class="panel">
+        <h2>巡礼</h2>
+        <div id="wonder-list" class="wonder-list"></div>
+        <div class="actions">
+          <button id="btn-tour" class="action" type="button">环球巡礼</button>
+          <button id="btn-space" class="action" type="button">返回太空</button>
+        </div>
+        <p class="hint">
+          拖动旋转地球，滚轮缩放。点击标记或列表飞向遗址。底图为 ArcGIS 全球影像，无地形密钥时走椭球。
+        </p>
+      </aside>
+
+      <article id="detail" class="detail hidden">
+        <div class="kicker" id="detail-kicker"></div>
+        <h3 id="detail-title"></h3>
+        <div class="en" id="detail-en"></div>
+        <p id="detail-blurb"></p>
+      </article>
+
+      <div id="status" class="status">正在初始化地球…</div>
+
+      <div id="error-box" class="error-box hidden" role="alert">
+        <strong>场景加载失败</strong>
+        <pre id="error-msg"></pre>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
