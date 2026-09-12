@@ -5,8 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# 只发布本仓库构建出的静态站点，不访问其它仓库、不发评论、不改 issue。
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -15,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -25,12 +26,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Add .nojekyll
-        run: |
-          test -f dist/.nojekyll || touch dist/.nojekyll
-      - name: Deploy to gh-pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - uses: actions/upload-pages-artifact@v4
         with:
-          folder: dist
-          branch: gh-pages
-          clean: true
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
