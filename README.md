@@ -58,8 +58,8 @@ git remote add origin https://github.com/<你的用户名>/EarthWonders.git
 git push -u origin main
 ```
 
-3. 仓库 **Settings → Pages → Source** 选 **GitHub Actions**。
-4. 推送 `main` 后，工作流 `.github/workflows/pages.yml` 会 `npm ci`、`npm run build` 并发布 `dist`。
+3. 推送 `main` 后，工作流会构建并把 `dist` 推到 `gh-pages` 分支。
+4. 仓库 **Settings → Pages**：Source 选 **Deploy from a branch**，Branch 选 **gh-pages** / **/ (root)**，保存。
 5. 站点地址一般为 `https://<你的用户名>.github.io/EarthWonders/`
 
 `vite.config.ts` 已设 `base: './'`，贴图走相对路径，项目站点（非用户根站点）也能打开。
