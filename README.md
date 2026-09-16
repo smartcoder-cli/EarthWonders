@@ -2,7 +2,9 @@
 
 独立于 `Pentagon3D` 的地球演示：用开源三维地球引擎 [Tellux](https://github.com/cyanfish-x/tellux) 把 **2007 新世界七大奇迹** 和荣誉成员 **吉萨大金字塔** 放到真实经纬度上。
 
-遗址几何是示意体块，不是测绘模型。底图默认走 **ArcGIS World Imagery**（无需 token）。不配置 Cesium Ion / 天地图密钥时使用椭球，没有真实地形起伏。
+各遗址按标志性结构做特征建模（砌石分层、拱券残垣、破山花、歇山顶等），并铺对应石材 / 砖瓦贴图。仍是示意尺度，不是测绘模型。底图默认走 **ArcGIS World Imagery**（无需 token）。不配置 Cesium Ion / 天地图密钥时使用椭球，没有真实地形起伏。
+
+单独查看模型：打开 `/preview.html?id=giza`（`wall` / `petra` / `colosseum` / `chichen` / `machu` / `taj` / `christ`）。
 
 ## 八处地点
 

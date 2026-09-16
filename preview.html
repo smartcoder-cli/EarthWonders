@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>奇迹模型预览</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #1a1d24; overflow: hidden; }
+      #stage { position: absolute; inset: 0; }
+      #label {
+        position: absolute; left: 16px; bottom: 16px; color: #eef3ff;
+        font: 14px/1.4 "Segoe UI", "Microsoft YaHei", sans-serif;
+        text-shadow: 0 1px 8px #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="label">loading</div>
+    <script type="module" src="/src/preview.ts"></script>
+  </body>
+</html>
