@@ -20,16 +20,12 @@ const errorBox = document.getElementById("error-box");
 const errorMsg = document.getElementById("error-msg");
 
 function showError(err: unknown) {
+  // Keep technical details in the console; show a useful, non-sensitive message in the UI.
+  console.error("EarthWonders initialization failed:", err);
   if (errorBox) errorBox.classList.remove("hidden");
   if (errorMsg) {
-    errorMsg.textContent =
-      err instanceof Error
-        ? err.stack ?? err.message
-        : typeof err === "string"
-          ? err
-          : JSON.stringify(err);
+    errorMsg.textContent = "加载失败，请检查网络连接后刷新页面重试。";
   }
-  console.error(err);
 }
 
 function setStatus(text: string) {
@@ -47,6 +43,7 @@ let selectedId: string | null = null;
 let flying = false;
 let touring = false;
 let tourGeneration = 0;
+let flightGeneration = 0;
 const landmarkGroups = new Map<string, THREE.Group>();
 let landmarksRoot: THREE.Group | null = null;
 
@@ -64,13 +61,22 @@ function renderList() {
     btn.type = "button";
     btn.className = "wonder-btn" + (wonder.id === selectedId ? " active" : "");
     btn.dataset.id = wonder.id;
-    btn.innerHTML = `
-      <span class="idx" style="background:${wonder.color}">${wonder.index}</span>
-      <span>
-        <span class="name">${wonder.nameZh}</span>
-        <div class="meta">${wonder.place}</div>
-      </span>
-    `;
+    const index = document.createElement("span");
+    index.className = "idx";
+    index.style.backgroundColor = wonder.color;
+    index.textContent = String(wonder.index);
+
+    const copy = document.createElement("span");
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = wonder.nameZh;
+
+    const place = document.createElement("div");
+    place.className = "meta";
+    place.textContent = wonder.place;
+
+    copy.append(name, place);
+    btn.append(index, copy);
     btn.addEventListener("click", () => {
       void visit(wonder);
     });
@@ -97,6 +103,7 @@ function setControlsEnabled(enabled: boolean) {
 function flyToSpace(): Promise<void> {
   const current = viewer;
   if (!current) return Promise.resolve();
+  const flight = ++flightGeneration;
   selectedId = null;
   renderList();
   detailEl?.classList.add("hidden");
@@ -118,13 +125,17 @@ function flyToSpace(): Promise<void> {
       duration: 3.2,
       maximumHeight: 20_000_000,
       complete: () => {
-        setFlying(false);
-        setControlsEnabled(true);
+        if (flight === flightGeneration) {
+          setFlying(false);
+          setControlsEnabled(true);
+        }
         resolve();
       },
       cancel: () => {
-        setFlying(false);
-        setControlsEnabled(true);
+        if (flight === flightGeneration) {
+          setFlying(false);
+          setControlsEnabled(true);
+        }
         resolve();
       },
     });
@@ -134,6 +145,7 @@ function flyToSpace(): Promise<void> {
 function flyToWonder(wonder: Wonder): Promise<void> {
   const current = viewer;
   if (!current) return Promise.resolve();
+  const flight = ++flightGeneration;
   setFlying(true);
   setControlsEnabled(false);
   return new Promise((resolve) => {
@@ -152,13 +164,17 @@ function flyToWonder(wonder: Wonder): Promise<void> {
       duration: wonder.flyDuration,
       maximumHeight: 8_500_000,
       complete: () => {
-        setFlying(false);
-        setControlsEnabled(true);
+        if (flight === flightGeneration) {
+          setFlying(false);
+          setControlsEnabled(true);
+        }
         resolve();
       },
       cancel: () => {
-        setFlying(false);
-        setControlsEnabled(true);
+        if (flight === flightGeneration) {
+          setFlying(false);
+          setControlsEnabled(true);
+        }
         resolve();
       },
     },
@@ -174,7 +190,10 @@ async function visit(wonder: Wonder) {
   showDetail(wonder);
   setStatus(`飞向 ${wonder.nameZh}`);
   await flyToWonder(wonder);
-  setStatus(`${wonder.nameZh} · ${wonder.place}`);
+  // An older visit must not overwrite the status of a newer selection or tour.
+  if (selectedId === wonder.id && !touring) {
+    setStatus(`${wonder.nameZh} · ${wonder.place}`);
+  }
 }
 
 async function runTour() {
