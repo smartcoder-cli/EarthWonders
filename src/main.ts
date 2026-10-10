@@ -190,7 +190,10 @@ async function visit(wonder: Wonder) {
   showDetail(wonder);
   setStatus(`飞向 ${wonder.nameZh}`);
   await flyToWonder(wonder);
-  setStatus(`${wonder.nameZh} · ${wonder.place}`);
+  // An older visit must not overwrite the status of a newer selection or tour.
+  if (selectedId === wonder.id && !touring) {
+    setStatus(`${wonder.nameZh} · ${wonder.place}`);
+  }
 }
 
 async function runTour() {
