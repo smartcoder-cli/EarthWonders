@@ -1244,18 +1244,23 @@ function minaret(parent: THREE.Object3D, marble: Mat, inlay: Mat, x: number, z: 
 export function createTajMahal(kit: SurfaceKit) {
   const root = new THREE.Group();
   const marble = mapped(kit.marble, {
-    roughness: 0.32,
-    metalness: 0.08,
-    metersPerTile: 6,
-    bumpScale: 0.08,
-    clearcoat: 0.28,
+    // Finer marble veining and a restrained relief keep the surface readable
+    // at close range without making the white stone look coarse.
+    roughness: 0.4,
+    metalness: 0.025,
+    metersPerTile: 3.8,
+    bumpScale: 0.16,
+    clearcoat: 0.18,
   });
   const inlay = mapped(kit.marble, {
-    color: 0xf0e6d8,
-    roughness: 0.42,
-    metalness: 0.06,
-    metersPerTile: 5,
-    clearcoat: 0.18,
+    // Slightly warmer, finer-grained stone separates the carved borders
+    // from the main marble instead of reading as one flat white material.
+    color: 0xe7d7bf,
+    roughness: 0.48,
+    metalness: 0.015,
+    metersPerTile: 3.2,
+    bumpScale: 0.1,
+    clearcoat: 0.12,
   });
   const dark = mapped(kit.marble, { color: 0x6a5a50, roughness: 0.88, metersPerTile: 4 });
   const red = mapped(kit.redSandstone, { roughness: 0.86, metersPerTile: 5, bumpScale: 0.28 });
