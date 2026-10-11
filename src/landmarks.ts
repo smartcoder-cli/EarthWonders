@@ -1342,7 +1342,7 @@ export function createTajMahal(kit: SurfaceKit) {
   return root;
 }
 
-/** 基督像：装饰艺术基座礼拜堂、皂石马赛克、袍褶与平举双臂。 */
+/** 基督像：强化救世基督像的剪影、面部、长发、手掌与可读的袍褶。 */
 export function createChrist(kit: SurfaceKit) {
   const root = new THREE.Group();
   const soap = mapped(kit.soapstone, {
@@ -1357,76 +1357,163 @@ export function createChrist(kit: SurfaceKit) {
     metersPerTile: 2.2,
     bumpScale: 0.28,
   });
+  const shadow = stone(0xaaa396, 0.86);
   const rock = mapped(kit.machu, { color: 0xa09888, roughness: 0.92, metersPerTile: 5 });
   const dark = stone(0x3a342c, 0.9);
 
-  box(root, rock, 28, 3.4, 22, 0, 0, 0);
-  box(root, soapDark, 18, 2.6, 16, 0, 3.4, 0);
-  box(root, soapDark, 12.5, 8, 12.5, 0, 6.0, 0);
+  // Art Deco chapel pedestal, with a broader foot and distinct stepped cornice.
+  box(root, rock, 30, 1.2, 24, 0, 0, 0);
+  box(root, rock, 28, 2.2, 22, 0, 1.2, 0);
+  box(root, soapDark, 19, 1.0, 17, 0, 3.4, 0);
+  box(root, soapDark, 15, 0.55, 15, 0, 4.4, 0);
+  box(root, soapDark, 12.5, 7.4, 12.5, 0, 4.95, 0);
   for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
     const arch = new THREE.Group();
     const opening = new THREE.Mesh(archSlab(3.6, 5.2, 1.4, 0.55), dark);
-    opening.position.set(0, 6.8, -6.3);
+    opening.position.set(0, 5.65, -6.3);
     arch.add(opening);
     arch.rotation.y = yaw;
     root.add(arch);
   }
   for (const x of [-7.4, 7.4]) {
-    box(root, soapDark, 0.85, 11, 0.85, x, 2.2, -7.8);
-    box(root, soapDark, 0.85, 11, 0.85, x, 2.2, 7.8);
+    box(root, soapDark, 0.85, 10.4, 0.85, x, 1.2, -7.8);
+    box(root, soapDark, 0.85, 10.4, 0.85, x, 1.2, 7.8);
   }
-  box(root, soapDark, 18, 0.55, 14, 0, 14.0, 0);
+  box(root, soapDark, 19, 0.65, 15, 0, 12.35, 0);
+  box(root, soap, 17.5, 0.45, 13.8, 0, 13.0, 0);
 
+  // Long, tapering robe: the larger silhouette is visible even from the globe view.
   const robe = new THREE.LatheGeometry(
     [
-      [2.55, 0],
-      [2.95, 1.1],
-      [2.55, 4.2],
-      [2.15, 8.4],
-      [1.85, 12.4],
-      [1.55, 15.2],
-      [1.15, 16.6],
+      [2.65, 0], [3.0, 1.0], [2.75, 3.2], [2.45, 6.0],
+      [2.18, 8.8], [1.92, 11.4], [1.62, 14.0], [1.28, 16.2], [1.0, 17.0],
     ].map(([x, y]) => new THREE.Vector2(x, y)),
-    28,
+    36,
   );
   const body = new THREE.Mesh(robe, soap);
-  body.position.y = 15.6;
+  body.position.y = 14.0;
   root.add(body);
-  for (const a of [-0.45, 0, 0.45]) {
-    const fold = new THREE.Mesh(
-      new THREE.BoxGeometry(0.35, 12.5, 1.15),
-      soapDark,
-    );
-    fold.position.set(Math.sin(a) * 2.05, 22.2, 1.35);
-    fold.rotation.y = a;
-    root.add(fold);
-  }
-  box(root, soap, 3.6, 4.2, 2.6, 0, 31.6, 0.2);
-  box(root, soapDark, 1.15, 1.35, 0.35, 0, 33.4, 1.45);
 
-  const armGeo = new THREE.CapsuleGeometry(1.05, 10.8, 6, 12);
+  // Raised folds follow the front of the robe instead of reading as rectangular strips.
+  const foldPaths = [
+    [[-2.15, 15.3, 1.05], [-1.85, 19.0, 1.95], [-1.35, 24.0, 1.85], [-0.9, 29.5, 1.25]],
+    [[-1.45, 14.8, 1.75], [-1.2, 19.0, 2.25], [-0.75, 24.0, 2.0], [-0.4, 29.8, 1.32]],
+    [[-0.55, 14.7, 2.2], [-0.35, 19.5, 2.25], [-0.15, 24.8, 1.95], [0.05, 30.0, 1.28]],
+    [[0.55, 14.7, 2.2], [0.45, 19.5, 2.25], [0.35, 24.8, 1.95], [0.25, 30.0, 1.28]],
+    [[1.45, 14.8, 1.75], [1.2, 19.0, 2.25], [0.85, 24.0, 2.0], [0.65, 29.8, 1.32]],
+    [[2.15, 15.3, 1.05], [1.85, 19.0, 1.95], [1.45, 24.0, 1.85], [1.05, 29.5, 1.25]],
+  ];
+  for (const points of foldPaths) {
+    const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 18, 0.12, 6, false), shadow));
+  }
+  // A diagonal mantle seam makes the chest and shoulders read as draped cloth.
+  const mantle = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-1.8, 30.3, 1.0),
+    new THREE.Vector3(-0.9, 28.9, 1.42),
+    new THREE.Vector3(0.2, 27.3, 1.7),
+    new THREE.Vector3(1.25, 25.8, 1.78),
+  ]);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(mantle, 16, 0.16, 7, false), soapDark));
+
+  // Neck and shoulders blend the robe into the horizontal blessing pose.
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.92, 2.1, 12), soap);
+  neck.position.set(0, 31.0, 0.05);
+  root.add(neck);
+  for (const x of [-2.4, 2.4]) {
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(1.65, 12, 10), soap);
+    shoulder.scale.set(1.3, 0.78, 0.9);
+    shoulder.position.set(x, 31.4, 0);
+    root.add(shoulder);
+  }
+
+  const armGeo = new THREE.CapsuleGeometry(1.12, 11.4, 8, 14);
   const left = new THREE.Mesh(armGeo, soap);
   left.rotation.z = Math.PI / 2;
-  left.position.set(-8.0, 32.6, 0);
+  left.position.set(-8.0, 32.2, 0);
   const right = left.clone();
   right.position.x = 8.0;
   root.add(left, right);
-  box(root, soap, 1.6, 0.55, 1.15, -14.6, 32.1, 0);
-  box(root, soap, 1.6, 0.55, 1.15, 14.6, 32.1, 0);
-  box(root, soap, 1.15, 0.7, 0.45, -15.5, 32.15, 0);
-  box(root, soap, 1.15, 0.7, 0.45, 15.5, 32.15, 0);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(2.05, 16, 14), soap);
-  head.scale.set(0.9, 1.08, 0.85);
-  head.position.set(0, 37.6, 0.35);
+  // Palm pads and individually modeled fingers replace the old block-shaped hands.
+  for (const side of [-1, 1]) {
+    const palm = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 10), soap);
+    palm.scale.set(1.0, 0.68, 0.42);
+    palm.position.set(side * 14.4, 32.0, 0.02);
+    root.add(palm);
+    for (let finger = 0; finger < 4; finger++) {
+      const length = 0.82 - finger * 0.07;
+      const digit = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, length, 4, 8), soap);
+      digit.rotation.z = side * Math.PI / 2;
+      digit.position.set(side * (15.0 + length * 0.45), 32.18 - finger * 0.23, 0.04);
+      root.add(digit);
+    }
+    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.55, 4, 8), soap);
+    thumb.rotation.z = side * 0.7;
+    thumb.position.set(side * 14.8, 31.45, 0.18);
+    root.add(thumb);
+  }
+
+  // Sculpted head, ears, nose, eyes, brows, mouth and a tapered beard.
+  const head = new THREE.Mesh(new THREE.SphereGeometry(2.0, 24, 20), soap);
+  head.scale.set(0.88, 1.12, 0.82);
+  head.position.set(0, 36.5, 0.32);
   root.add(head);
-  const hair = new THREE.Mesh(
-    new THREE.SphereGeometry(2.2, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.58),
+
+  const hairCap = new THREE.Mesh(
+    new THREE.SphereGeometry(2.12, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62),
     soapDark,
   );
-  hair.position.set(0, 38.15, 0.12);
-  root.add(hair);
-  box(root, soapDark, 1.5, 1.6, 0.7, 0, 36.2, 1.55);
+  hairCap.scale.set(1.02, 1.0, 0.98);
+  hairCap.position.set(0, 37.15, 0.16);
+  root.add(hairCap);
+
+  for (const side of [-1, 1]) {
+    const lock = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 2.6, 6, 10), soapDark);
+    lock.position.set(side * 1.55, 36.0, 0.52);
+    lock.rotation.z = side * -0.08;
+    root.add(lock);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), soap);
+    ear.scale.set(0.7, 1.0, 0.5);
+    ear.position.set(side * 1.66, 36.55, 0.32);
+    root.add(ear);
+
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), dark);
+    eye.scale.set(1.25, 0.62, 0.45);
+    eye.position.set(side * 0.58, 36.7, 1.91);
+    root.add(eye);
+
+    const browCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 0.98, 37.05, 1.72),
+      new THREE.Vector3(side * 0.62, 37.12, 1.86),
+      new THREE.Vector3(side * 0.3, 37.04, 1.9),
+    ]);
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(browCurve, 8, 0.1, 6, false), soapDark));
+  }
+
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.9, 7), soap);
+  nose.rotation.x = Math.PI / 2;
+  nose.position.set(0, 36.35, 2.02);
+  root.add(nose);
+
+  const moustache = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), soapDark);
+  moustache.scale.set(1.25, 0.35, 0.35);
+  moustache.position.set(0, 35.95, 1.85);
+  root.add(moustache);
+
+  const beard = new THREE.Mesh(new THREE.ConeGeometry(0.82, 2.0, 10), soapDark);
+  beard.rotation.z = Math.PI;
+  beard.scale.set(0.92, 1.0, 0.62);
+  beard.position.set(0, 35.0, 1.3);
+  root.add(beard);
+
+  const mouthCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.35, 35.75, 1.83),
+    new THREE.Vector3(0, 35.7, 1.91),
+    new THREE.Vector3(0.35, 35.75, 1.83),
+  ]);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(mouthCurve, 8, 0.055, 5, false), shadow));
+
   return root;
 }
 
