@@ -1417,8 +1417,8 @@ export function createChrist(kit: SurfaceKit) {
   root.add(new THREE.Mesh(new THREE.TubeGeometry(mantle, 16, 0.16, 7, false), soapDark));
 
   // Neck and shoulders blend the robe into the horizontal blessing pose.
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.92, 2.1, 12), soap);
-  neck.position.set(0, 31.0, 0.05);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.92, 4.4, 12), soap);
+  neck.position.set(0, 32.2, 0.05);
   root.add(neck);
   for (const x of [-2.4, 2.4]) {
     const shoulder = new THREE.Mesh(new THREE.SphereGeometry(1.65, 12, 10), soap);
