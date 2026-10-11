@@ -13,6 +13,25 @@ const detailKicker = document.getElementById("detail-kicker");
 const detailTitle = document.getElementById("detail-title");
 const detailEn = document.getElementById("detail-en");
 const detailBlurb = document.getElementById("detail-blurb");
+const comparisonEl = document.getElementById("photo-comparison");
+const comparisonImage = document.getElementById("comparison-image") as HTMLImageElement | null;
+const comparisonSource = document.getElementById("comparison-source") as HTMLAnchorElement | null;
+const comparisonCredit = document.getElementById("comparison-credit"); 
+
+const REFERENCE_PHOTOS: Record<string, { image: string; page: string; credit: string; alt: string }> = {
+  christ: {
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Christ%20the%20Redeemer-%28Corcovado%29%20front%20view.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Christ_the_Redeemer-(Corcovado)_front_view.jpg",
+    credit: "照片：Wikimedia Commons · Christ the Redeemer (Corcovado) front view",
+    alt: "基督像正面实景照片",
+  },
+  petra: {
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Petra.%20Front%20view%20of%20Temple%20of%20el-Khazneh%20LOC%20matpc.06878.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Petra._Front_view_of_Temple_of_el-Khazneh_LOC_matpc.06878.jpg",
+    credit: "照片：美国国会图书馆 Matson Collection / Wikimedia Commons（公有领域）",
+    alt: "佩特拉宝库正面历史实景照片",
+  },
+};
 const statusEl = document.getElementById("status");
 const btnTour = document.getElementById("btn-tour") as HTMLButtonElement | null;
 const btnSpace = document.getElementById("btn-space") as HTMLButtonElement | null;
