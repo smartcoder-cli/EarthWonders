@@ -56,10 +56,10 @@ const REFERENCE_PHOTOS: Record<string, { image: string; page: string; credit: st
     alt: "马丘比丘与瓦伊纳比丘实景照片",
   },
   taj: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Taj%20Mahal%2C%20front%20view.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Taj_Mahal,_front_view.jpg",
-    credit: "照片：Divya Shikhar / Wikimedia Commons · CC BY-SA 4.0",
-    alt: "泰姬陵正面实景照片",
+    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Taj%20Mahal%20frontal.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Taj_Mahal_frontal.jpg",
+    credit: "照片：Marsmux / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "泰姬陵完整正面实景照片，包含中央穹顶与四座宣礼塔",
   },
   christ: {
     image: "https://commons.wikimedia.org/wiki/Special:FilePath/Christ%20the%20Redeemer-%28Corcovado%29%20front%20view.jpg",
@@ -402,7 +402,7 @@ function placeLandmarks(
     group.userData.wonderId = wonder.id;
     group.matrixAutoUpdate = false;
     current.cartographicToMatrix4(
-      [wonder.longitude, wonder.latitude, 0],
+      [wonder.longitude, wonder.latitude, wonder.modelHeight ?? 0],
       { heading: wonder.modelHeading ?? 0 },
       group.matrix,
     );
