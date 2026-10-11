@@ -296,3 +296,43 @@ body {
     width: auto;
   }
 }
+
+
+.photo-comparison {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.photo-comparison.hidden { display: none; }
+.comparison-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+#comparison-source { display: block; }
+#comparison-image {
+  display: block;
+  width: 100%;
+  max-height: 190px;
+  object-fit: cover;
+  object-position: center 35%;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.04);
+}
+#comparison-image.image-unavailable { display: none; }
+#comparison-credit {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+@media (max-width: 720px) {
+  .detail { max-height: 35vh; overflow: auto; }
+  #comparison-image { max-height: 120px; }
+}
