@@ -617,6 +617,14 @@ function addBeaconTower(parent: THREE.Object3D, brick: Mat, brickDark: Mat, eart
   gate.position.set(yard / 2 - 0.2, 0.45, 0);
   gate.rotation.y = Math.PI / 2;
   beacon.add(gate);
+  // A narrow coping course and regularly spaced drainage/scupper openings
+  // break up the otherwise monolithic beacon walls at close viewing distances.
+  box(beacon, brickDark, yard + 0.35, 0.34, yardT + 0.22, 0, 4.55, -yard / 2 + yardT / 2);
+  box(beacon, brickDark, yard + 0.35, 0.34, yardT + 0.22, 0, 4.55, yard / 2 - yardT / 2);
+  for (const x of [-7.2, -3.6, 3.6, 7.2]) {
+    box(beacon, brickDark, 0.62, 0.32, 0.12, x, 2.4, -yard / 2 - 0.02);
+    box(beacon, brickDark, 0.62, 0.32, 0.12, x, 2.4, yard / 2 + 0.02);
+  }
   parent.add(beacon);
   return beacon;
 }
@@ -762,7 +770,21 @@ export function createPetra(kit: SurfaceKit) {
     box(root, sandLight, 26 - i * 0.15, 0.22, 4.8, 0, i * 0.2, -7.4);
   }
   for (let i = 0; i < 6; i++) {
-    column(root, sandLight, 18.5, 0.95, -12.5 + i * 5, 4.6, -7.2);
+    const x = -12.5 + i * 5;
+    column(root, sandLight, 18.5, 0.95, x, 4.6, -7.2);
+    // Shallow neck rings and a stepped capital make the carved shafts read as stonework,
+    // rather than smooth generic cylinders, when viewed from the plaza.
+    cyl(root, sandLight, 1.02, 1.02, 0.34, x, 6.0, -7.2, 16);
+    cyl(root, sandLight, 1.08, 1.08, 0.28, x, 21.9, -7.2, 16);
+    box(root, sandLight, 2.7, 0.48, 2.5, x, 22.25, -7.2);
+    box(root, band, 2.5, 0.18, 2.25, x, 22.75, -7.2);
+  }
+  // Repeated shallow relief blocks along the entablature add the rhythmic carved
+  // ornament visible on Nabataean rock-cut façades without overwhelming the silhouette.
+  for (let i = 0; i < 13; i++) {
+    const x = -12.0 + i * 2.0;
+    box(root, band, 0.72, 1.05, 0.38, x, 23.35, -7.72);
+    box(root, sandLight, 0.9, 0.16, 0.48, x, 24.0, -7.76);
   }
   box(root, sand, 27.5, 1.8, 6, 0, 23.2, -4.6);
   box(root, sand, 27.5, 0.9, 5.8, 0, 25, -4.6);
