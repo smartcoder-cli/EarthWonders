@@ -772,12 +772,10 @@ export function createPetra(kit: SurfaceKit) {
   for (let i = 0; i < 6; i++) {
     const x = -12.5 + i * 5;
     column(root, sandLight, 18.5, 0.95, x, 4.6, -7.2);
-    // Shallow neck rings and a stepped capital make the carved shafts read as stonework,
-    // rather than smooth generic cylinders, when viewed from the plaza.
-    cyl(root, sandLight, 1.02, 1.02, 0.34, x, 6.0, -7.2, 16);
-    cyl(root, sandLight, 1.08, 1.08, 0.28, x, 21.9, -7.2, 16);
-    box(root, sandLight, 2.7, 0.48, 2.5, x, 22.25, -7.2);
-    box(root, band, 2.5, 0.18, 2.25, x, 22.75, -7.2);
+    // Fine, shallow vertical grooves on the visible face suggest hand-carved fluting.
+    for (let flute = -2; flute <= 2; flute++) {
+      box(root, band, 0.055, 12.8, 0.045, x + flute * 0.24, 7.0, -8.13);
+    }
   }
   // Repeated shallow relief blocks along the entablature add the rhythmic carved
   // ornament visible on Nabataean rock-cut façades without overwhelming the silhouette.
