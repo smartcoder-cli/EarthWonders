@@ -92,6 +92,51 @@ function sleep(ms: number) {
     window.setTimeout(resolve, ms);
   });
 }
+const MAP_TILE_URL_MARKER = "/ArcGIS/rest/services/World_Imagery/MapServer/tile/";
+
+/** Wait for map-tile requests to become quiet after arriving at a landmark.
+ * Resource timing only reports completed requests, so this is a bounded
+ * quiet-window heuristic rather than a guarantee that every tile has loaded.
+ */
+function waitForMapTiles(timeoutMs = 10_000, quietMs = 1_500, minimumMs = 1_800): Promise<void> {
+  const startedAt = performance.now();
+  let lastTileAt = startedAt;
+  let tileCount = 0;
+  const seen = new Set<string>();
+  const scanEntries = (entries: PerformanceEntry[]) => {
+    for (const entry of entries) {
+      if (entry.entryType !== "resource" || !entry.name.includes(MAP_TILE_URL_MARKER)) continue;
+      const key = `${entry.name}|${entry.startTime}|${entry.duration}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      tileCount += 1;
+      lastTileAt = Math.max(lastTileAt, entry.startTime + entry.duration);
+    }
+  };
+  scanEntries(performance.getEntriesByType("resource"));
+  return new Promise((resolve) => {
+    let observer: PerformanceObserver | undefined;
+    const finish = () => {
+      observer?.disconnect();
+      window.clearInterval(timer);
+      resolve();
+    };
+    try {
+      observer = new PerformanceObserver((list) => scanEntries(list.getEntries()));
+      observer.observe({ type: "resource", buffered: true });
+    } catch {
+      observer = undefined;
+    }
+    const timer = window.setInterval(() => {
+      scanEntries(performance.getEntriesByType("resource"));
+      const elapsed = performance.now() - startedAt;
+      const quietFor = performance.now() - lastTileAt;
+      if (elapsed >= timeoutMs || (elapsed >= minimumMs && tileCount > 0 && quietFor >= quietMs)) {
+        finish();
+      }
+    }, 250);
+  });
+}
 
 let viewer: InstanceType<typeof tellux.Viewer> | null = null;
 let selectedId: string | null = null;
@@ -288,6 +333,10 @@ async function runTour() {
     setStatus(`巡礼 ${wonder.index}/8 · ${wonder.nameZh}`);
     await flyToWonder(wonder);
     if (!touring || generation !== tourGeneration) break;
+    setStatus(`等待地图加载 · ${wonder.nameZh}`);
+    await waitForMapTiles();
+    if (!touring || generation !== tourGeneration) break;
+    setStatus(`巡礼 ${wonder.index}/8 · ${wonder.nameZh}`);
     await sleep(6500);
   }
   if (generation === tourGeneration) {
