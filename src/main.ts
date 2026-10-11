@@ -112,9 +112,31 @@ function showDetail(wonder: Wonder) {
   if (detailTitle) detailTitle.textContent = wonder.nameZh;
   if (detailEn) detailEn.textContent = `${wonder.nameEn} · ${wonder.place}`;
   if (detailBlurb) detailBlurb.textContent = wonder.blurb;
+
+  const photo = REFERENCE_PHOTOS[wonder.id];
+  if (comparisonEl && comparisonImage && comparisonSource && comparisonCredit) {
+    if (photo) {
+      comparisonImage.classList.remove("image-unavailable");
+      comparisonImage.alt = photo.alt;
+      comparisonImage.src = photo.image;
+      comparisonSource.href = photo.page;
+      comparisonCredit.textContent = photo.credit;
+      comparisonImage.onerror = () => {
+        comparisonImage.classList.add("image-unavailable");
+        comparisonCredit.textContent = `${photo.credit} · 照片加载失败，可打开来源页面查看`;
+      };
+      comparisonEl.classList.remove("hidden");
+    } else {
+      comparisonImage.removeAttribute("src");
+      comparisonImage.alt = "";
+      comparisonImage.onerror = null;
+      comparisonSource.href = "#";
+      comparisonCredit.textContent = "";
+      comparisonEl.classList.add("hidden");
+    }
+  }
   detailEl?.classList.remove("hidden");
 }
-
 function setControlsEnabled(enabled: boolean) {
   if (viewer) viewer.controls.enabled = enabled;
 }
