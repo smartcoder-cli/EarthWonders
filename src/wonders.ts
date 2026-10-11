@@ -16,6 +16,8 @@ export type Wonder = {
   labelHeight: number
   /** 飞向目标时看向的海拔高度（米）。 */
   lookHeight?: number
+  /** 模型底座相对海平面的高度（米），用于山顶等高海拔遗址。 */
+  modelHeight?: number
   /** 模型朝向（度）。缺省 0 表示当地北。 */
   modelHeading?: number
   blurb: string
@@ -170,12 +172,13 @@ export const WONDERS: Wonder[] = [
     color: "#d8d2c4",
     longitude: -43.21056,
     latitude: -22.95194,
-    flyDistance: 580,
+    flyDistance: 340,
     flyHeading: 292,
-    flyPitch: -28,
+    flyPitch: -20,
     flyDuration: 5.2,
     labelHeight: 44,
-    lookHeight: 26,
+    lookHeight: 748,
+    modelHeight: 710,
     modelHeading: 90,
     blurb:
       "科尔科瓦多山顶的钢筋混凝土雕像，高约 30 米（不含基座）。张开的双臂成为里约港湾与现代城市天际线的标志。",
