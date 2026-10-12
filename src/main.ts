@@ -457,9 +457,10 @@ async function boot() {
   }
 
   renderList();
-  setStatus("正在加载石材贴图…");
-  const kit = await loadSurfaceKit();
 
+  // Create the globe before waiting for landmark material textures. This lets
+  // the earth and base imagery begin rendering while local textures load.
+  performance.mark("earthwonders-boot-start");
   const current = new tellux.Viewer(container, {
     overlays: [
       {
@@ -528,6 +529,14 @@ async function boot() {
   });
 
   viewer = current;
+  performance.mark("earthwonders-viewer-created");
+  setStatus("地球已启动，正在加载景点材质…");
+  performance.mark("earthwonders-textures-start");
+  const kit = await loadSurfaceKit();
+  performance.mark("earthwonders-textures-ready");
+  performance.measure("earthwonders-viewer-startup", "earthwonders-boot-start", "earthwonders-viewer-created");
+  performance.measure("earthwonders-texture-loading", "earthwonders-textures-start", "earthwonders-textures-ready");
+
   for (const wonder of WONDERS) addMarker(current, wonder);
   placeLandmarks(current, kit);
   bindViewerEvents(current);
