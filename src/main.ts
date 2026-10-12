@@ -530,15 +530,9 @@ async function boot() {
 
   viewer = current;
   performance.mark("earthwonders-viewer-created");
-  setStatus("地球已启动，正在加载景点材质…");
-  performance.mark("earthwonders-textures-start");
-  const kit = await loadSurfaceKit();
-  performance.mark("earthwonders-textures-ready");
-  performance.measure("earthwonders-viewer-startup", "earthwonders-boot-start", "earthwonders-viewer-created");
-  performance.measure("earthwonders-texture-loading", "earthwonders-textures-start", "earthwonders-textures-ready");
 
+  // Register markers, interactions, and keyboard shortcuts immediately so the globe is fully responsive
   for (const wonder of WONDERS) addMarker(current, wonder);
-  placeLandmarks(current, kit);
   bindViewerEvents(current);
 
   btnTour?.addEventListener("click", () => {
@@ -572,7 +566,19 @@ async function boot() {
     current.destroy();
   });
 
-  setStatus("拖动地球 · 点击列表或按 1–8 飞向奇迹");
+  setStatus("地球已启动，正在加载景点材质…");
+  performance.mark("earthwonders-textures-start");
+  const kit = await loadSurfaceKit();
+  performance.mark("earthwonders-textures-ready");
+  performance.measure("earthwonders-viewer-startup", "earthwonders-boot-start", "earthwonders-viewer-created");
+  performance.measure("earthwonders-texture-loading", "earthwonders-textures-start", "earthwonders-textures-ready");
+
+  placeLandmarks(current, kit);
+
+  // Restore idle hint only if the user hasn't already started a flight, tour, or selection
+  if (!flying && !touring && selectedId === null) {
+    setStatus("拖动地球 · 点击列表或按 1–8 飞向奇迹");
+  }
 }
 
 void boot().catch(showError);

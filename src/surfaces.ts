@@ -102,12 +102,30 @@ function bumpFrom(source: THREE.Texture, invert: boolean) {
   return bump;
 }
 
+function createFallbackTexture(color = "#bfb8ab"): THREE.Texture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 16;
+  canvas.height = 16;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 16, 16);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  return prep(tex);
+}
+
 export async function loadSurfaceKit(): Promise<SurfaceKit> {
   const loader = new THREE.TextureLoader();
   const entries = await Promise.all(
     (Object.keys(FILES) as (keyof SurfaceKit)[]).map(async (key) => {
-      const texture = prep(await loader.loadAsync(assetUrl(FILES[key])));
-      return [key, texture] as const;
+      try {
+        const texture = prep(await loader.loadAsync(assetUrl(FILES[key])));
+        return [key, texture] as const;
+      } catch (err) {
+        console.warn(`材质贴图 ${FILES[key]} 加载失败，使用保底材质代替:`, err);
+        return [key, createFallbackTexture()] as const;
+      }
     }),
   );
   return Object.fromEntries(entries) as SurfaceKit;
