@@ -475,10 +475,8 @@ function placeLandmarks(
     );
     group.updateMatrixWorld(true);
     group.traverse((object) => {
-      const mesh = object as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      mesh.frustumCulled = false;
-      mesh.raycast = () => {};
+      object.frustumCulled = false;
+      object.raycast = () => {};
     });
     root.add(group);
     landmarkGroups.set(wonder.id, group);
@@ -590,12 +588,12 @@ async function boot() {
           mode: "light-source",
           sunLight: true,
           skyLight: true,
-          sunLightIntensity: 1.15,
-          skyLightIntensity: 1.1,
+          sunLightIntensity: 1.4,
+          skyLightIntensity: 0.85,
         },
         fallbackAmbientLight: {
           enabled: true,
-          intensity: 0.55,
+          intensity: 0.35,
         },
         sky: {
           stars: {

@@ -370,6 +370,80 @@ function templeCourt(
   }
 }
 
+/**
+ * 为金字塔四面交汇处构建高精度、极具3D立体感的交角大脊线与棱角过渡：
+ * 1. 4 条从底座四角直至塔尖直通的骨架棱角线（LineSegments）；
+ * 2. 4 条微倒角实体石棱柱（TubeGeometry），在阳光照射下产生自然明暗分界；
+ * 3. 塔尖 Benben 小金字塔尖顶。
+ */
+function addPyramidArrisFeatures(
+  group: THREE.Group,
+  base: number,
+  height: number,
+  y0 = 0,
+  lineColor = 0x362516,
+  ribColor = 0x8a7050,
+) {
+  const hb = base / 2;
+  const topY = y0 + height;
+  const top = new THREE.Vector3(0, topY, 0);
+  const corners = [
+    new THREE.Vector3(-hb, y0, -hb),
+    new THREE.Vector3(hb, y0, -hb),
+    new THREE.Vector3(hb, y0, hb),
+    new THREE.Vector3(-hb, y0, hb),
+  ];
+
+  // (A) 4 条贯穿至塔尖的骨架棱角线 + 底面周长线
+  const linePositions = new Float32Array([
+    // 4条对角大脊线
+    corners[0].x, y0, corners[0].z,  0, topY, 0,
+    corners[1].x, y0, corners[1].z,  0, topY, 0,
+    corners[2].x, y0, corners[2].z,  0, topY, 0,
+    corners[3].x, y0, corners[3].z,  0, topY, 0,
+    // 底边闭合框
+    corners[0].x, y0, corners[0].z,  corners[1].x, y0, corners[1].z,
+    corners[1].x, y0, corners[1].z,  corners[2].x, y0, corners[2].z,
+    corners[2].x, y0, corners[2].z,  corners[3].x, y0, corners[3].z,
+    corners[3].x, y0, corners[3].z,  corners[0].x, y0, corners[0].z,
+  ]);
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
+  const lineMat = new THREE.LineBasicMaterial({
+    color: lineColor,
+    transparent: true,
+    opacity: 0.92,
+    depthTest: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const skeleton = new THREE.LineSegments(lineGeo, lineMat);
+  skeleton.renderOrder = 2;
+  group.add(skeleton);
+
+  // (B) 四角立体微倒角石棱（实体几何）：
+  // 在阳光漫反射下，形成向阳微亮、背光微暗的 45° 倒角棱带，
+  // 彻底打破两个三角面贴图平铺交汇无分割的平面感。
+  const ribRadius = Math.max(0.35, Math.min(1.2, base * 0.005));
+  const ribMat = stone(ribColor, 0.92, 0.03);
+  for (const c of corners) {
+    const curve = new THREE.LineCurve3(c, top);
+    const ribGeo = new THREE.TubeGeometry(curve, 1, ribRadius, 4);
+    const ribMesh = new THREE.Mesh(ribGeo, ribMat);
+    ribMesh.userData.skipLines = true;
+    group.add(ribMesh);
+  }
+
+  // (C) 塔尖 Benben 顶石
+  const capSize = Math.max(1.8, ribRadius * 3.6);
+  const cap = new THREE.Mesh(pyramidGeo(capSize, capSize * 0.85), stone(ribColor, 0.88, 0.05));
+  cap.position.set(0, topY - capSize * 0.25, 0);
+  cap.userData.skipLines = true;
+  group.add(cap);
+}
+
 function coursedPyramid(
   parent: THREE.Object3D,
   material: Mat,
@@ -394,6 +468,10 @@ function coursedPyramid(
     y += ch;
     size = next;
   }
+
+  // 强化四角大脊线与倒角立体棱柱
+  addPyramidArrisFeatures(group, base, height, y0);
+
   group.position.set(x, 0, z);
   parent.add(group);
   return group;
@@ -1036,6 +1114,9 @@ export function createChichenItza(kit: SurfaceKit) {
     size = next;
   }
 
+  // 为玛雅库库尔坎金字塔主塔增加四角通天大脊线与棱角过渡
+  addPyramidArrisFeatures(root, 55.3, y, 0, 0x2c271e, 0x9a8462);
+
   box(root, lime, 13.6, 6.4, 13.6, 0, y, 0);
   for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
     const door = new THREE.Group();
@@ -1347,7 +1428,12 @@ export function createTajMahal(kit: SurfaceKit) {
   return root;
 }
 
-/** 基督像：强化救世基督像的剪影、面部、长发、手掌与可读的袍褶。 */
+/** 基督像：按 1931 年里约科尔科瓦多山实景比例重构：
+ * 1. 宽达 5.4m 的雄伟 Art Deco 躯干柱体与肩部，彻底告别单薄的锥管躯干；
+ * 2. 标志性的经典垂悬长袍广袖（袖口垂直高 3.6m，下沿优雅悬垂回拢至躯干侧肋），配 Art Deco 竖向棱面褶皱与袖口滚边；
+ * 3. 臂展精确控制在 30.0 米，双手自广袖深处舒展而出，拥有宽阔圣掌与分明庄严的降福五指；
+ * 4. 庄严肃穆的 Art Deco 头部、垂肩发缕、方颌短须与胸前斜披垂褶。
+ */
 export function createChrist(kit: SurfaceKit) {
   const root = new THREE.Group();
   const soap = mapped(kit.soapstone, {
@@ -1366,7 +1452,7 @@ export function createChrist(kit: SurfaceKit) {
   const rock = mapped(kit.machu, { color: 0xa09888, roughness: 0.92, metersPerTile: 5 });
   const dark = stone(0x3a342c, 0.9);
 
-  // Art Deco chapel pedestal, with a broader foot and distinct stepped cornice.
+  // 1. Art Deco 礼拜堂基座与八角阶梯台基 (y = 0 ~ 14.5m)
   box(root, rock, 30, 1.2, 24, 0, 0, 0);
   box(root, rock, 28, 2.2, 22, 0, 1.2, 0);
   box(root, soapDark, 19, 1.0, 17, 0, 3.4, 0);
@@ -1387,152 +1473,430 @@ export function createChrist(kit: SurfaceKit) {
   box(root, soapDark, 19, 0.65, 15, 0, 12.35, 0);
   box(root, soap, 17.5, 0.45, 13.8, 0, 13.0, 0);
 
-  // Long, tapering robe: the larger silhouette is visible even from the globe view.
-  const robe = new THREE.LatheGeometry(
-    [
-      [2.65, 0], [3.0, 1.0], [2.75, 3.2], [2.45, 6.0],
-      [2.18, 8.8], [1.92, 11.4], [1.62, 14.0], [1.28, 16.2], [1.0, 17.0],
-    ].map(([x, y]) => new THREE.Vector2(x, y)),
-    36,
-  );
+  // 雕像脚下阶梯石阶台座
+  box(root, soapDark, 11.2, 0.6, 9.6, 0, 13.45, 0);
+  box(root, soapDark, 9.2, 0.5, 8.0, 0, 14.05, 0);
+
+  // 2. 雄浑雕塑感长袍躯干 (y = 14.55 ~ 33.6m)
+  // 按照人体与袍服黄金比例放宽胸膛与胯部，形成挺拔稳固的巨型石像体量
+  const robePoints = [
+    new THREE.Vector2(3.6, 0),     // 裙摆 y = 14.55, 宽达 8.5m
+    new THREE.Vector2(3.45, 1.5),  // y = 16.05
+    new THREE.Vector2(3.2, 4.8),   // y = 19.35
+    new THREE.Vector2(2.95, 8.5),  // y = 23.05
+    new THREE.Vector2(2.72, 12.2), // y = 26.75 (腰围)
+    new THREE.Vector2(2.55, 15.6), // y = 30.15 (胸围)
+    new THREE.Vector2(2.38, 18.2), // y = 32.75 (肩胛)
+    new THREE.Vector2(1.85, 19.1), // y = 33.65 (颈根)
+  ];
+  const robe = new THREE.LatheGeometry(robePoints, 32);
   const body = new THREE.Mesh(robe, soap);
-  body.position.y = 14.0;
+  body.scale.set(1.18, 1.0, 0.88);
+  body.position.y = 14.55;
   root.add(body);
 
-  // Raised folds follow the front of the robe instead of reading as rectangular strips.
-  const foldPaths = [
-    [[-2.15, 15.3, 1.05], [-1.85, 19.0, 1.95], [-1.35, 24.0, 1.85], [-0.9, 29.5, 1.25]],
-    [[-1.45, 14.8, 1.75], [-1.2, 19.0, 2.25], [-0.75, 24.0, 2.0], [-0.4, 29.8, 1.32]],
-    [[-0.55, 14.7, 2.2], [-0.35, 19.5, 2.25], [-0.15, 24.8, 1.95], [0.05, 30.0, 1.28]],
-    [[0.55, 14.7, 2.2], [0.45, 19.5, 2.25], [0.35, 24.8, 1.95], [0.25, 30.0, 1.28]],
-    [[1.45, 14.8, 1.75], [1.2, 19.0, 2.25], [0.85, 24.0, 2.0], [0.65, 29.8, 1.32]],
-    [[2.15, 15.3, 1.05], [1.85, 19.0, 1.95], [1.45, 24.0, 1.85], [1.05, 29.5, 1.25]],
+  // 袍身立体垂直褶皱（正面 6 道深影褶线，背面 5 道褶线）
+  const frontFolds = [
+    [[-2.4, 15.2, 2.7], [-1.9, 21.0, 2.8], [-1.3, 27.0, 2.5], [-0.85, 32.5, 2.0]],
+    [[-1.5, 15.0, 3.2], [-1.2, 21.0, 3.1], [-0.7, 27.0, 2.7], [-0.35, 32.8, 2.1]],
+    [[-0.5, 14.9, 3.3], [-0.35, 21.2, 3.2], [-0.15, 27.2, 2.75], [0.0, 33.0, 2.15]],
+    [[0.5, 14.9, 3.3], [0.35, 21.2, 3.2], [0.15, 27.2, 2.75], [0.0, 33.0, 2.15]],
+    [[1.5, 15.0, 3.2], [1.2, 21.0, 3.1], [0.7, 27.0, 2.7], [0.35, 32.8, 2.1]],
+    [[2.4, 15.2, 2.7], [1.9, 21.0, 2.8], [1.3, 27.0, 2.5], [0.85, 32.5, 2.0]],
   ];
-  for (const points of foldPaths) {
+  for (const points of frontFolds) {
     const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
-    root.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 18, 0.12, 6, false), shadow));
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 18, 0.15, 6, false), shadow));
   }
-  // A diagonal mantle seam makes the chest and shoulders read as draped cloth.
-  const mantle = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-1.8, 30.3, 1.0),
-    new THREE.Vector3(-0.9, 28.9, 1.42),
-    new THREE.Vector3(0.2, 27.3, 1.7),
-    new THREE.Vector3(1.25, 25.8, 1.78),
-  ]);
-  root.add(new THREE.Mesh(new THREE.TubeGeometry(mantle, 16, 0.16, 7, false), soapDark));
+  const backFolds = [
+    [[-2.2, 15.2, -2.7], [-1.7, 21.0, -2.8], [-1.1, 27.0, -2.5], [-0.7, 32.5, -2.0]],
+    [[-1.2, 15.0, -3.1], [-0.9, 21.0, -3.0], [-0.5, 27.0, -2.65], [-0.25, 32.8, -2.1]],
+    [[0.0, 14.9, -3.2], [0.0, 21.2, -3.1], [0.0, 27.2, -2.7], [0.0, 33.0, -2.15]],
+    [[1.2, 15.0, -3.1], [0.9, 21.0, -3.0], [0.5, 27.0, -2.65], [0.25, 32.8, -2.1]],
+    [[2.2, 15.2, -2.7], [1.7, 21.0, -2.8], [1.1, 27.0, -2.5], [0.7, 32.5, -2.0]],
+  ];
+  for (const points of backFolds) {
+    const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.13, 6, false), shadow));
+  }
 
-  // Neck and shoulders blend the robe into the horizontal blessing pose.
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.92, 4.4, 12), soap);
-  neck.position.set(0, 32.2, 0.05);
+  // 胸前斜披斗篷折痕（经典圣像对角披帛线条）
+  const mantleCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-2.2, 33.2, 1.4),
+    new THREE.Vector3(-1.2, 31.2, 2.0),
+    new THREE.Vector3(0.0, 29.2, 2.35),
+    new THREE.Vector3(1.2, 27.2, 2.45),
+    new THREE.Vector3(2.3, 25.5, 2.3),
+  ]);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(mantleCurve, 20, 0.22, 8, false), soapDark));
+  const mantleUpper = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-2.0, 33.5, 1.25),
+    new THREE.Vector3(-1.0, 31.7, 1.85),
+    new THREE.Vector3(0.1, 29.8, 2.2),
+    new THREE.Vector3(1.4, 27.9, 2.3),
+  ]);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(mantleUpper, 16, 0.12, 6, false), shadow));
+
+  // 3. 肩部与颈部（宽厚雄壮，与水平张开的双臂平顺过渡）
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 1.05, 3.6, 16), soap);
+  neck.position.set(0, 34.6, 0.1);
   root.add(neck);
+
   for (const x of [-2.4, 2.4]) {
-    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(1.65, 12, 10), soap);
-    shoulder.scale.set(1.3, 0.78, 0.9);
-    shoulder.position.set(x, 31.4, 0);
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(1.85, 16, 12), soap);
+    shoulder.scale.set(1.25, 0.85, 0.95);
+    shoulder.position.set(x, 33.2, 0);
     root.add(shoulder);
   }
 
-  const armGeo = new THREE.CapsuleGeometry(1.12, 11.4, 8, 14);
-  const left = new THREE.Mesh(armGeo, soap);
-  left.rotation.z = Math.PI / 2;
-  left.position.set(-8.0, 32.2, 0);
-  const right = left.clone();
-  right.position.x = 8.0;
-  root.add(left, right);
+  // 4. 垂悬长袍广袖（重点优化：Art Deco 巨型垂袖几何体）
+  // 右袖 (X > 0)
+  const rightSleeveShape = new THREE.Shape();
+  rightSleeveShape.moveTo(2.2, 33.5);
+  rightSleeveShape.lineTo(12.2, 33.15); // 上沿平直微倾
+  rightSleeveShape.lineTo(12.2, 29.6);  // 袖口垂落高度达 3.55m
+  rightSleeveShape.bezierCurveTo(9.6, 27.2, 5.8, 25.8, 2.2, 25.2); // 优雅悬垂底缘回拢到躯干
+  rightSleeveShape.lineTo(2.2, 33.5);
 
-  // Palm pads and individually modeled fingers replace the old block-shaped hands.
+  // 左袖 (X < 0) 保证逆时针顶点序法线朝外
+  const leftSleeveShape = new THREE.Shape();
+  leftSleeveShape.moveTo(-2.2, 25.2);
+  leftSleeveShape.bezierCurveTo(-5.8, 25.8, -9.6, 27.2, -12.2, 29.6);
+  leftSleeveShape.lineTo(-12.2, 33.15);
+  leftSleeveShape.lineTo(-2.2, 33.5);
+  leftSleeveShape.lineTo(-2.2, 25.2);
+
+  const sleeveExtrudeSettings: THREE.ExtrudeGeometryOptions = {
+    depth: 1.35,
+    bevelEnabled: true,
+    bevelThickness: 0.16,
+    bevelSize: 0.15,
+    bevelSegments: 3,
+  };
+
+  const rightSleeveGeo = new THREE.ExtrudeGeometry(rightSleeveShape, sleeveExtrudeSettings);
+  const rightSleeve = new THREE.Mesh(rightSleeveGeo, soap);
+  rightSleeve.position.z = -0.675;
+  root.add(rightSleeve);
+
+  const leftSleeveGeo = new THREE.ExtrudeGeometry(leftSleeveShape, sleeveExtrudeSettings);
+  const leftSleeve = new THREE.Mesh(leftSleeveGeo, soap);
+  leftSleeve.position.z = -0.675;
+  root.add(leftSleeve);
+
+  // 上臂圆浑体量支撑（藏于长袍广袖顶部，赋予手臂饱满骨架感）
   for (const side of [-1, 1]) {
-    const palm = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 10), soap);
-    palm.scale.set(1.0, 0.68, 0.42);
-    palm.position.set(side * 14.4, 32.0, 0.02);
-    root.add(palm);
-    for (let finger = 0; finger < 4; finger++) {
-      const length = 0.82 - finger * 0.07;
-      const digit = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, length, 4, 8), soap);
-      digit.rotation.z = side * Math.PI / 2;
-      digit.position.set(side * (15.0 + length * 0.45), 32.18 - finger * 0.23, 0.04);
-      root.add(digit);
+    const armCore = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.72, 10.0, 16), soap);
+    armCore.rotation.z = Math.PI / 2;
+    armCore.position.set(side * 7.2, 33.1, 0);
+    root.add(armCore);
+
+    // 长袍广袖上的 Art Deco 垂直棱形风琴褶褶（正反两面共 16 条立体褶楞）
+    const pleats = [
+      { x: 4.4, yTop: 33.4, yBot: 26.0 },
+      { x: 6.4, yTop: 33.3, yBot: 26.8 },
+      { x: 8.4, yTop: 33.2, yBot: 27.8 },
+      { x: 10.4, yTop: 33.15, yBot: 28.9 },
+    ];
+    for (const p of pleats) {
+      const h = p.yTop - p.yBot;
+      const cy = (p.yTop + p.yBot) / 2;
+      // 正面棱纹
+      const frontRib = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, h, 4), soapDark);
+      frontRib.rotation.y = Math.PI / 4;
+      frontRib.position.set(side * p.x, cy, 0.76);
+      root.add(frontRib);
+      // 背面棱纹
+      const backRib = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, h, 4), soapDark);
+      backRib.rotation.y = Math.PI / 4;
+      backRib.position.set(side * p.x, cy, -0.76);
+      root.add(backRib);
     }
-    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.55, 4, 8), soap);
-    thumb.rotation.z = side * 0.7;
-    thumb.position.set(side * 14.8, 31.45, 0.18);
-    root.add(thumb);
+
+    // 袖口镶边滚边与袖内深影
+    box(root, soapDark, 0.48, 3.8, 1.85, side * 12.18, 29.5, 0);
+    box(root, dark, 0.35, 3.2, 1.45, side * 12.35, 29.8, 0);
+
+    // 5. 前臂与手腕（自宽广袖口自然伸出）
+    const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.68, 1.4, 16), soap);
+    forearm.rotation.z = side * (Math.PI / 2);
+    forearm.position.set(side * 12.8, 32.7, 0.02);
+    root.add(forearm);
+
+    const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.52, 0.35, 14), soap);
+    wrist.rotation.z = Math.PI / 2;
+    wrist.position.set(side * 13.45, 32.7, 0.02);
+    root.add(wrist);
+
+    // 6. 庄严雕琢降福圣手（翼展精确达 30.0m，掌心向前倾微向上，五指分明有力）
+    const palmGroup = new THREE.Group();
+    palmGroup.position.set(side * 13.88, 32.65, 0.06);
+    palmGroup.rotation.x = -0.14;        // 微向上仰面向世人降福
+    palmGroup.rotation.y = side * 0.10;  // 掌心微朝内收
+    palmGroup.rotation.z = side * -0.04;
+
+    const palmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.35, 0.38), soap);
+    palmMesh.position.set(side * 0.12, 0, 0);
+    palmGroup.add(palmMesh);
+
+    // 大鱼际肌/掌丘饱满厚度
+    const palmPad = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), soap);
+    palmPad.scale.set(0.9, 1.3, 0.5);
+    palmPad.position.set(side * 0.05, -0.15, 0.14);
+    palmGroup.add(palmPad);
+
+    // 四指（食、中、无名、小指）
+    const fingerConfigs = [
+      { y: 0.44, len: 1.25, thick: 0.16 }, // 食指
+      { y: 0.15, len: 1.42, thick: 0.17 }, // 中指（最长，伸展至 15.0m 巅峰翼展）
+      { y: -0.14, len: 1.28, thick: 0.16 }, // 无名指
+      { y: -0.42, len: 1.08, thick: 0.15 }, // 小指
+    ];
+    for (const fc of fingerConfigs) {
+      const fGroup = new THREE.Group();
+      fGroup.position.set(side * 0.55, fc.y, 0.02);
+      // 第一指节
+      const seg1 = new THREE.Mesh(new THREE.CapsuleGeometry(fc.thick, fc.len * 0.55, 6, 8), soap);
+      seg1.rotation.z = side * (Math.PI / 2);
+      seg1.position.x = side * (fc.len * 0.28);
+      fGroup.add(seg1);
+      // 第二指节（微向前微曲，呈现雕塑自然弧度）
+      const seg2 = new THREE.Mesh(new THREE.CapsuleGeometry(fc.thick * 0.88, fc.len * 0.45, 6, 8), soap);
+      seg2.rotation.z = side * (Math.PI / 2);
+      seg2.rotation.y = side * -0.08;
+      seg2.position.set(side * (fc.len * 0.72), 0, 0.04);
+      fGroup.add(seg2);
+      palmGroup.add(fGroup);
+    }
+
+    // 拇指（向上、向前张开，大度端庄）
+    const thumbGroup = new THREE.Group();
+    thumbGroup.position.set(side * -0.20, 0.38, 0.12);
+    thumbGroup.rotation.z = side * 0.65;
+    thumbGroup.rotation.y = side * -0.28;
+    const thumbSeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.75, 6, 8), soap);
+    thumbSeg.rotation.z = side * (Math.PI / 2);
+    thumbSeg.position.x = side * 0.38;
+    thumbGroup.add(thumbSeg);
+    palmGroup.add(thumbGroup);
+
+    root.add(palmGroup);
   }
 
-  // Sculpted head, ears, nose, eyes, brows, mouth and a tapered beard.
-  const head = new THREE.Mesh(new THREE.SphereGeometry(2.0, 24, 20), soap);
-  head.scale.set(0.88, 1.12, 0.82);
-  head.position.set(0, 36.5, 0.32);
+  // 7. 头部雕塑与庄严面庞 (y = 35.0 ~ 39.5m)
+  const head = new THREE.Mesh(new THREE.SphereGeometry(2.1, 24, 20), soap);
+  head.scale.set(0.9, 1.15, 0.85);
+  head.position.set(0, 36.9, 0.35);
   root.add(head);
 
+  // 披肩长发帽与垂肩长发
   const hairCap = new THREE.Mesh(
-    new THREE.SphereGeometry(2.12, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.62),
+    new THREE.SphereGeometry(2.22, 22, 16, 0, Math.PI * 2, 0, Math.PI * 0.65),
     soapDark,
   );
-  hairCap.scale.set(1.02, 1.0, 0.98);
-  hairCap.position.set(0, 37.15, 0.16);
+  hairCap.scale.set(1.02, 1.02, 0.98);
+  hairCap.position.set(0, 37.5, 0.18);
   root.add(hairCap);
 
   for (const side of [-1, 1]) {
-    const lock = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 2.6, 6, 10), soapDark);
-    lock.position.set(side * 1.55, 36.0, 0.52);
-    lock.rotation.z = side * -0.08;
+    // 垂向两侧肩头的浓密长发缕
+    const lock = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 3.2, 8, 12), soapDark);
+    lock.position.set(side * 1.62, 35.6, 0.42);
+    lock.rotation.z = side * -0.06;
     root.add(lock);
-    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), soap);
+
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.36, 10, 8), soap);
     ear.scale.set(0.7, 1.0, 0.5);
-    ear.position.set(side * 1.66, 36.55, 0.32);
+    ear.position.set(side * 1.72, 36.9, 0.32);
     root.add(ear);
 
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), dark);
-    eye.scale.set(1.25, 0.62, 0.45);
-    eye.position.set(side * 0.58, 36.7, 1.91);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), dark);
+    eye.scale.set(1.3, 0.6, 0.45);
+    eye.position.set(side * 0.62, 37.15, 1.96);
     root.add(eye);
 
     const browCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 0.98, 37.05, 1.72),
-      new THREE.Vector3(side * 0.62, 37.12, 1.86),
-      new THREE.Vector3(side * 0.3, 37.04, 1.9),
+      new THREE.Vector3(side * 1.05, 37.5, 1.75),
+      new THREE.Vector3(side * 0.65, 37.58, 1.92),
+      new THREE.Vector3(side * 0.3, 37.5, 1.96),
     ]);
-    root.add(new THREE.Mesh(new THREE.TubeGeometry(browCurve, 8, 0.1, 6, false), soapDark));
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(browCurve, 8, 0.11, 6, false), soapDark));
   }
 
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.9, 7), soap);
+  // Art Deco 挺拔山根鼻梁
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.05, 7), soap);
   nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, 36.35, 2.02);
+  nose.position.set(0, 36.75, 2.1);
   root.add(nose);
 
-  const moustache = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), soapDark);
-  moustache.scale.set(1.25, 0.35, 0.35);
-  moustache.position.set(0, 35.95, 1.85);
+  // 胡须与方正方颌胡子
+  const moustache = new THREE.Mesh(new THREE.SphereGeometry(0.46, 12, 8), soapDark);
+  moustache.scale.set(1.3, 0.36, 0.36);
+  moustache.position.set(0, 36.3, 1.92);
   root.add(moustache);
 
-  const beard = new THREE.Mesh(new THREE.ConeGeometry(0.82, 2.0, 10), soapDark);
+  const beard = new THREE.Mesh(new THREE.ConeGeometry(0.92, 2.3, 10), soapDark);
   beard.rotation.z = Math.PI;
-  beard.scale.set(0.92, 1.0, 0.62);
-  beard.position.set(0, 35.0, 1.3);
+  beard.scale.set(0.92, 1.0, 0.65);
+  beard.position.set(0, 35.2, 1.35);
   root.add(beard);
 
   const mouthCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.35, 35.75, 1.83),
-    new THREE.Vector3(0, 35.7, 1.91),
-    new THREE.Vector3(0.35, 35.75, 1.83),
+    new THREE.Vector3(-0.38, 36.1, 1.9),
+    new THREE.Vector3(0, 36.05, 1.98),
+    new THREE.Vector3(0.38, 36.1, 1.9),
   ]);
-  root.add(new THREE.Mesh(new THREE.TubeGeometry(mouthCurve, 8, 0.055, 5, false), shadow));
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(mouthCurve, 8, 0.06, 5, false), shadow));
+
+  // 头顶经典薄光环/芒带
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.08, 6, 24), soapDark);
+  halo.rotation.x = Math.PI / 2;
+  halo.position.set(0, 39.1, 0.25);
+  root.add(halo);
 
   return root;
 }
 
-function withMeterUvs(build: (kit: SurfaceKit) => THREE.Group) {
-  return (kit: SurfaceKit) => finishSurfaces(build(kit), 7);
+interface LandmarkLinePalette {
+  color: number;
+  opacity: number;
+  thresholdAngle: number;
+  minDiagonal?: number;
+}
+
+const LANDMARK_LINE_PALETTES: Record<string, LandmarkLinePalette> = {
+  giza: {
+    color: 0x3d2b1a, // 埃及暖赭石深影缝隙色
+    opacity: 0.88,
+    thresholdAngle: 24,
+    minDiagonal: 0.8,
+  },
+  wall: {
+    color: 0x221e1a, // 明长城灰砖青苔勾缝深色
+    opacity: 0.84,
+    thresholdAngle: 22,
+    minDiagonal: 0.7,
+  },
+  petra: {
+    color: 0x381812, // 佩特拉纳巴泰红砂岩深渊裂谷暗红深色
+    opacity: 0.86,
+    thresholdAngle: 22,
+    minDiagonal: 0.6,
+  },
+  colosseum: {
+    color: 0x34291c, // 罗马白灰华石千年风化阴影线
+    opacity: 0.82,
+    thresholdAngle: 24,
+    minDiagonal: 0.8,
+  },
+  chichen: {
+    color: 0x2c271e, // 玛雅雨林石灰岩苍老刻线
+    opacity: 0.86,
+    thresholdAngle: 22,
+    minDiagonal: 0.7,
+  },
+  machu: {
+    color: 0x222629, // 安第斯山脉花岗岩玄武岩冷深刻线
+    opacity: 0.84,
+    thresholdAngle: 22,
+    minDiagonal: 0.6,
+  },
+  taj: {
+    color: 0x3e4950, // 莫卧儿白色大理石雕凿清冷灰蓝阴影线
+    opacity: 0.72,
+    thresholdAngle: 24,
+    minDiagonal: 0.8,
+  },
+  christ: {
+    color: 0x30383d, // 里约基督像滑石马赛克折纸风立体衣褶线
+    opacity: 0.78,
+    thresholdAngle: 24,
+    minDiagonal: 0.6,
+  },
+};
+
+const _lineMaterialCache = new Map<string, THREE.LineBasicMaterial>();
+
+function getLineMaterial(color: number, opacity: number): THREE.LineBasicMaterial {
+  const key = `${color}_${opacity}`;
+  let mat = _lineMaterialCache.get(key);
+  if (!mat) {
+    mat = new THREE.LineBasicMaterial({
+      color,
+      transparent: opacity < 1,
+      opacity,
+      depthTest: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1.5,
+      polygonOffsetUnits: -1.5,
+    });
+    _lineMaterialCache.set(key, mat);
+  }
+  return mat;
+}
+
+const _calcBox = new THREE.Box3();
+const _calcSize = new THREE.Vector3();
+
+export function attachLandmarkLines(root: THREE.Group, wonderId: string) {
+  const palette = LANDMARK_LINE_PALETTES[wonderId];
+  if (!palette) return root;
+
+  const lineMat = getLineMaterial(palette.color, palette.opacity);
+  const minDiag = palette.minDiagonal ?? 0.6;
+  const threshold = palette.thresholdAngle;
+
+  const candidates: THREE.Mesh[] = [];
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    if ((mesh as unknown as { isInstancedMesh?: boolean }).isInstancedMesh) return;
+    if (mesh.userData?.skipLines) return;
+    candidates.push(mesh);
+  });
+
+  for (const mesh of candidates) {
+    const geo = mesh.geometry;
+    if (!geo || !geo.getAttribute("position")) continue;
+
+    _calcBox.setFromBufferAttribute(geo.getAttribute("position") as THREE.BufferAttribute);
+    _calcBox.getSize(_calcSize);
+    if (_calcSize.length() < minDiag) continue;
+
+    if (!geo.userData) geo.userData = {};
+    let edgesGeo = geo.userData._edgesGeo as THREE.EdgesGeometry | undefined;
+    if (!edgesGeo) {
+      edgesGeo = new THREE.EdgesGeometry(geo, threshold);
+      geo.userData._edgesGeo = edgesGeo;
+    }
+
+    if (edgesGeo.getAttribute("position") && edgesGeo.getAttribute("position").count > 0) {
+      const line = new THREE.LineSegments(edgesGeo, lineMat);
+      line.renderOrder = 1;
+      mesh.add(line);
+    }
+  }
+
+  return root;
+}
+
+function withMeterUvs(id: string, build: (kit: SurfaceKit) => THREE.Group) {
+  return (kit: SurfaceKit) => {
+    const group = build(kit);
+    finishSurfaces(group, 7);
+    attachLandmarkLines(group, id);
+    return group;
+  };
 }
 
 export const LANDMARK_BUILDERS: Record<string, (kit: SurfaceKit) => THREE.Group> = {
-  giza: withMeterUvs(createGiza),
-  wall: withMeterUvs(createGreatWall),
-  petra: withMeterUvs(createPetra),
-  colosseum: withMeterUvs(createColosseum),
-  chichen: withMeterUvs(createChichenItza),
-  machu: withMeterUvs(createMachuPicchu),
-  taj: withMeterUvs(createTajMahal),
-  christ: withMeterUvs(createChrist),
+  giza: withMeterUvs("giza", createGiza),
+  wall: withMeterUvs("wall", createGreatWall),
+  petra: withMeterUvs("petra", createPetra),
+  colosseum: withMeterUvs("colosseum", createColosseum),
+  chichen: withMeterUvs("chichen", createChichenItza),
+  machu: withMeterUvs("machu", createMachuPicchu),
+  taj: withMeterUvs("taj", createTajMahal),
+  christ: withMeterUvs("christ", createChrist),
 };
