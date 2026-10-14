@@ -2,7 +2,11 @@ import * as THREE from "three";
 import tellux from "tellux";
 import { LANDMARK_BUILDERS } from "./landmarks";
 import { loadSurfaceKit, type SurfaceKit } from "./surfaces";
+import { installTileProvider } from "./tileProvider";
 import { SPACE_VIEW, WONDERS, type Wonder } from "./wonders";
+
+// 启动阶段立即安装智能瓦片提供器拦截器，确保所有地图瓦片请求均受级联与重采样保护
+installTileProvider();
 
 const ARCGIS_WORLD_IMAGERY =
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
@@ -92,49 +96,74 @@ function sleep(ms: number) {
     window.setTimeout(resolve, ms);
   });
 }
-const MAP_TILE_URL_MARKER = "/ArcGIS/rest/services/World_Imagery/MapServer/tile/";
-
-/** Wait for map-tile requests to become quiet after arriving at a landmark.
- * Resource timing only reports completed requests, so this is a bounded
- * quiet-window heuristic rather than a guarantee that every tile has loaded.
- */
-function waitForMapTiles(timeoutMs = 10_000, quietMs = 1_500, minimumMs = 1_800): Promise<void> {
-  const startedAt = performance.now();
-  let lastTileAt = startedAt;
-  let tileCount = 0;
-  const seen = new Set<string>();
-  const scanEntries = (entries: PerformanceEntry[]) => {
-    for (const entry of entries) {
-      if (entry.entryType !== "resource" || !entry.name.includes(MAP_TILE_URL_MARKER)) continue;
-      const key = `${entry.name}|${entry.startTime}|${entry.duration}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      tileCount += 1;
-      lastTileAt = Math.max(lastTileAt, entry.startTime + entry.duration);
-    }
+interface OptimizedTileset {
+  errorTarget?: number;
+  downloadQueue?: {
+    items: unknown[];
+    currJobs: number;
+    priorityCallback: ((a: unknown, b: unknown) => number) | null;
   };
-  scanEntries(performance.getEntriesByType("resource"));
+}
+
+function getSurfaceTileset(v: InstanceType<typeof tellux.Viewer> | null): OptimizedTileset | undefined {
+  if (!v) return undefined;
+  const untyped = v as unknown as { tilesetManager?: { surfaceTileset?: OptimizedTileset } };
+  return untyped.tilesetManager?.surfaceTileset;
+}
+
+let baseErrorTarget = 2;
+
+/**
+ * 等待当前景点的地图瓦片下载并渲染完成。
+ * 直接监控 3D-Tiles 的 downloadQueue 与网络活跃状态，排空且稳定后立即放行。
+ */
+function waitForMapTiles(maxWaitMs = 14_000, quietMs = 1_000): Promise<void> {
   return new Promise((resolve) => {
-    let observer: PerformanceObserver | undefined;
-    const finish = () => {
-      observer?.disconnect();
-      window.clearInterval(timer);
-      resolve();
-    };
-    try {
-      observer = new PerformanceObserver((list) => scanEntries(list.getEntries()));
-      observer.observe({ type: "resource", buffered: true });
-    } catch {
-      observer = undefined;
-    }
+    const tileset = getSurfaceTileset(viewer);
+    const dlQueue = tileset?.downloadQueue;
+    const startedAt = performance.now();
+    let quietSince: number | null = null;
+    let initialGraceDone = false;
+
     const timer = window.setInterval(() => {
-      scanEntries(performance.getEntriesByType("resource"));
       const elapsed = performance.now() - startedAt;
-      const quietFor = performance.now() - lastTileAt;
-      if (elapsed >= timeoutMs || (elapsed >= minimumMs && tileCount > 0 && quietFor >= quietMs)) {
-        finish();
+
+      // 允许最初 350ms 宽限期，以便镜头刚停稳时 3D-Tiles 发起视口遍历并将当前景点的瓦片推入队列
+      if (!initialGraceDone) {
+        if (elapsed < 350) return;
+        initialGraceDone = true;
       }
-    }, 250);
+
+      // 若巡礼已被用户手动打断，立即结束等待
+      if (!touring) {
+        window.clearInterval(timer);
+        resolve();
+        return;
+      }
+
+      const items = dlQueue?.items?.length ?? 0;
+      const jobs = dlQueue?.currJobs ?? 0;
+
+      // 当队列中既无等待任务也无正在进行的网络连接时，确认处于完全就绪状态
+      if (items === 0 && jobs === 0) {
+        if (quietSince === null) {
+          quietSince = performance.now();
+        }
+        if (performance.now() - quietSince >= quietMs) {
+          window.clearInterval(timer);
+          resolve();
+          return;
+        }
+      } else {
+        quietSince = null;
+      }
+
+      // 达到最长超时保底，放行继续巡礼
+      if (elapsed >= maxWaitMs) {
+        window.clearInterval(timer);
+        resolve();
+      }
+    }, 120);
   });
 }
 
@@ -151,6 +180,18 @@ function setFlying(next: boolean) {
   flying = next;
   if (btnTour) btnTour.disabled = next && !touring;
   if (btnSpace) btnSpace.disabled = next && !touring;
+  const container = document.getElementById("viewer");
+  if (container) {
+    container.style.pointerEvents = next ? "none" : "";
+  }
+
+  // 飞行期间将 surfaceTileset.errorTarget 从 2 升至 120，
+  // 杜绝万米高空洲际飞跃时向下递归细分并向下载队列塞入数百张无用的过路高清瓦片。
+  // 降落停稳后恢复基准精度（baseErrorTarget），立即按目标视口极速拉取。
+  const tileset = getSurfaceTileset(viewer);
+  if (tileset) {
+    tileset.errorTarget = next ? 120 : baseErrorTarget;
+  }
 }
 
 function renderList() {
@@ -248,6 +289,12 @@ function flyToSpace(): Promise<void> {
       maximumHeight: 20_000_000,
       complete: () => {
         if (flight === flightGeneration) {
+          try {
+            const rawControls = (current.controls as { raw?: { pivotPoint?: THREE.Vector3 } })?.raw ?? (current.controls as { pivotPoint?: THREE.Vector3 });
+            rawControls?.pivotPoint?.set(0, 0, 0);
+          } catch {
+            // ignore
+          }
           setFlying(false);
           setControlsEnabled(true);
         }
@@ -287,6 +334,24 @@ function flyToWonder(wonder: Wonder): Promise<void> {
       maximumHeight: 8_500_000,
       complete: () => {
         if (flight === flightGeneration) {
+          // 精确同步 GlobeControls 旋转轴心点，彻底杜绝飞抵后稍动鼠标镜头围绕旧位置瞬间甩飞
+          try {
+            const targetMat = new THREE.Matrix4();
+            current.cartographicToMatrix4(
+              [wonder.longitude, wonder.latitude, wonder.lookHeight ?? 24],
+              {},
+              targetMat,
+            );
+            const targetPos = new THREE.Vector3().setFromMatrixPosition(targetMat);
+            const rawControls = (current.controls as { raw?: { pivotPoint?: THREE.Vector3; pivotMesh?: THREE.Object3D } })?.raw ?? (current.controls as { pivotPoint?: THREE.Vector3; pivotMesh?: THREE.Object3D });
+            if (rawControls?.pivotPoint) {
+              rawControls.pivotPoint.copy(targetPos);
+              rawControls.pivotMesh?.position.copy(targetPos);
+            }
+          } catch {
+            // 忽略非致命同步异常
+          }
+
           setFlying(false);
           setControlsEnabled(true);
         }
@@ -306,6 +371,8 @@ function flyToWonder(wonder: Wonder): Promise<void> {
 
 async function visit(wonder: Wonder) {
   if (!viewer) return;
+  // 若已停留在当前景点或已在飞向当前景点的途中，无需重复打断并重置飞行
+  if (selectedId === wonder.id && !touring) return;
   touring = false;
   tourGeneration += 1;
   if (btnTour) btnTour.classList.remove("active");
@@ -430,6 +497,8 @@ function wonderIdFromObject(start: THREE.Object3D | null | undefined) {
 
 function bindViewerEvents(current: InstanceType<typeof tellux.Viewer>) {
   current.on("click", (event) => {
+    // 飞行过程中屏蔽画布误触拾取，避免打断镜头插值导致半途悬停
+    if (flying) return;
     let wonderId: string | undefined;
     const hit = event.pick;
     if (hit?.type === "entity") {
@@ -448,6 +517,32 @@ function bindViewerEvents(current: InstanceType<typeof tellux.Viewer>) {
     const wonder = WONDERS.find((item) => item.id === wonderId);
     if (wonder) void visit(wonder);
   });
+}
+
+function configureTilesetOptimization(current: InstanceType<typeof tellux.Viewer>) {
+  const tileset = getSurfaceTileset(current);
+  if (!tileset) return;
+
+  baseErrorTarget = tileset.errorTarget ?? 2;
+
+  // 优化 3D-Tiles 下载队列调度：
+  // 3D-Tiles-Renderer 的 ImageOverlayPlugin 使用 priority = -performance.now() 入队，
+  // 并且 PriorityQueue 按照 priorityCallback 排序后使用 items.pop() 弹出队尾元素。
+  // 原生统一比较器使得较早入队的过路瓦片比较晚入队的视口瓦片具有更高优先级（-t_old > -t_new）。
+  // 此处反转为：最新加入队列的瓦片排在数组末尾，使得 pop() 优先处理最新请求（LIFO 策略），
+  // 杜绝飞抵景点后被中途积压的过路瓦片饥饿阻塞。
+  const dlQueue = tileset.downloadQueue;
+  if (dlQueue) {
+    const originalCallback = dlQueue.priorityCallback;
+    dlQueue.priorityCallback = (a: any, b: any) => {
+      const pa = a?.priority;
+      const pb = b?.priority;
+      if (typeof pa === "number" && typeof pb === "number") {
+        return pa < pb ? 1 : pa > pb ? -1 : 0;
+      }
+      return originalCallback ? originalCallback(a, b) : 0;
+    };
+  }
 }
 
 async function boot() {
@@ -529,6 +624,9 @@ async function boot() {
   });
 
   viewer = current;
+  (window as unknown as { __viewer: unknown }).__viewer = current;
+  configureTilesetOptimization(current);
+  current.controls.minDistance = 40;
   performance.mark("earthwonders-viewer-created");
 
   // Register markers, interactions, and keyboard shortcuts immediately so the globe is fully responsive

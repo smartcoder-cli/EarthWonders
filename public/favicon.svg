@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Background atmospheric halo -->
+    <radialGradient id="space-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="65%" stop-color="#38bdf8" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Deep 3D ocean sphere -->
+    <radialGradient id="ocean" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="25%" stop-color="#2563eb" />
+      <stop offset="65%" stop-color="#1d4ed8" />
+      <stop offset="92%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- Atmospheric limb / rim light -->
+    <linearGradient id="atmosphere" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.95" />
+      <stop offset="35%" stop-color="#38bdf8" stop-opacity="0.5" />
+      <stop offset="85%" stop-color="#1e3a8a" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Golden beacon sparkle glow -->
+    <radialGradient id="star-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fef08a" stop-opacity="1" />
+      <stop offset="45%" stop-color="#f59e0b" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Globe clipping circle -->
+    <clipPath id="globe-clip">
+      <circle cx="32" cy="32" r="27" />
+    </clipPath>
+  </defs>
+
+  <!-- Atmosphere halo outer glow -->
+  <circle cx="32" cy="32" r="30" fill="url(#space-glow)" />
+
+  <!-- Base ocean sphere -->
+  <circle cx="32" cy="32" r="27" fill="url(#ocean)" />
+
+  <!-- Clipped globe contents -->
+  <g clip-path="url(#globe-clip)">
+    <!-- Stylized Continents: Eurasia & Africa -->
+    <path d="M26 12 C30 10, 38 11, 44 14 C48 16, 52 18, 54 22 C55 26, 52 30, 48 31 C43 32, 40 28, 36 29 C33 30, 31 34, 33 39 C34 43, 33 47, 30 50 C27 52, 25 48, 25 44 C25 40, 27 37, 26 33 C25 29, 21 27, 21 23 C21 18, 24 14, 26 12 Z"
+          fill="#10b981" />
+    <!-- Golden Earth Wonder cradle (Egypt / Petra / Mesopotamia ancient civilizations) -->
+    <path d="M30 22 C34 21, 38 23, 41 26 C38 28, 34 29, 31 28 C28 27, 27 24, 30 22 Z"
+          fill="#d97706" opacity="0.9" />
+    <!-- East Asia / Islands -->
+    <path d="M47 24 C50 23, 53 25, 52 28 C50 30, 47 29, 46 26 C46 25, 46.5 24.5, 47 24 Z"
+          fill="#10b981" />
+    <path d="M43 36 C46 35, 49 37, 48 40 C46 41, 43 40, 42 38 Z"
+          fill="#10b981" />
+    <!-- Western landmass rim -->
+    <path d="M8 20 C11 18, 14 20, 15 25 C16 30, 13 34, 11 38 C9 41, 7 42, 6 38 C5 34, 6 25, 8 20 Z"
+          fill="#10b981" opacity="0.85" />
+
+    <!-- Latitudinal and Longitudinal GIS Grids -->
+    <!-- Equator -->
+    <ellipse cx="32" cy="32" rx="27" ry="8" fill="none" stroke="#bae6fd" stroke-width="1.1" stroke-dasharray="2 1.5" opacity="0.45" />
+    <!-- Tropic of Cancer (North) -->
+    <ellipse cx="32" cy="21" rx="23" ry="6" fill="none" stroke="#bae6fd" stroke-width="0.9" opacity="0.3" />
+    <!-- Tropic of Capricorn (South) -->
+    <ellipse cx="32" cy="43" rx="23" ry="6" fill="none" stroke="#bae6fd" stroke-width="0.9" opacity="0.3" />
+    <!-- Curved Meridian -->
+    <ellipse cx="32" cy="32" rx="14" ry="27" fill="none" stroke="#bae6fd" stroke-width="1.1" stroke-dasharray="2 1.5" opacity="0.45" />
+    <!-- Central Meridian -->
+    <line x1="32" y1="5" x2="32" y2="59" stroke="#bae6fd" stroke-width="1" opacity="0.35" />
+
+    <!-- Day/Night Terminator curve shadow -->
+    <path d="M32 5 A27 27 0 0 1 59 32 A27 27 0 0 1 32 59 C44 52 50 42 50 32 C50 22 44 12 32 5 Z"
+          fill="#020617" opacity="0.35" />
+  </g>
+
+  <!-- Atmosphere Rim Ring -->
+  <circle cx="32" cy="32" r="27" fill="none" stroke="url(#atmosphere)" stroke-width="1.8" />
+
+  <!-- Wonder Beacon (8-pointed Golden Star symbolizing the Wonders of the World) -->
+  <!-- Outer Glow -->
+  <circle cx="38" cy="22" r="7" fill="url(#star-glow)" />
+
+  <!-- Primary 4-point star -->
+  <path d="M38 14 Q38 22 46 22 Q38 22 38 30 Q38 22 30 22 Q38 22 38 14 Z"
+        fill="#fef08a" stroke="#d97706" stroke-width="0.4" />
+
+  <!-- Secondary diagonal 4-point star rays -->
+  <path d="M38 17 Q38 22 43 22 Q38 22 38 27 Q38 22 33 22 Q38 22 38 17 Z"
+        transform="rotate(45 38 22)"
+        fill="#fde047" opacity="0.95" />
+
+  <!-- Brilliant Star Core -->
+  <circle cx="38" cy="22" r="1.4" fill="#ffffff" />
+</svg>
