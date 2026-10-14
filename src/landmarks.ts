@@ -557,36 +557,127 @@ export function createGiza(kit: SurfaceKit) {
     box(root, stone(0x6a5438, 0.96), 48, 0.7, 6.4, dx, -0.15, dz);
   }
 
+  // 狮身人面像（Great Sphinx of Giza）：按埃及吉萨实景重构法老尼姆斯头巾、巨爪、记梦碑与围岩地基
   const sphinx = new THREE.Group();
-  const haunch = new THREE.Mesh(new THREE.SphereGeometry(11.8, 16, 12), sphinxMat);
-  haunch.scale.set(1.22, 0.8, 1.48);
-  haunch.position.set(0, 10.6, -18);
+
+  // 采石围坑岩壁（Sphinx Enclosure Trench Walls）
+  const trenchMat = mapped(kit.pyramid, { color: 0xc8a46e, roughness: 0.94, metersPerTile: 6 });
+  box(sphinx, trenchMat, 38, 7.5, 3.5, 0, 0, -42); // 后岩壁
+  box(sphinx, trenchMat, 3.5, 6.8, 92, -18, 0, 4); // 左侧岩壁
+  box(sphinx, trenchMat, 3.5, 6.8, 92, 18, 0, 4);  // 右侧岩壁
+
+  // 狮身后臀与躯干
+  const haunch = new THREE.Mesh(new THREE.SphereGeometry(12.5, 18, 14), sphinxMat);
+  haunch.scale.set(1.25, 0.82, 1.45);
+  haunch.position.set(0, 10.2, -18);
   sphinx.add(haunch);
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(9.4, 30, 8, 16), sphinxMat);
+
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(9.6, 32, 10, 16), sphinxMat);
   body.rotation.x = Math.PI / 2;
-  body.scale.set(1.12, 1, 0.88);
-  body.position.set(0, 10.6, 3);
+  body.scale.set(1.15, 1.0, 0.88);
+  body.position.set(0, 10.4, 3);
   sphinx.add(body);
-  box(sphinx, sphinxMat, 8.4, 5.6, 26, -6.6, 0, 26);
-  box(sphinx, sphinxMat, 8.4, 5.6, 26, 6.6, 0, 26);
-  cyl(sphinx, sphinxMat, 3.6, 4.1, 2.2, -6.6, 0, 38.5, 10);
-  cyl(sphinx, sphinxMat, 3.6, 4.1, 2.2, 6.6, 0, 38.5, 10);
-  box(sphinx, sphinxMat, 7.6, 7.2, 10, -8.4, 0, -22);
-  box(sphinx, sphinxMat, 7.6, 7.2, 10, 8.4, 0, -22);
-  const tail = new THREE.Mesh(new THREE.TorusGeometry(8.8, 1.15, 8, 14, Math.PI * 0.75), sphinxMat);
+
+  // 狮子后腿侧肌肉
+  box(sphinx, sphinxMat, 8.5, 7.8, 12, -9.2, 0, -22);
+  box(sphinx, sphinxMat, 8.5, 7.8, 12, 9.2, 0, -22);
+
+  // 卷曲尾巴（盘在右侧臀旁）
+  const tail = new THREE.Mesh(new THREE.TorusGeometry(8.8, 1.15, 8, 16, Math.PI * 0.75), sphinxMat);
   tail.rotation.set(Math.PI / 2, 0, Math.PI / 5);
-  tail.position.set(8.4, 8.4, -28);
+  tail.position.set(8.8, 8.4, -28);
   sphinx.add(tail);
-  box(sphinx, sphinxMat, 17.4, 15.8, 14.5, 0, 12.4, 33);
-  box(sphinx, pale, 22, 3.2, 12.5, 0, 28.2, 33.4);
-  box(sphinx, sphinxMat, 3.4, 12.2, 2.6, -8.6, 16, 34);
-  box(sphinx, sphinxMat, 3.4, 12.2, 2.6, 8.6, 16, 34);
-  const face = new THREE.Mesh(new THREE.SphereGeometry(5.5, 16, 14), pale);
-  face.scale.set(0.82, 1.08, 0.72);
-  face.position.set(0, 24.2, 40.6);
-  sphinx.add(face);
-  box(sphinx, sphinxMat, 3.2, 4.2, 2.2, 0, 20.2, 42.4);
-  cyl(sphinx, pale, 0.35, 0.45, 2.6, 0, 28.4, 39.2, 6);
+
+  // 狮子雄伟前胸
+  box(sphinx, sphinxMat, 17.5, 16.5, 14, 0, 12.0, 28);
+
+  // 伸展前爪（长达 18 米的巨型石砌双爪与爪趾）
+  for (const side of [-1, 1]) {
+    // 粗壮前臂
+    box(sphinx, sphinxMat, 5.8, 5.2, 22, side * 7.5, 0, 31);
+    // 爪端掌心
+    box(sphinx, sphinxMat, 5.2, 4.4, 8, side * 7.5, 0, 46);
+    // 三根分明的狮爪趾
+    for (const claw of [-1.6, 0, 1.6]) {
+      const digit = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.8, 4.8), sphinxMat);
+      digit.position.set(side * 7.5 + claw, 1.4, 52.2);
+      sphinx.add(digit);
+    }
+  }
+
+  // 双爪间的法老记梦碑（Dream Stele of Thutmose IV）
+  const steleMat = mapped(kit.pyramid, { color: 0x9b5d45, roughness: 0.82 }); // 红色花岗岩
+  const stele = new THREE.Mesh(new THREE.BoxGeometry(3.2, 6.5, 0.85), steleMat);
+  stele.position.set(0, 3.25, 42.5);
+  sphinx.add(stele);
+  const steleTop = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.85, 16), steleMat);
+  steleTop.rotation.x = Math.PI / 2;
+  steleTop.position.set(0, 6.5, 42.5);
+  sphinx.add(steleTop);
+
+  // 法老头部与尼姆斯头巾（Nemes Headdress）
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.8, 6.2, 16), sphinxMat);
+  neck.position.set(0, 20.5, 33);
+  sphinx.add(neck);
+
+  // 头颅主体
+  const head = new THREE.Mesh(new THREE.SphereGeometry(6.2, 20, 16), pale);
+  head.scale.set(0.9, 1.15, 0.88);
+  head.position.set(0, 26.2, 34);
+  sphinx.add(head);
+
+  // 尼姆斯头巾顶部圆弧包覆与额头圣蛇
+  const nemesTop = new THREE.Mesh(new THREE.SphereGeometry(6.6, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.58), sphinxMat);
+  nemesTop.scale.set(0.96, 1.12, 0.94);
+  nemesTop.position.set(0, 26.8, 33.6);
+  sphinx.add(nemesTop);
+
+  // 额头王权圣蛇（Uraeus）
+  const uraeus = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.2, 6), stone(0xc9a84c, 0.4));
+  uraeus.rotation.x = Math.PI / 4;
+  uraeus.position.set(0, 31.8, 39.5);
+  sphinx.add(uraeus);
+
+  // 尼姆斯头巾垂落双肩的两侧宽翼折巾（Lappets）
+  for (const side of [-1, 1]) {
+    const lappet = new THREE.Mesh(new THREE.BoxGeometry(3.2, 14.5, 3.6), sphinxMat);
+    lappet.rotation.z = side * -0.08;
+    lappet.position.set(side * 6.5, 21.0, 36.2);
+    sphinx.add(lappet);
+
+    // 巾带条纹棱
+    for (let h = 0; h < 5; h++) {
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.55, 3.8), stone(0x3a2e22, 0.85));
+      stripe.position.set(side * 6.5, 15.5 + h * 2.4, 36.2);
+      sphinx.add(stripe);
+    }
+  }
+
+  // 庄严法老面容
+  const pharaohNose = new THREE.Mesh(new THREE.ConeGeometry(0.75, 2.4, 6), pale);
+  pharaohNose.rotation.x = Math.PI / 2;
+  pharaohNose.position.set(0, 26.2, 39.8);
+  sphinx.add(pharaohNose);
+
+  const pharaohEyes = new THREE.Mesh(new THREE.SphereGeometry(0.48, 8, 6), stone(0x2a1c12, 0.6));
+  pharaohEyes.scale.set(1.4, 0.7, 0.5);
+  pharaohEyes.position.set(-2.2, 27.2, 39.2);
+  const pharaohEyesR = pharaohEyes.clone();
+  pharaohEyesR.position.x = 2.2;
+  sphinx.add(pharaohEyes, pharaohEyesR);
+
+  // 仪式假胡须残存底座
+  box(sphinx, sphinxMat, 2.2, 3.4, 1.8, 0, 20.8, 38.6);
+
+  // 狮身人面像神庙遗址门廊（Sphinx Temple Ruins in front of paws）
+  const templeMat = mapped(kit.pyramid, { color: 0xd8b276, roughness: 0.92 });
+  box(sphinx, templeMat, 32, 4.5, 18, 0, 0, 68);
+  for (const px of [-12, -4, 4, 12]) {
+    for (const pz of [62, 74]) {
+      cyl(sphinx, templeMat, 1.2, 1.4, 6.2, px, 0, pz, 8);
+    }
+  }
+
   sphinx.position.set(345, 0, -436);
   sphinx.rotation.y = Math.PI / 2;
   root.add(sphinx);
@@ -1353,6 +1444,16 @@ export function createTajMahal(kit: SurfaceKit) {
   });
   const lawn = mapped(kit.grass, { roughness: 0.98, metersPerTile: 8 });
 
+  // 莫卧儿查尔巴赫对称大理石倒影水道（Charbagh Reflecting Pool Canal）
+  const poolWaterMat = new THREE.MeshPhysicalMaterial({
+    color: 0x1d465c,
+    roughness: 0.04,
+    metalness: 0.15,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.05,
+  });
+
+  // 主大理石基台上的几何十字水渠
   box(root, marble, 108, 5.4, 108, 0, 0, 0);
   box(root, lawn, 36, 0.45, 36, -32, 5.4, -32);
   box(root, lawn, 36, 0.45, 36, 32, 5.4, -32);
@@ -1360,10 +1461,56 @@ export function createTajMahal(kit: SurfaceKit) {
   box(root, lawn, 36, 0.45, 36, 32, 5.4, 32);
   box(root, water, 7.2, 0.4, 108, 0, 5.45, 0);
   box(root, water, 108, 0.4, 7.2, 0, 5.45, 0);
-  box(root, water, 14, 0.45, 56, 0, 5.48, -74);
   const pool = new THREE.Mesh(new THREE.BoxGeometry(16, 0.5, 16), water);
   pool.position.set(0, 5.7, 0);
   root.add(pool);
+
+  // 南向大花园倒影水道（长 140m，宽 10m，自台基南缘延伸）
+  box(root, marble, 12.4, 0.6, 142, 0, 0, 124); // 大理石池底与基槽
+  box(root, poolWaterMat, 9.6, 0.5, 140, 0, 0.15, 124); // 高反光水面
+  // 水渠两侧大理石包边矮护栏
+  box(root, marble, 0.7, 0.85, 142, -5.5, 0, 124);
+  box(root, marble, 0.7, 0.85, 142, 5.5, 0, 124);
+
+  // 东西向横向交叉水道（构成经典的查尔巴赫十字水系）
+  box(root, marble, 142, 0.6, 12.4, 0, 0, 124);
+  box(root, poolWaterMat, 140, 0.5, 9.6, 0, 0.15, 124);
+  box(root, marble, 142, 0.85, 0.7, 0, 0, 124 - 5.5);
+  box(root, marble, 142, 0.85, 0.7, 0, 0, 124 + 5.5);
+
+  // 十字水渠中央：八角形霍德·考瑟尔水上大理石水榭（Al-Hawd al-Kawthar / Diana's Seat）
+  const centerPlinth = new THREE.Mesh(chamferPrism(24, 1.2, 4.5), marble);
+  centerPlinth.position.set(0, 0.3, 124);
+  root.add(centerPlinth);
+  const centerTank = new THREE.Mesh(chamferPrism(17.5, 0.8, 3.5), poolWaterMat);
+  centerTank.position.set(0, 0.7, 124);
+  root.add(centerTank);
+  // 戴安娜大理石纪念长椅
+  box(root, marble, 2.5, 0.65, 0.8, 0, 1.5, 124);
+
+  // 水道两列等距莲花喷泉嘴（Lotus Fountain Jets）
+  for (const z of [68, 86, 104, 144, 162, 180]) {
+    cyl(root, gold(), 0.3, 0.45, 0.8, 0, 0.1, z, 8);
+    const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 2.4, 6), poolWaterMat);
+    jet.position.set(0, 1.8, z);
+    root.add(jet);
+  }
+
+  // 倒影水渠两侧名闻天下的常青丝柏树林（Cypress Tree Avenue）
+  const cypressMat = mapped(kit.grass, { color: 0x1b3b24, roughness: 0.92 });
+  const trunkMat = stone(0x3a2818, 0.95);
+  for (const z of [66, 80, 94, 108, 140, 154, 168, 182]) {
+    for (const x of [-9.8, 9.8]) {
+      // 树干
+      cyl(root, trunkMat, 0.35, 0.45, 2.5, x, 0, z, 6);
+      // 纤细高挺的锥形丝柏树冠
+      const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.65, 11.5, 8), cypressMat);
+      canopy.position.set(x, 7.5, z);
+      root.add(canopy);
+      // 树下圆形大理石树池
+      cyl(root, marble, 2.2, 2.4, 0.3, x, 0, z, 10);
+    }
+  }
 
   const tomb = new THREE.Mesh(chamferPrism(56, 33, 11), marble);
   tomb.position.y = 5.4;
@@ -1683,76 +1830,104 @@ export function createChrist(kit: SurfaceKit) {
     root.add(palmGroup);
   }
 
-  // 7. 头部雕塑与庄严面庞 (y = 35.0 ~ 39.5m)
-  const head = new THREE.Mesh(new THREE.SphereGeometry(2.1, 24, 20), soap);
-  head.scale.set(0.9, 1.15, 0.85);
-  head.position.set(0, 36.9, 0.35);
+  // 7. 头部雕塑与庄严面庞 (y = 35.0 ~ 39.0m)
+  // 依据真实救世基督像：去除突兀的头盔式发帽与浮空光环，采用纯粹一体的 Art Deco 中分雕塑长发与端庄五官
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1.95, 24, 20), soap);
+  head.scale.set(0.85, 1.15, 0.90);
+  head.position.set(0, 36.8, 0.25);
   root.add(head);
 
-  // 披肩长发帽与垂肩长发
-  const hairCap = new THREE.Mesh(
-    new THREE.SphereGeometry(2.22, 22, 16, 0, Math.PI * 2, 0, Math.PI * 0.65),
-    soapDark,
-  );
-  hairCap.scale.set(1.02, 1.02, 0.98);
-  hairCap.position.set(0, 37.5, 0.18);
-  root.add(hairCap);
+  // 头部后脑与发冠雕塑体量（与面部同色材质，自然紧贴颅骨，绝非宽大头盔）
+  const hairCrown = new THREE.Mesh(new THREE.SphereGeometry(1.92, 22, 16), soap);
+  hairCrown.scale.set(0.86, 1.05, 0.92);
+  hairCrown.position.set(0, 37.15, 0.12);
+  root.add(hairCrown);
+
+  // 经典 Art Deco 中分发线（自前额中央直通后脑勺的雅致微凹刻线）
+  const partCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 38.15, 1.35),
+    new THREE.Vector3(0, 38.95, 0.45),
+    new THREE.Vector3(0, 38.65, -0.65),
+    new THREE.Vector3(0, 37.2, -1.25),
+  ]);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(partCurve, 16, 0.08, 6, false), shadow));
+
+  // 后颈波浪发体（向后下顺滑收束于颈背）
+  const napeHair = new THREE.Mesh(new THREE.CapsuleGeometry(0.72, 1.8, 8, 10), soap);
+  napeHair.rotation.x = 0.2;
+  napeHair.position.set(0, 35.6, -0.75);
+  root.add(napeHair);
 
   for (const side of [-1, 1]) {
-    // 垂向两侧肩头的浓密长发缕
-    const lock = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 3.2, 8, 12), soapDark);
-    lock.position.set(side * 1.62, 35.6, 0.42);
-    lock.rotation.z = side * -0.06;
-    root.add(lock);
+    // 太阳穴侧发波浪（自然服帖于颅侧，修饰面颊轮廓）
+    const templeWave = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 1.5, 6, 10), soap);
+    templeWave.rotation.set(-0.2, 0, side * -0.15);
+    templeWave.position.set(side * 1.35, 37.4, 0.55);
+    root.add(templeWave);
 
-    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.36, 10, 8), soap);
-    ear.scale.set(0.7, 1.0, 0.5);
-    ear.position.set(side * 1.72, 36.9, 0.32);
+    // 垂向两侧肩头的波浪长发绺（前绺与后绺自然垂落于锁骨与肩部）
+    const frontLock = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 2.6, 6, 10), soap);
+    frontLock.rotation.z = side * -0.05;
+    frontLock.position.set(side * 1.48, 35.3, 0.52);
+    root.add(frontLock);
+
+    const backLock = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 2.8, 6, 10), soap);
+    backLock.rotation.z = side * -0.04;
+    backLock.position.set(side * 1.42, 35.4, -0.05);
+    root.add(backLock);
+
+    // 发绺间的阴影折线
+    const lockGroove = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side * 1.42, 37.2, 0.4),
+      new THREE.Vector3(side * 1.52, 35.5, 0.35),
+      new THREE.Vector3(side * 1.58, 34.2, 0.3),
+    ]);
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(lockGroove, 10, 0.06, 5, false), shadow));
+
+    // 耳廓（半隐于侧发间）
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), soap);
+    ear.scale.set(0.55, 1.0, 0.45);
+    ear.position.set(side * 1.55, 36.8, 0.25);
     root.add(ear);
 
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), dark);
-    eye.scale.set(1.3, 0.6, 0.45);
-    eye.position.set(side * 0.62, 37.15, 1.96);
+    // 深邃目光与眉弓
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), dark);
+    eye.scale.set(1.25, 0.58, 0.4);
+    eye.position.set(side * 0.55, 37.05, 1.76);
     root.add(eye);
 
     const browCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * 1.05, 37.5, 1.75),
-      new THREE.Vector3(side * 0.65, 37.58, 1.92),
-      new THREE.Vector3(side * 0.3, 37.5, 1.96),
+      new THREE.Vector3(side * 0.95, 37.35, 1.55),
+      new THREE.Vector3(side * 0.55, 37.42, 1.72),
+      new THREE.Vector3(side * 0.22, 37.38, 1.78),
     ]);
-    root.add(new THREE.Mesh(new THREE.TubeGeometry(browCurve, 8, 0.11, 6, false), soapDark));
+    root.add(new THREE.Mesh(new THREE.TubeGeometry(browCurve, 8, 0.08, 6, false), soapDark));
   }
 
   // Art Deco 挺拔山根鼻梁
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.05, 7), soap);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1.05, 7), soap);
   nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, 36.75, 2.1);
+  nose.position.set(0, 36.65, 1.95);
   root.add(nose);
 
-  // 胡须与方正方颌胡子
-  const moustache = new THREE.Mesh(new THREE.SphereGeometry(0.46, 12, 8), soapDark);
-  moustache.scale.set(1.3, 0.36, 0.36);
-  moustache.position.set(0, 36.3, 1.92);
+  // 庄重修整胡须与方正方颌胡子
+  const moustache = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), soapDark);
+  moustache.scale.set(1.25, 0.32, 0.32);
+  moustache.position.set(0, 36.2, 1.82);
   root.add(moustache);
 
-  const beard = new THREE.Mesh(new THREE.ConeGeometry(0.92, 2.3, 10), soapDark);
+  const beard = new THREE.Mesh(new THREE.ConeGeometry(0.85, 2.1, 8), soapDark);
   beard.rotation.z = Math.PI;
-  beard.scale.set(0.92, 1.0, 0.65);
-  beard.position.set(0, 35.2, 1.35);
+  beard.scale.set(0.9, 1.0, 0.6);
+  beard.position.set(0, 35.15, 1.25);
   root.add(beard);
 
   const mouthCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.38, 36.1, 1.9),
-    new THREE.Vector3(0, 36.05, 1.98),
-    new THREE.Vector3(0.38, 36.1, 1.9),
+    new THREE.Vector3(-0.35, 36.0, 1.78),
+    new THREE.Vector3(0, 35.95, 1.86),
+    new THREE.Vector3(0.35, 36.0, 1.78),
   ]);
-  root.add(new THREE.Mesh(new THREE.TubeGeometry(mouthCurve, 8, 0.06, 5, false), shadow));
-
-  // 头顶经典薄光环/芒带
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.08, 6, 24), soapDark);
-  halo.rotation.x = Math.PI / 2;
-  halo.position.set(0, 39.1, 0.25);
-  root.add(halo);
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(mouthCurve, 8, 0.05, 5, false), shadow));
 
   return root;
 }

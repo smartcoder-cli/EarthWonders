@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import tellux from "tellux";
+import { HotspotManager } from "./hotspotManager";
 import { LANDMARK_BUILDERS } from "./landmarks";
+import { SolarController, DroneOrbitController, type SolarPreset } from "./solarAndOrbit";
 import { loadSurfaceKit, type SurfaceKit } from "./surfaces";
 import { installTileProvider } from "./tileProvider";
 import { SPACE_VIEW, WONDERS, type Wonder } from "./wonders";
@@ -176,6 +178,60 @@ let flightGeneration = 0;
 const landmarkGroups = new Map<string, THREE.Group>();
 let landmarksRoot: THREE.Group | null = null;
 
+let hotspotManager: HotspotManager | null = null;
+let solarController: SolarController | null = null;
+let droneOrbitController: DroneOrbitController | null = null;
+let activePivotPos: THREE.Vector3 | null = null;
+let currentWonderObj: Wonder | null = null;
+
+const btnSolarRealtime = document.getElementById("btn-solar-realtime") as HTMLButtonElement | null;
+const btnSolarDawn = document.getElementById("btn-solar-dawn") as HTMLButtonElement | null;
+const btnSolarNoon = document.getElementById("btn-solar-noon") as HTMLButtonElement | null;
+const btnSolarGolden = document.getElementById("btn-solar-golden") as HTMLButtonElement | null;
+const btnSolarNight = document.getElementById("btn-solar-night") as HTMLButtonElement | null;
+const solarTimeLabel = document.getElementById("solar-time-label");
+const solarSlider = document.getElementById("solar-slider") as HTMLInputElement | null;
+const btnTimelapse = document.getElementById("btn-timelapse") as HTMLButtonElement | null;
+const btnDroneOrbit = document.getElementById("btn-drone-orbit") as HTMLButtonElement | null;
+const hotspotLayer = document.getElementById("hotspot-layer") as HTMLElement | null;
+const hotspotCard = document.getElementById("hotspot-card") as HTMLElement | null;
+
+function formatHour(hour: number): string {
+  const h = Math.floor(hour) % 24;
+  const m = Math.floor((hour - Math.floor(hour)) * 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function updatePresetButtons(activePreset?: SolarPreset) {
+  const buttons: Array<[HTMLButtonElement | null, SolarPreset]> = [
+    [btnSolarRealtime, "realtime"],
+    [btnSolarDawn, "dawn"],
+    [btnSolarNoon, "noon"],
+    [btnSolarGolden, "golden"],
+    [btnSolarNight, "night"],
+  ];
+  for (const [btn, preset] of buttons) {
+    if (btn) {
+      if (preset === activePreset) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    }
+  }
+}
+
+function updateDroneBtn() {
+  if (!btnDroneOrbit) return;
+  if (droneOrbitController?.isOrbiting) {
+    btnDroneOrbit.classList.add("active");
+    btnDroneOrbit.innerHTML = `<span class="orbit-icon">⏹</span><span class="orbit-text">停止环绕</span>`;
+  } else {
+    btnDroneOrbit.classList.remove("active");
+    btnDroneOrbit.innerHTML = `<span class="orbit-icon">🛸</span><span class="orbit-text">航拍环绕</span>`;
+  }
+}
+
 function setFlying(next: boolean) {
   flying = next;
   if (btnTour) btnTour.disabled = next && !touring;
@@ -268,6 +324,12 @@ function flyToSpace(): Promise<void> {
   if (!current) return Promise.resolve();
   const flight = ++flightGeneration;
   selectedId = null;
+  currentWonderObj = null;
+  activePivotPos = null;
+  droneOrbitController?.stop();
+  updateDroneBtn();
+  solarController?.setWonder(null);
+  hotspotManager?.setActiveWonder(null);
   renderList();
   detailEl?.classList.add("hidden");
   setStatus("返回太空视角");
@@ -343,11 +405,13 @@ function flyToWonder(wonder: Wonder): Promise<void> {
               targetMat,
             );
             const targetPos = new THREE.Vector3().setFromMatrixPosition(targetMat);
+            activePivotPos = targetPos.clone();
             const rawControls = (current.controls as { raw?: { pivotPoint?: THREE.Vector3; pivotMesh?: THREE.Object3D } })?.raw ?? (current.controls as { pivotPoint?: THREE.Vector3; pivotMesh?: THREE.Object3D });
             if (rawControls?.pivotPoint) {
               rawControls.pivotPoint.copy(targetPos);
               rawControls.pivotMesh?.position.copy(targetPos);
             }
+            hotspotManager?.setActiveWonder(wonder);
           } catch {
             // 忽略非致命同步异常
           }
@@ -375,6 +439,12 @@ async function visit(wonder: Wonder) {
   if (selectedId === wonder.id && !touring) return;
   touring = false;
   tourGeneration += 1;
+  currentWonderObj = wonder;
+  droneOrbitController?.stop();
+  updateDroneBtn();
+  solarController?.setWonder(wonder);
+  updatePresetButtons("noon");
+  hotspotManager?.setActiveWonder(null);
   if (btnTour) btnTour.classList.remove("active");
   showDetail(wonder);
   setStatus(`飞向 ${wonder.nameZh}`);
@@ -387,6 +457,9 @@ async function visit(wonder: Wonder) {
 
 async function runTour() {
   if (!viewer || flying) return;
+  droneOrbitController?.stop();
+  updateDroneBtn();
+  solarController?.stopTimelapse();
   touring = true;
   const generation = ++tourGeneration;
   if (btnTour) {
@@ -419,6 +492,8 @@ async function runTour() {
 function stopTour() {
   touring = false;
   tourGeneration += 1;
+  droneOrbitController?.stop();
+  updateDroneBtn();
   if (btnTour) {
     btnTour.classList.remove("active");
     btnTour.textContent = "环球巡礼";
@@ -656,6 +731,104 @@ async function boot() {
       void flyToSpace();
     }
     if (event.key.toLowerCase() === "t") void runTour();
+    if (event.key.toLowerCase() === "o" && !event.ctrlKey && !event.metaKey) {
+      btnDroneOrbit?.click();
+    }
+    if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey) {
+      btnSolarRealtime?.click();
+    }
+  });
+
+  // 初始化昼夜光影控制器
+  solarController = new SolarController(current, (hour, isRealtime) => {
+    if (solarTimeLabel) {
+      solarTimeLabel.textContent = isRealtime ? `${formatHour(hour)} 实时` : formatHour(hour);
+    }
+    if (solarSlider && document.activeElement !== solarSlider) {
+      solarSlider.value = String(hour);
+    }
+  });
+
+  // 初始化无人机航拍控制器
+  droneOrbitController = new DroneOrbitController(current, () => {
+    updateDroneBtn();
+  });
+
+  // 初始化 3D 热点管理器
+  if (hotspotLayer) {
+    hotspotManager = new HotspotManager(
+      current,
+      landmarkGroups,
+      hotspotLayer,
+      hotspotCard,
+      () => {
+        if (currentWonderObj) void flyToWonder(currentWonderObj);
+      },
+    );
+  }
+
+  // 绑定光影预设与滑块事件
+  btnSolarRealtime?.addEventListener("click", () => {
+    solarController?.setRealtime();
+    updatePresetButtons("realtime");
+    if (btnTimelapse) {
+      btnTimelapse.classList.remove("active");
+      btnTimelapse.textContent = "▶ 延时";
+    }
+    setStatus("已恢复当前现实正常时间 (实时光影)");
+  });
+  btnSolarDawn?.addEventListener("click", () => {
+    solarController?.setPreset("dawn");
+    updatePresetButtons("dawn");
+  });
+  btnSolarNoon?.addEventListener("click", () => {
+    solarController?.setPreset("noon");
+    updatePresetButtons("noon");
+  });
+  btnSolarGolden?.addEventListener("click", () => {
+    solarController?.setPreset("golden");
+    updatePresetButtons("golden");
+  });
+  btnSolarNight?.addEventListener("click", () => {
+    solarController?.setPreset("night");
+    updatePresetButtons("night");
+  });
+
+  solarSlider?.addEventListener("input", () => {
+    const hour = parseFloat(solarSlider.value);
+    solarController?.setLocalSolarHour(hour);
+    updatePresetButtons(undefined);
+  });
+
+  btnTimelapse?.addEventListener("click", () => {
+    const playing = solarController?.toggleTimelapse();
+    if (btnTimelapse) {
+      if (playing) {
+        btnTimelapse.classList.add("active");
+        btnTimelapse.textContent = "⏸ 暂停";
+      } else {
+        btnTimelapse.classList.remove("active");
+        btnTimelapse.textContent = "▶ 延时";
+      }
+    }
+  });
+
+  btnDroneOrbit?.addEventListener("click", () => {
+    if (droneOrbitController?.isOrbiting) {
+      droneOrbitController.stop();
+    } else {
+      if (flying) {
+        setStatus("正在飞行中，飞抵后即可开启航拍环绕");
+        return;
+      }
+      if (!currentWonderObj || !activePivotPos) {
+        setStatus("请先选择一个奇迹，再开启航拍环绕");
+        return;
+      }
+      droneOrbitController?.start(currentWonderObj, activePivotPos);
+      hotspotManager?.closeCard();
+    }
+    updateDroneBtn();
   });
 
   window.addEventListener("pagehide", () => {
@@ -671,9 +844,26 @@ async function boot() {
 
   placeLandmarks(current, kit);
 
+  // 启动高帧率连续更新循环（驱动航拍与 3D 热点投影）
+  let lastFrameTime = performance.now();
+  const renderLoop = (now: number) => {
+    const dt = (now - lastFrameTime) / 1000;
+    lastFrameTime = now;
+
+    if (droneOrbitController?.isOrbiting) {
+      droneOrbitController.update(dt);
+      updateDroneBtn();
+    }
+
+    hotspotManager?.update();
+
+    requestAnimationFrame(renderLoop);
+  };
+  requestAnimationFrame(renderLoop);
+
   // Restore idle hint only if the user hasn't already started a flight, tour, or selection
   if (!flying && !touring && selectedId === null) {
-    setStatus("拖动地球 · 点击列表或按 1–8 飞向奇迹");
+    setStatus("拖动地球 · 点击列表或按 1–8 飞向奇迹 · O 键航拍环绕");
   }
 }
 
