@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Tellux 地球八大奇迹演示：新世界七大奇迹 + 吉萨金字塔",
+  "description": "Tellux 地球十七大奇迹与现代超级工程：古代文明遗迹、跨海大桥、射电望远镜与先锋建筑群三维沉浸式全景",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

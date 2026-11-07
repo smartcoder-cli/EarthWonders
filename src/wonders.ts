@@ -1,6 +1,9 @@
+export type WonderCategory = "ancient" | "megastructure" | "skyline" | "infrastructure";
+
 export type Wonder = {
   id: string
   index: number
+  category: WonderCategory
   nameZh: string
   nameEn: string
   place: string
@@ -21,16 +24,27 @@ export type Wonder = {
   /** 模型朝向（度）。缺省 0 表示当地北。 */
   modelHeading?: number
   blurb: string
+  specs?: Record<string, string>
+  hasInspection?: boolean
 };
 
+export const CATEGORIES = [
+  { id: "all", labelZh: "全部", icon: "🌐" },
+  { id: "ancient", labelZh: "古代文明", icon: "🏛️" },
+  { id: "megastructure", labelZh: "现代巨构", icon: "🚀" },
+  { id: "skyline", labelZh: "先锋地标", icon: "🏙️" },
+  { id: "infrastructure", labelZh: "跨海工程", icon: "🌉" },
+] as const;
+
 /**
- * 新世界七大奇迹（2007）+ 吉萨大金字塔（荣誉成员）。
+ * 新世界七大奇迹（2007）+ 吉萨大金字塔（荣誉成员）+ 现代工程巨构与摩天都市地标。
  * 坐标为各遗址核心点的公开近似值，示意用。
  */
 export const WONDERS: Wonder[] = [
   {
     id: "giza",
     index: 1,
+    category: "ancient",
     nameZh: "吉萨金字塔",
     nameEn: "Great Pyramid of Giza",
     place: "埃及 · 开罗",
@@ -46,10 +60,17 @@ export const WONDERS: Wonder[] = [
     lookHeight: 55,
     blurb:
       "古代世界七大奇迹中唯一仍屹立的一座。胡夫金字塔底边约 230 米，原高约 146 米，是人类早期大规模精确石作的代表。",
+    specs: {
+      "原初高度": "146.6 米",
+      "现存高度": "约 138.8 米",
+      "底边边长": "约 230.4 米",
+      "石块数量": "约 230 万块",
+    },
   },
   {
     id: "wall",
     index: 2,
+    category: "ancient",
     nameZh: "中国长城",
     nameEn: "Great Wall of China",
     place: "中国 · 北京八达岭",
@@ -66,10 +87,16 @@ export const WONDERS: Wonder[] = [
     lookHeight: 16,
     blurb:
       "跨越山脉的防御工程体系，并非单墙一道。八达岭是明长城最广为人知的段落之一，也是从地球尺度看中国北方的醒目标记。",
+    specs: {
+      "八达岭段": "约 12 公里",
+      "主要建材": "花岗岩条石、青砖",
+      "建筑形态": "关隘、敌楼、烽火台网格",
+    },
   },
   {
     id: "petra",
     index: 3,
+    category: "ancient",
     nameZh: "佩特拉",
     nameEn: "Petra",
     place: "约旦 · 马安省",
@@ -85,10 +112,16 @@ export const WONDERS: Wonder[] = [
     lookHeight: 24,
     blurb:
       "纳巴泰人在玫瑰色砂岩峡谷中开凿的都城。宝库（Al-Khazneh）的立面从石壁中雕出，是沙漠商路文明的象征。",
+    specs: {
+      "宝库高度": "约 39.5 米",
+      "地质风貌": "玫瑰色砂岩峡谷",
+      "工程特点": "整座山岩立面一次性凿成",
+    },
   },
   {
     id: "colosseum",
     index: 4,
+    category: "ancient",
     nameZh: "罗马斗兽场",
     nameEn: "Colosseum",
     place: "意大利 · 罗马",
@@ -99,15 +132,26 @@ export const WONDERS: Wonder[] = [
     flyDistance: 520,
     flyHeading: -48,
     flyPitch: -32,
+    modelHeading: -25,
     flyDuration: 4.2,
     labelHeight: 56,
     lookHeight: 22,
     blurb:
-      "弗拉维圆形剧场可容纳数万人。椭圆平面、分层拱券与混凝土技术，定义了此后西方公共建筑的原型。",
+      "弗拉维圆形剧场可容纳数万人。椭圆平面、分层拱券与混凝土技术，定义了此后西方公共建筑的原型。北立面保留了壮丽完整的四层拱券外墙，南侧残缺面展露内部梯级看台与地下猛兽角斗地宫。",
+    specs: {
+      "外圈长轴": "188 米",
+      "短轴": "156 米",
+      "外墙高度": "48.5 米 (4层拱券)",
+      "容纳观众": "约 5~8 万人",
+      "建筑朝向": "长轴沿西北-东南对齐罗马古城中轴",
+      "立面特色": "北侧四层完整外墙 + 南侧两层残缺看台",
+    },
+    hasInspection: true,
   },
   {
     id: "chichen",
     index: 5,
+    category: "ancient",
     nameZh: "奇琴伊察",
     nameEn: "Chichen Itza",
     place: "墨西哥 · 尤卡坦",
@@ -123,10 +167,16 @@ export const WONDERS: Wonder[] = [
     lookHeight: 22,
     blurb:
       "玛雅文明后古典期的仪式中心。库库尔坎金字塔在春分、秋分时，北梯阴影会形成蛇形光带，把天文与建筑绑在一起。",
+    specs: {
+      "金字塔台阶": "四面各91阶+顶阶=365阶",
+      "基底边长": "55.3 米",
+      "主体高度": "约 30 米",
+    },
   },
   {
     id: "machu",
     index: 6,
+    category: "ancient",
     nameZh: "马丘比丘",
     nameEn: "Machu Picchu",
     place: "秘鲁 · 库斯科大区",
@@ -142,10 +192,16 @@ export const WONDERS: Wonder[] = [
     lookHeight: 28,
     blurb:
       "安第斯山脉云雾中的印加遗址。梯田、太阳神庙与精密石砌，展示了高海拔农业与礼仪空间如何叠在同一座山脊上。",
+    specs: {
+      "遗址海拔": "2,430 米",
+      "地理环境": "乌鲁班巴河峡谷鞍部",
+      "石作特点": "无灰浆干垒巨石榫卯",
+    },
   },
   {
     id: "taj",
     index: 7,
+    category: "ancient",
     nameZh: "泰姬陵",
     nameEn: "Taj Mahal",
     place: "印度 · 阿格拉",
@@ -161,10 +217,17 @@ export const WONDERS: Wonder[] = [
     lookHeight: 28,
     blurb:
       "莫卧儿皇帝沙贾汗为穆姆塔兹·马哈尔修建的白色大理石陵墓。四座宣礼塔与中央穹顶构成严格对称的河畔园林。",
+    specs: {
+      "总高度": "约 73 米",
+      "基座尺寸": "95 米 × 95 米",
+      "主体材质": "纯白马克拉纳大理石",
+      "布局特点": "严格中轴对称与四分园水系",
+    },
   },
   {
     id: "christ",
     index: 8,
+    category: "ancient",
     nameZh: "基督像",
     nameEn: "Christ the Redeemer",
     place: "巴西 · 里约热内卢",
@@ -182,6 +245,272 @@ export const WONDERS: Wonder[] = [
     modelHeading: 90,
     blurb:
       "科尔科瓦多山顶的钢筋混凝土雕像，高约 30 米（不含基座）。张开的双臂成为里约港湾与现代城市天际线的标志。",
+    specs: {
+      "雕像净高": "30 米 (基座 8 米)",
+      "臂展跨度": "28 米",
+      "所在山峰": "科尔科瓦多山 (海拔 710 米)",
+      "表层工艺": "数百万枚皂石马赛克小三角片",
+    },
+  },
+  {
+    id: "pentagon",
+    index: 9,
+    category: "megastructure",
+    nameZh: "五角大楼",
+    nameEn: "The Pentagon",
+    place: "美国 · 弗吉尼亚州阿灵顿",
+    completed: "1943 年",
+    color: "#4f8cf6",
+    longitude: -77.0563,
+    latitude: 38.8719,
+    flyDistance: 680,
+    flyHeading: -45,
+    flyPitch: -28,
+    flyDuration: 4.8,
+    labelHeight: 45,
+    lookHeight: 15,
+    modelHeading: -18,
+    blurb:
+      "美国国防部所在地，世界上占地最广的单体办公建筑之一。正五边形轮廓、A–E 五环同心回廊，内部走廊总长达 28 公里。",
+    specs: {
+      "外围边长": "约 281 米",
+      "中庭边长": "约 110 米",
+      "地上建筑高度": "23.5 米 (5层)",
+      "环形结构": "A–E 5 环同心 + 10 条放射走廊",
+      "建筑面积": "约 60 万平方米",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "fast",
+    index: 10,
+    category: "megastructure",
+    nameZh: "中国天眼 FAST",
+    nameEn: "FAST Radio Telescope",
+    place: "中国 · 贵州平塘",
+    completed: "2016 年",
+    color: "#38bdf8",
+    longitude: 106.8566,
+    latitude: 25.6529,
+    flyDistance: 880,
+    flyHeading: 35,
+    flyPitch: -32,
+    flyDuration: 4.5,
+    labelHeight: 180,
+    lookHeight: 40,
+    blurb:
+      "500 米口径球面射电望远镜（FAST），世界最大单口径、最灵敏的射电望远镜。依喀斯特天然洼坑而建，索网结构驱动反射面主动变位。",
+    specs: {
+      "反射面口径": "500 米 (球面)",
+      "有效工作口径": "300 米 (抛物面)",
+      "圈梁环高": "距离坑底约 100 米",
+      "馈源舱重量": "约 30 吨 (6塔钢索柔性悬挂)",
+      "地质依托": "天然喀斯特溶蚀洼坑",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "burj",
+    index: 11,
+    category: "skyline",
+    nameZh: "哈利法塔",
+    nameEn: "Burj Khalifa",
+    place: "阿联酋 · 迪拜",
+    completed: "2010 年",
+    color: "#a855f7",
+    longitude: 55.2744,
+    latitude: 25.1972,
+    flyDistance: 1300,
+    flyHeading: 120,
+    flyPitch: -22,
+    flyDuration: 5.0,
+    labelHeight: 850,
+    lookHeight: 350,
+    blurb:
+      "高 828 米，共 163 层，当今世界最高人造建筑。采用伊斯兰花卉沙漠之花灵感的 Y 形三叶式退台布局，具备极强的气动抗风性能。",
+    specs: {
+      "建筑总高": "828 米",
+      "地上层数": "163 层",
+      "平面形态": "六边形中央核心筒 + Y 型三翼",
+      "抗风设计": "螺旋上升 27 级阶梯退台收分",
+      "外立面": "高反射铝板与隔热玻璃幕墙",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "apple",
+    index: 12,
+    category: "megastructure",
+    nameZh: "苹果总部 Apple Park",
+    nameEn: "Apple Park (Spaceship)",
+    place: "美国 · 加州库比蒂诺",
+    completed: "2017 年",
+    color: "#06b6d4",
+    longitude: -122.0090,
+    latitude: 37.3346,
+    flyDistance: 1100,
+    flyHeading: 215,
+    flyPitch: -32,
+    flyDuration: 4.8,
+    labelHeight: 180,
+    lookHeight: 45,
+    blurb:
+      "诺曼·福斯特与乔布斯共同构想的环形「飞船」超级园区。直径 461 米，全周覆盖世界最大曲面安全玻璃幕墙与 17 兆瓦屋顶光伏，100% 采用可再生能源运行。",
+    specs: {
+      "建筑外径": "约 461 米 (周长 1.6 公里)",
+      "建筑内径": "约 354 米 (中庭近 30 英亩)",
+      "建筑高度": "22 米 (地上 4 层)",
+      "立面特色": "全球最大面积连续定制曲面玻璃幕墙",
+      "屋顶光伏": "17 兆瓦太阳能电池板 (全球最大企业屋顶光伏之一)",
+      "独立地标": "史蒂夫·乔布斯剧院 (无柱悬浮 80 吨碳纤维圆盘屋顶)",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "sydney",
+    index: 13,
+    category: "skyline",
+    nameZh: "悉尼歌剧院",
+    nameEn: "Sydney Opera House",
+    place: "澳大利亚 · 悉尼便利朗角",
+    completed: "1973 年",
+    color: "#f59e0b",
+    longitude: 151.2153,
+    latitude: -33.8568,
+    flyDistance: 550,
+    flyHeading: 335,
+    flyPitch: -26,
+    flyDuration: 4.8,
+    labelHeight: 80,
+    lookHeight: 25,
+    modelHeading: 15,
+    blurb:
+      "约恩·乌松设计的 20 世纪最具辨识度的表现主义建筑杰作。标志性的预制混凝土贝壳风帆屋顶全部取材于同一球面几何，伫立于悉尼港半岛尽头。",
+    specs: {
+      "主壳体总数": "两组主厅共 8 组贝壳风帆 + 餐厅壳体",
+      "几何解构": "全部壳顶曲率均源自同一个 75 米半径母球",
+      "外立面贴片": "105.6 万块瑞典产自洁微光瓷砖",
+      "台基基座": "长 180 米的花岗岩纪念碑式台基",
+      "玻璃幕墙": "特制双层琥珀色几何悬挑玻璃",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "globalcenter",
+    index: 14,
+    category: "megastructure",
+    nameZh: "成都新世纪环球中心",
+    nameEn: "Chengdu Global Center",
+    place: "中国 · 四川成都高新区",
+    completed: "2013 年",
+    color: "#38bdf8",
+    longitude: 104.0612,
+    latitude: 30.5703,
+    flyDistance: 1180,
+    flyHeading: 282,
+    flyPitch: -26,
+    flyDuration: 4.8,
+    labelHeight: 160,
+    lookHeight: 60,
+    modelHeading: 12.5,
+    blurb:
+      "世界第一大单体建筑，建筑面积达 176 万平方米。严密契合天府大道 12.5° 城市轴线，东西长 500 米、南北宽 400 米，以「海鸥展翅、波浪起伏」为灵感构筑超巨型钢构曲面屋顶，内含室内天堂岛无柱大跨度晶莹玻璃苍穹与人造海洋。",
+    specs: {
+      "建筑占地": "东西长 500 米 × 南北宽 400 米",
+      "建筑总高": "约 100 米 (苍穹最高点 112 米)",
+      "建筑总面积": "约 176 万平方米 (世界第一大单体建筑)",
+      "朝向轴线": "精准对齐天府大道 12.5° 城市经纬网",
+      "中央穹顶": "天堂岛无柱空间网架大跨度透明天幕",
+      "内部中庭": "天堂岛海洋乐园 (人造海浪池与室内真沙海滩)",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "hzmb",
+    index: 15,
+    category: "infrastructure",
+    nameZh: "港珠澳大桥 · 人工岛",
+    nameEn: "Hong Kong-Zhuhai-Macao Bridge",
+    place: "中国 · 粤港澳大湾区伶仃洋",
+    completed: "2018 年",
+    color: "#06b6d4",
+    longitude: 113.8058,
+    latitude: 22.2858,
+    flyDistance: 820,
+    flyHeading: 160,
+    flyPitch: -22,
+    flyDuration: 4.8,
+    labelHeight: 80,
+    lookHeight: 20,
+    modelHeading: 105,
+    blurb:
+      "世界最长跨海大桥与隧道集群超级工程，全长 55 公里。外海深水人工岛呈优美流线蚝贝造型，实现 6.7 公里世界最深水下沉管隧道与跨海桥梁的平滑转换。",
+    specs: {
+      "工程总长": "55 公里跨海集群工程",
+      "人工岛形态": "海中蚝贝形东人工岛 (长约 625 米)",
+      "海底隧道": "40 米深埋沉管隧道 (长 6.7 公里)",
+      "桥梁主塔": "「中国结」造型双塔斜拉桥",
+      "设计寿命": "120 年抗 16 级台风与 8 级地震",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "goldengate",
+    index: 16,
+    category: "infrastructure",
+    nameZh: "旧金山金门大桥",
+    nameEn: "Golden Gate Bridge",
+    place: "美国 · 加州旧金山金门海峡",
+    completed: "1937 年",
+    color: "#ef4444",
+    longitude: -122.4783,
+    latitude: 37.8199,
+    flyDistance: 1600,
+    flyHeading: 215,
+    flyPitch: -25,
+    flyDuration: 4.8,
+    labelHeight: 180,
+    lookHeight: 65,
+    modelHeading: -9,
+    blurb:
+      "近代桥梁工程经典名片与装饰艺术（Art Deco）建筑典范。跨越 2.7 公里的金门海峡，以 227 米高的双阶梯钢塔、雄浑的主悬索与标志性的「国际橘」涂装闻名世界。",
+    specs: {
+      "桥梁总长": "2,737 米 (主跨 1,280 米)",
+      "桥塔高度": "水面以上 227 米 (装饰艺术阶梯收分)",
+      "主缆钢丝": "直径 0.91 米 (内含 12.9 万公里钢丝)",
+      "桥面净空": "海面以上约 67 米",
+      "标志涂装": "耐盐雾防锈「国际橘 (International Orange)」",
+    },
+    hasInspection: true,
+  },
+  {
+    id: "svalbard",
+    index: 17,
+    category: "megastructure",
+    nameZh: "斯瓦尔巴全球种子库",
+    nameEn: "Svalbard Global Seed Vault",
+    place: "挪威 · 斯瓦尔巴群岛朗伊尔城",
+    completed: "2008 年",
+    color: "#22d3ee",
+    longitude: 15.4913,
+    latitude: 78.2380,
+    flyDistance: 80,
+    flyHeading: 198,
+    flyPitch: -16,
+    flyDuration: 4.8,
+    labelHeight: 25,
+    lookHeight: 8,
+    modelHeading: 45,
+    blurb:
+      "深嵌于北极永久冻土与砂岩深处的全球植物多样性「末日方舟」。极简混凝土棱柱入口破雪而出，屋顶覆盖永久回响极光水晶棱镜艺术装置，在北极极夜中晶莹发光。",
+    specs: {
+      "地理位置": "北纬 78° 北极圈永久冻土层",
+      "存储深度": "山体内深入 120 米砂岩深处",
+      "储藏温度": "恒温 -18℃ (即使断电仍保冻数十年)",
+      "设计容量": "可容纳 450 万份作物种子样本",
+      "入口艺术": "「永久回响」高反射棱镜与光纤艺术屋顶",
+    },
+    hasInspection: true,
   },
 ];
 

@@ -1,0 +1,104 @@
+{
+  "giza": {
+    "image": "/photos/giza.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Great_Pyramid_of_Giza.jpg",
+    "credit": "照片：kallerna / Wikimedia Commons · CC BY-SA 3.0",
+    "alt": "吉萨胡夫大金字塔实景照片"
+  },
+  "wall": {
+    "image": "/photos/wall.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Badaling_China_Great-Wall-of-China-01.jpg",
+    "credit": "照片：CEphoto, Uwe Aranas / Wikimedia Commons · CC BY-SA 3.0",
+    "alt": "八达岭长城实景照片"
+  },
+  "petra": {
+    "image": "/photos/petra.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Al_Khazneh_Petra_edit_2.jpg",
+    "credit": "照片：Graham Racher, MrPanyGoff / Wikimedia Commons · CC BY-SA 2.0",
+    "alt": "佩特拉卡兹尼神殿宝库立面实景照片"
+  },
+  "colosseum": {
+    "image": "/photos/colosseum.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Colosseum_in_Rome,_Italy_-_April_2007.jpg",
+    "credit": "照片：Diliff / Wikimedia Commons · CC BY-SA 2.5",
+    "alt": "罗马斗兽场全景外观实景照片"
+  },
+  "chichen": {
+    "image": "/photos/chichen.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:El_Castillo_Stitch_2008_Edit_2.jpg",
+    "credit": "照片：Fcb981 / Wikimedia Commons · CC BY-SA 3.0",
+    "alt": "奇琴伊察库库尔坎金字塔实景照片"
+  },
+  "machu": {
+    "image": "/photos/machu.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Machu_Picchu_with_Huayna_Picchu_P%C3%A9rou_(7).jpg",
+    "credit": "照片：Pierre Andre Leclercq / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "马丘比丘与瓦伊纳比丘全景实景照片"
+  },
+  "taj": {
+    "image": "/photos/taj.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Taj_Mahal_(Edited).jpeg",
+    "credit": "照片：Yann / Jim Carter / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "泰姬陵正面中轴水系与宣礼塔实景照片"
+  },
+  "christ": {
+    "image": "/photos/christ.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Christ_the_Redeemer-(Corcovado)_front_view.jpg",
+    "credit": "照片：Artyominc / Wikimedia Commons · CC BY-SA 3.0",
+    "alt": "里约热内卢科尔科瓦多山基督像正面实景照片"
+  },
+  "pentagon": {
+    "image": "/photos/pentagon.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:The_Pentagon,_Headquarters_of_the_US_Department_of_Defense.jpg",
+    "credit": "照片：Touch Of Light / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "美国五角大楼鸟瞰实景照片"
+  },
+  "fast": {
+    "image": "/photos/fast.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:202508_FAST_(Five-hundred-meter_Aperture_Spherical_radio_Telescope).jpg",
+    "credit": "照片：SCJiang / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "中国天眼 FAST 500米口径球面射电望远镜实景照片"
+  },
+  "burj": {
+    "image": "/photos/burj.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Burj_Khalifa_(16260269606).jpg",
+    "credit": "照片：Donaldytong / Wikimedia Commons · CC BY-SA 3.0",
+    "alt": "迪拜哈利法塔全貌实景照片"
+  },
+  "apple": {
+    "image": "/photos/apple.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Aerial_view_of_Apple_Park_dllu.jpg",
+    "credit": "照片：Daniel Lu (dllu) / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "苹果总部 Apple Park 飞船环形园区鸟瞰实景照片"
+  },
+  "sydney": {
+    "image": "/photos/sydney.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Sydney_(AU),_Opera_House_--_2019_--_2994.jpg",
+    "credit": "照片：Dietmar Rabich / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "悉尼歌剧院贝壳风帆立面实景照片"
+  },
+  "globalcenter": {
+    "image": "/photos/globalcenter.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:New_Century_Global_Centre_-_panoramio.jpg",
+    "credit": "照片：Raki_Man / Wikimedia Commons · CC BY 3.0",
+    "alt": "成都新世纪环球中心实景照片"
+  },
+  "hzmb": {
+    "image": "/photos/hzmb.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Artificial_island_of_HK-Zhuhai-MO_Bridge_20180723.jpg",
+    "credit": "照片：Wpcpey / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "港珠澳大桥人工岛与沉管隧道入口俯瞰实景照片"
+  },
+  "goldengate": {
+    "image": "/photos/goldengate.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Golden_Gate_Bridge_as_seen_from_Marshall%E2%80%99s_Beach,_March_2018.jpg",
+    "credit": "照片：Frank Schulenburg / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "旧金山金门大桥国际橘双塔与悬索实景照片"
+  },
+  "svalbard": {
+    "image": "/photos/svalbard.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Longyearbyen,_Svalbard_Global_Seed_Vault.JPG",
+    "credit": "照片：Superchilum / Wikimedia Commons · CC BY-SA 4.0",
+    "alt": "斯瓦尔巴全球种子库极地入口棱柱实景照片"
+  }
+}

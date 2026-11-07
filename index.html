@@ -13,19 +13,28 @@
       <div id="viewer"></div>
 
       <header class="hud">
-        <h1>地球八大奇迹</h1>
-        <p class="sub">New 7 Wonders + Giza · Tellux 3D Earth</p>
+        <h1>地球奇迹与现代巨构</h1>
+        <p class="sub">Global Architectural Wonders & Megastructures · Tellux 3D Earth</p>
       </header>
 
       <aside class="panel">
-        <h2>巡礼</h2>
+        <div class="panel-header">
+          <h2>风貌主题</h2>
+          <div class="category-tabs" id="category-tabs" role="tablist" aria-label="建筑风貌分类">
+            <button class="cat-tab active" data-cat="all" type="button" title="查看全部地标">🌐 全部</button>
+            <button class="cat-tab" data-cat="ancient" type="button" title="古典与古代奇迹">🏛️ 古代</button>
+            <button class="cat-tab" data-cat="megastructure" type="button" title="现代工程与科研巨构">🚀 巨构</button>
+            <button class="cat-tab" data-cat="skyline" type="button" title="先锋地标与摩天都市">🏙️ 先锋</button>
+            <button class="cat-tab" data-cat="infrastructure" type="button" title="世纪跨海桥隧与人工岛工程">🌉 跨海</button>
+          </div>
+        </div>
         <div id="wonder-list" class="wonder-list"></div>
         <div class="actions">
           <button id="btn-tour" class="action" type="button">环球巡礼</button>
           <button id="btn-space" class="action" type="button">返回太空</button>
         </div>
         <p class="hint">
-          拖动旋转地球，滚轮缩放。点击标记或列表飞向遗址。底图为 ArcGIS 全球影像，无地形密钥时走椭球。
+          拖动旋转地球，滚轮缩放。点击分类胶囊快速筛选地标。底图为 ArcGIS 全球影像。
         </p>
       </aside>
 
@@ -34,6 +43,14 @@
         <h3 id="detail-title"></h3>
         <div class="en" id="detail-en"></div>
         <p id="detail-blurb"></p>
+        <div id="detail-specs" class="detail-specs hidden"></div>
+        <div id="inspection-bar" class="inspection-bar hidden">
+          <div class="inspection-title">🛠️ 工程剖析 (Pentagon3D 模式)</div>
+          <div class="inspection-actions">
+            <button id="btn-wireframe" class="inspect-btn" type="button">📐 线框网格</button>
+            <button id="btn-nightmode" class="inspect-btn" type="button">🌓 窗光夜景</button>
+          </div>
+        </div>
         <section id="photo-comparison" class="photo-comparison hidden" aria-label="模型与实景照片对比">
           <div class="comparison-heading"><span>实景对照</span><span>3D 模型 · 实际照片</span></div>
           <a id="comparison-source" href="#" target="_blank" rel="noopener noreferrer">

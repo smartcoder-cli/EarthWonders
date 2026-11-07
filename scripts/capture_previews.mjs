@@ -3,7 +3,25 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 
-const ids = ["giza", "wall", "petra", "colosseum", "chichen", "machu", "taj", "christ"];
+const ids = [
+  "giza",
+  "wall",
+  "petra",
+  "colosseum",
+  "chichen",
+  "machu",
+  "taj",
+  "christ",
+  "pentagon",
+  "fast",
+  "burj",
+  "apple",
+  "sydney",
+  "globalcenter",
+  "hzmb",
+  "goldengate",
+  "svalbard",
+];
 const outDir = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "textures", "_previews");
 mkdirSync(outDir, { recursive: true });
 

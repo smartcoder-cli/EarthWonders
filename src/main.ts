@@ -24,54 +24,128 @@ const comparisonImage = document.getElementById("comparison-image") as HTMLImage
 const comparisonSource = document.getElementById("comparison-source") as HTMLAnchorElement | null;
 const comparisonCredit = document.getElementById("comparison-credit"); 
 
-const REFERENCE_PHOTOS: Record<string, { image: string; page: string; credit: string; alt: string }> = {
+const REFERENCE_PHOTOS: Record<
+  string,
+  { image: string; fallbackImage?: string; page: string; credit: string; alt: string }
+> = {
   giza: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Great%20Pyramid%20of%20Giza.jpg",
+    image: "/photos/giza.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/a/a0/Great_Pyramid_of_Giza.jpg",
     page: "https://commons.wikimedia.org/wiki/File:Great_Pyramid_of_Giza.jpg",
     credit: "照片：kallerna / Wikimedia Commons · CC BY-SA 3.0",
-    alt: "吉萨金字塔实景照片",
+    alt: "吉萨胡夫大金字塔实景照片",
   },
   wall: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Badaling%20China%20Great-Wall-of-China-01.jpg",
+    image: "/photos/wall.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/5/50/Badaling_China_Great-Wall-of-China-01.jpg",
     page: "https://commons.wikimedia.org/wiki/File:Badaling_China_Great-Wall-of-China-01.jpg",
     credit: "照片：CEphoto, Uwe Aranas / Wikimedia Commons · CC BY-SA 3.0",
     alt: "八达岭长城实景照片",
   },
   petra: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Petra.%20Front%20view%20of%20Temple%20of%20el-Khazneh%20LOC%20matpc.06878.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Petra._Front_view_of_Temple_of_el-Khazneh_LOC_matpc.06878.jpg",
-    credit: "照片：美国国会图书馆 Matson Collection / Wikimedia Commons（公有领域）",
-    alt: "佩特拉宝库正面历史实景照片",
+    image: "/photos/petra.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/6/62/Al_Khazneh_Petra_edit_2.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Al_Khazneh_Petra_edit_2.jpg",
+    credit: "照片：Graham Racher, MrPanyGoff / Wikimedia Commons · CC BY-SA 2.0",
+    alt: "佩特拉卡兹尼神殿宝库立面实景照片",
   },
   colosseum: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Colosseum%20-%20exterior.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Colosseum_-_exterior.jpg",
-    credit: "照片：Wikimedia Commons · Colosseum - exterior.jpg",
-    alt: "罗马斗兽场外观实景照片",
+    image: "/photos/colosseum.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/5/53/Colosseum_in_Rome%2C_Italy_-_April_2007.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Colosseum_in_Rome,_Italy_-_April_2007.jpg",
+    credit: "照片：Diliff / Wikimedia Commons · CC BY-SA 2.5",
+    alt: "罗马斗兽场全景外观实景照片",
   },
   chichen: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/El%20Castillo%2C%20Chich%C3%A9n%20Itz%C3%A1.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:El_Castillo,_Chich%C3%A9n_Itz%C3%A1.jpg",
-    credit: "照片：Jaakko Sakari Reinikainen / Wikimedia Commons",
+    image: "/photos/chichen.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/4/4d/El_Castillo_Stitch_2008_Edit_2.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:El_Castillo_Stitch_2008_Edit_2.jpg",
+    credit: "照片：Fcb981 / Wikimedia Commons · CC BY-SA 3.0",
     alt: "奇琴伊察库库尔坎金字塔实景照片",
   },
   machu: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Machu%20Picchu%20with%20Huayna%20Picchu%20P%C3%A9rou%20%287%29.jpg",
+    image: "/photos/machu.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/2/21/Machu_Picchu_with_Huayna_Picchu_P%C3%A9rou_%287%29.jpg",
     page: "https://commons.wikimedia.org/wiki/File:Machu_Picchu_with_Huayna_Picchu_P%C3%A9rou_(7).jpg",
-    credit: "照片：Pierre Andre Leclercq / Wikimedia Commons",
-    alt: "马丘比丘与瓦伊纳比丘实景照片",
+    credit: "照片：Pierre Andre Leclercq / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "马丘比丘与瓦伊纳比丘全景实景照片",
   },
   taj: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Taj%20Mahal%20frontal.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Taj_Mahal_frontal.jpg",
-    credit: "照片：Marsmux / Wikimedia Commons · CC BY-SA 4.0",
-    alt: "泰姬陵完整正面实景照片，包含中央穹顶与四座宣礼塔",
+    image: "/photos/taj.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/1/1d/Taj_Mahal_%28Edited%29.jpeg",
+    page: "https://commons.wikimedia.org/wiki/File:Taj_Mahal_(Edited).jpeg",
+    credit: "照片：Yann / Jim Carter / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "泰姬陵正面中轴水系与宣礼塔实景照片",
   },
   christ: {
-    image: "https://commons.wikimedia.org/wiki/Special:FilePath/Christ%20the%20Redeemer-%28Corcovado%29%20front%20view.jpg",
+    image: "/photos/christ.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/a/aa/Christ_the_Redeemer-%28Corcovado%29_front_view.jpg",
     page: "https://commons.wikimedia.org/wiki/File:Christ_the_Redeemer-(Corcovado)_front_view.jpg",
-    credit: "照片：Wikimedia Commons · Christ the Redeemer (Corcovado) front view",
-    alt: "基督像正面实景照片",
+    credit: "照片：Artyominc / Wikimedia Commons · CC BY-SA 3.0",
+    alt: "里约热内卢科尔科瓦多山基督像正面实景照片",
+  },
+  pentagon: {
+    image: "/photos/pentagon.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/b/bf/The_Pentagon%2C_Headquarters_of_the_US_Department_of_Defense.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:The_Pentagon,_Headquarters_of_the_US_Department_of_Defense.jpg",
+    credit: "照片：Touch Of Light / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "美国五角大楼鸟瞰实景照片",
+  },
+  fast: {
+    image: "/photos/fast.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/d/d1/202508_FAST_%28Five-hundred-meter_Aperture_Spherical_radio_Telescope%29.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:202508_FAST_(Five-hundred-meter_Aperture_Spherical_radio_Telescope).jpg",
+    credit: "照片：SCJiang / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "中国天眼 FAST 500米口径球面射电望远镜实景照片",
+  },
+  burj: {
+    image: "/photos/burj.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/a/a6/Burj_Khalifa_%2816260269606%29.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Burj_Khalifa_(16260269606).jpg",
+    credit: "照片：Donaldytong / Wikimedia Commons · CC BY-SA 3.0",
+    alt: "迪拜哈利法塔全貌实景照片",
+  },
+  apple: {
+    image: "/photos/apple.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/5/5a/Aerial_view_of_Apple_Park_dllu.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Aerial_view_of_Apple_Park_dllu.jpg",
+    credit: "照片：Daniel Lu (dllu) / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "苹果总部 Apple Park 飞船环形园区鸟瞰实景照片",
+  },
+  sydney: {
+    image: "/photos/sydney.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/e/e1/Sydney_Opera_House_2026.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Sydney_Opera_House_2026.jpg",
+    credit: "照片：BAVhah / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "悉尼歌剧院便利朗角贝壳风帆全景实景照片",
+  },
+  globalcenter: {
+    image: "/photos/globalcenter.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/7/78/New_Century_Global_Centre_-_panoramio.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:New_Century_Global_Centre_-_panoramio.jpg",
+    credit: "照片：Raki_Man / Wikimedia Commons · CC BY 3.0",
+    alt: "成都新世纪环球中心海鸥波浪曲面实景照片",
+  },
+  hzmb: {
+    image: "/photos/hzmb.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Artificial_island_of_HK-Zhuhai-MO_Bridge_20180723.jpg/1280px-Artificial_island_of_HK-Zhuhai-MO_Bridge_20180723.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Artificial_island_of_HK-Zhuhai-MO_Bridge_20180723.jpg",
+    credit: "照片：Wpcpey / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "港珠澳大桥东人工岛与沉管隧道入口俯瞰实景照片",
+  },
+  goldengate: {
+    image: "/photos/goldengate.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/c/c7/Golden_Gate_Bridge_as_seen_from_Marshall%E2%80%99s_Beach%2C_March_2018.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Golden_Gate_Bridge_as_seen_from_Marshall%E2%80%99s_Beach,_March_2018.jpg",
+    credit: "照片：Frank Schulenburg / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "旧金山金门大桥国际橘双塔与悬索实景照片",
+  },
+  svalbard: {
+    image: "/photos/svalbard.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/4/4a/Longyearbyen%2C_Svalbard_Global_Seed_Vault.JPG",
+    page: "https://commons.wikimedia.org/wiki/File:Longyearbyen,_Svalbard_Global_Seed_Vault.JPG",
+    credit: "照片：Superchilum / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "斯瓦尔巴全球种子库极地入口棱柱实景照片",
   },
 };
 const statusEl = document.getElementById("status");
@@ -223,13 +297,12 @@ function updatePresetButtons(activePreset?: SolarPreset) {
 
 function updateDroneBtn() {
   if (!btnDroneOrbit) return;
-  if (droneOrbitController?.isOrbiting) {
-    btnDroneOrbit.classList.add("active");
-    btnDroneOrbit.innerHTML = `<span class="orbit-icon">⏹</span><span class="orbit-text">停止环绕</span>`;
-  } else {
-    btnDroneOrbit.classList.remove("active");
-    btnDroneOrbit.innerHTML = `<span class="orbit-icon">🛸</span><span class="orbit-text">航拍环绕</span>`;
-  }
+  const isOrbiting = !!droneOrbitController?.isOrbiting;
+  btnDroneOrbit.classList.toggle("active", isOrbiting);
+  const icon = btnDroneOrbit.querySelector(".orbit-icon");
+  const text = btnDroneOrbit.querySelector(".orbit-text");
+  if (icon) icon.textContent = isOrbiting ? "⏹" : "🛸";
+  if (text) text.textContent = isOrbiting ? "停止环绕" : "航拍环绕";
 }
 
 function setFlying(next: boolean) {
@@ -250,10 +323,15 @@ function setFlying(next: boolean) {
   }
 }
 
+let activeCategory = "all";
+let wireframeOn = false;
+let landmarkNightOn = false;
+
 function renderList() {
   if (!listEl) return;
   listEl.replaceChildren();
-  for (const wonder of WONDERS) {
+  const filtered = activeCategory === "all" ? WONDERS : WONDERS.filter((w) => w.category === activeCategory);
+  for (const wonder of filtered) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "wonder-btn" + (wonder.id === selectedId ? " active" : "");
@@ -281,15 +359,64 @@ function renderList() {
   }
 }
 
+function resetInspectionMode() {
+  wireframeOn = false;
+  landmarkNightOn = false;
+  const btnWire = document.getElementById("btn-wireframe");
+  const btnNight = document.getElementById("btn-nightmode");
+  if (btnWire) {
+    btnWire.classList.remove("active");
+    btnWire.textContent = "📐 线框网格";
+  }
+  if (btnNight) {
+    btnNight.classList.remove("active");
+    btnNight.textContent = "🌓 窗光夜景";
+  }
+}
+
 function showDetail(wonder: Wonder) {
   selectedId = wonder.id;
   renderList();
   if (detailKicker) {
-    detailKicker.textContent = `${String(wonder.index).padStart(2, "0")} / 08 · ${wonder.completed}`;
+    detailKicker.textContent = `${String(wonder.index).padStart(2, "0")} / ${String(WONDERS.length).padStart(2, "0")} · ${wonder.completed}`;
   }
   if (detailTitle) detailTitle.textContent = wonder.nameZh;
   if (detailEn) detailEn.textContent = `${wonder.nameEn} · ${wonder.place}`;
   if (detailBlurb) detailBlurb.textContent = wonder.blurb;
+
+  // 渲染技术与工程规格参数 (Specs)
+  const specsEl = document.getElementById("detail-specs");
+  if (specsEl) {
+    if (wonder.specs && Object.keys(wonder.specs).length > 0) {
+      specsEl.replaceChildren();
+      for (const [lbl, val] of Object.entries(wonder.specs)) {
+        const item = document.createElement("div");
+        item.className = "spec-item";
+        const lSpan = document.createElement("span");
+        lSpan.className = "spec-label";
+        lSpan.textContent = lbl;
+        const vSpan = document.createElement("span");
+        vSpan.className = "spec-val";
+        vSpan.textContent = val;
+        item.append(lSpan, vSpan);
+        specsEl.append(item);
+      }
+      specsEl.classList.remove("hidden");
+    } else {
+      specsEl.classList.add("hidden");
+    }
+  }
+
+  // 深度工程剖析栏 (Pentagon3D 模式)
+  const inspectBar = document.getElementById("inspection-bar");
+  if (inspectBar) {
+    if (wonder.hasInspection) {
+      inspectBar.classList.remove("hidden");
+    } else {
+      inspectBar.classList.add("hidden");
+    }
+  }
+  resetInspectionMode();
 
   const photo = REFERENCE_PHOTOS[wonder.id];
   if (comparisonEl && comparisonImage && comparisonSource && comparisonCredit) {
@@ -299,7 +426,13 @@ function showDetail(wonder: Wonder) {
       comparisonImage.src = photo.image;
       comparisonSource.href = photo.page;
       comparisonCredit.textContent = photo.credit;
+      let triedFallback = false;
       comparisonImage.onerror = () => {
+        if (!triedFallback && photo.fallbackImage && comparisonImage.src !== photo.fallbackImage) {
+          triedFallback = true;
+          comparisonImage.src = photo.fallbackImage;
+          return;
+        }
         comparisonImage.classList.add("image-unavailable");
         comparisonCredit.textContent = `${photo.credit} · 照片加载失败，可打开来源页面查看`;
       };
@@ -315,8 +448,32 @@ function showDetail(wonder: Wonder) {
   }
   detailEl?.classList.remove("hidden");
 }
+function resetControlsInertia(current: InstanceType<typeof tellux.Viewer> | null | undefined) {
+  if (!current) return;
+  try {
+    const raw = (current.controls as any)?.raw ?? current.controls;
+    if (raw) {
+      raw.rotationInertia?.set(0, 0);
+      raw.dragInertia?.set(0, 0, 0);
+      raw.globeInertia?.identity();
+      raw.globeInertiaFactor = 0;
+      raw.zoomDelta = 0;
+      raw.needsUpdate = false;
+      raw.actionHeightOffset = 0;
+      raw.resetState?.();
+    }
+  } catch {
+    // 忽略非致命重置异常
+  }
+}
+
 function setControlsEnabled(enabled: boolean) {
-  if (viewer) viewer.controls.enabled = enabled;
+  if (viewer) {
+    if (!enabled) {
+      resetControlsInertia(viewer);
+    }
+    viewer.controls.enabled = enabled;
+  }
 }
 
 function flyToSpace(): Promise<void> {
@@ -330,6 +487,7 @@ function flyToSpace(): Promise<void> {
   updateDroneBtn();
   solarController?.setWonder(null);
   hotspotManager?.setActiveWonder(null);
+  resetInspectionMode();
   renderList();
   detailEl?.classList.add("hidden");
   setStatus("返回太空视角");
@@ -357,6 +515,7 @@ function flyToSpace(): Promise<void> {
           } catch {
             // ignore
           }
+          resetControlsInertia(current);
           setFlying(false);
           setControlsEnabled(true);
         }
@@ -364,6 +523,7 @@ function flyToSpace(): Promise<void> {
       },
       cancel: () => {
         if (flight === flightGeneration) {
+          resetControlsInertia(current);
           setFlying(false);
           setControlsEnabled(true);
         }
@@ -416,6 +576,9 @@ function flyToWonder(wonder: Wonder): Promise<void> {
             // 忽略非致命同步异常
           }
 
+          // 关键修复：飞抵降落瞬间清除所有累积惯性与残留标记，杜绝 controls.update() 在 NONE 状态下触发
+          // _alignCameraUp / _clampRotation 绕相机中心原地旋转导致地标从画面瞬间位移甩失
+          resetControlsInertia(current);
           setFlying(false);
           setControlsEnabled(true);
         }
@@ -423,6 +586,7 @@ function flyToWonder(wonder: Wonder): Promise<void> {
       },
       cancel: () => {
         if (flight === flightGeneration) {
+          resetControlsInertia(current);
           setFlying(false);
           setControlsEnabled(true);
         }
@@ -467,16 +631,17 @@ async function runTour() {
     btnTour.textContent = "巡礼中…";
   }
   setStatus("开始环球巡礼");
-  for (const wonder of WONDERS) {
+  const tourList = activeCategory === "all" ? WONDERS : WONDERS.filter((w) => w.category === activeCategory);
+  for (const wonder of tourList) {
     if (!touring || generation !== tourGeneration) break;
     showDetail(wonder);
-    setStatus(`巡礼 ${wonder.index}/8 · ${wonder.nameZh}`);
+    setStatus(`巡礼 ${wonder.index}/${WONDERS.length} · ${wonder.nameZh}`);
     await flyToWonder(wonder);
     if (!touring || generation !== tourGeneration) break;
     setStatus(`等待地图加载 · ${wonder.nameZh}`);
     await waitForMapTiles();
     if (!touring || generation !== tourGeneration) break;
-    setStatus(`巡礼 ${wonder.index}/8 · ${wonder.nameZh}`);
+    setStatus(`巡礼 ${wonder.index}/${WONDERS.length} · ${wonder.nameZh}`);
     await sleep(6500);
   }
   if (generation === tourGeneration) {
@@ -658,7 +823,7 @@ async function boot() {
     },
     scene: {
       atmosphere: {
-        show: true,
+        show: false,
         lighting: {
           mode: "light-source",
           sunLight: true,
@@ -678,27 +843,42 @@ async function boot() {
         },
       },
       clouds: {
-        show: true,
-        coverage: 0.28,
-        quality: "low",
+        show: false,
       },
     },
     postProcess: {
       toneMapping: {
-        enabled: true,
-        mode: "agx",
-        exposure: 5,
+        enabled: false,
       },
       lensFlare: {
-        enabled: true,
+        enabled: false,
       },
-      smaa: { enabled: true },
+      smaa: { enabled: false },
     },
   });
 
   viewer = current;
-  (window as unknown as { __viewer: unknown }).__viewer = current;
+  (window as unknown as { __viewer: unknown; THREE: unknown }).__viewer = current;
+  (window as unknown as { __viewer: unknown; THREE: unknown }).THREE = THREE;
   configureTilesetOptimization(current);
+
+  // 彻底免疫黑屏：强制 Three.js 直连屏幕默认帧缓冲绘制，
+  // 拦截并绕过在 Windows/ANGLE 环境下导致黑屏的后处理 Pass
+  const rawRenderer = current.renderer.raw as any;
+  if (typeof rawRenderer.setEffects === "function") {
+    const origSetEffects = rawRenderer.setEffects.bind(rawRenderer);
+    rawRenderer.setEffects = () => origSetEffects([]);
+    origSetEffects([]);
+  }
+  const pp = (current as any).postProcessing;
+  if (pp) {
+    pp.activeEffects = [];
+    pp.applyEffects = () => {
+      pp.activeEffects = [];
+      (current.renderer.raw as any).setEffects?.([]);
+    };
+  }
+
   current.controls.minDistance = 40;
   performance.mark("earthwonders-viewer-created");
 
@@ -721,9 +901,21 @@ async function boot() {
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement) return;
-    const index = Number(event.key);
-    if (index >= 1 && index <= 8) {
-      const wonder = WONDERS[index - 1];
+    const key = event.key;
+    const KEY_MAP: Record<string, number> = {
+      "0": 10,
+      "-": 11,
+      "=": 12,
+      "+": 12,
+      "[": 13,
+      "]": 14,
+      "\\": 15,
+      ";": 16,
+      "'": 17,
+    };
+    const num = KEY_MAP[key] ?? Number(key);
+    if (!isNaN(num) && num >= 1 && num <= WONDERS.length) {
+      const wonder = WONDERS[num - 1];
       if (wonder) void visit(wonder);
     }
     if (event.key === "Escape") {
@@ -736,6 +928,75 @@ async function boot() {
     }
     if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey) {
       btnSolarRealtime?.click();
+    }
+  });
+
+  // 绑定主题风貌分类切换
+  const categoryTabs = document.getElementById("category-tabs");
+  categoryTabs?.addEventListener("click", (e) => {
+    const target = (e.target as HTMLElement).closest<HTMLButtonElement>(".cat-tab");
+    if (!target) return;
+    const cat = target.dataset.cat ?? "all";
+    if (cat === activeCategory) return;
+    activeCategory = cat;
+    categoryTabs.querySelectorAll(".cat-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab === target);
+    });
+    renderList();
+    if (viewer) {
+      for (const wonder of WONDERS) {
+        const ent = viewer.entities.getById(wonder.id);
+        if (ent) {
+          ent.show = activeCategory === "all" || wonder.category === activeCategory;
+        }
+      }
+    }
+    setStatus(`已切换至「${target.textContent?.trim()}」分类`);
+  });
+
+  // 绑定深度工程剖析模式 (Pentagon3D 模式)
+  const btnWireframe = document.getElementById("btn-wireframe");
+  const btnNightmode = document.getElementById("btn-nightmode");
+
+  btnWireframe?.addEventListener("click", () => {
+    wireframeOn = !wireframeOn;
+    btnWireframe.classList.toggle("active", wireframeOn);
+    btnWireframe.textContent = wireframeOn ? "📐 线框开启" : "📐 线框网格";
+    if (currentWonderObj) {
+      const grp = landmarkGroups.get(currentWonderObj.id);
+      if (grp) {
+        grp.traverse((c) => {
+          if ((c as THREE.Mesh).isMesh) {
+            const m = (c as THREE.Mesh).material;
+            if (Array.isArray(m)) {
+              m.forEach((mat) => {
+                if ("wireframe" in mat) (mat as THREE.MeshStandardMaterial).wireframe = wireframeOn;
+              });
+            } else if (m && "wireframe" in m) {
+              (m as THREE.MeshStandardMaterial).wireframe = wireframeOn;
+            }
+          }
+        });
+      }
+    }
+  });
+
+  btnNightmode?.addEventListener("click", () => {
+    landmarkNightOn = !landmarkNightOn;
+    btnNightmode.classList.toggle("active", landmarkNightOn);
+    btnNightmode.textContent = landmarkNightOn ? "🌙 夜间窗光" : "🌓 窗光夜景";
+    if (currentWonderObj) {
+      const grp = landmarkGroups.get(currentWonderObj.id);
+      if (grp && typeof grp.userData?.setNightMode === "function") {
+        grp.userData.setNightMode(landmarkNightOn);
+      }
+      if (landmarkNightOn) {
+        solarController?.setPreset("night");
+        updatePresetButtons("night");
+      } else {
+        solarController?.setPreset("noon");
+        updatePresetButtons("noon");
+      }
     }
   });
 
@@ -813,7 +1074,8 @@ async function boot() {
     }
   });
 
-  btnDroneOrbit?.addEventListener("click", () => {
+  btnDroneOrbit?.addEventListener("click", (e) => {
+    e.stopPropagation();
     if (droneOrbitController?.isOrbiting) {
       droneOrbitController.stop();
     } else {
@@ -850,9 +1112,30 @@ async function boot() {
     const dt = (now - lastFrameTime) / 1000;
     lastFrameTime = now;
 
+    // 确保任何飞行、降落或静止状态下，near/far 裁剪面始终实时贴合当前地心距离，
+    // 杜绝 controls.enabled 为 false 期间 14,000km 巨型 near 裁剪面导致的地标消失与穿模；
+    // 同时强行保持 adjustHeight = false，杜绝误触射线碰撞高度偏移导致画面位移
+    if (viewer) {
+      const pp = (viewer as any).postProcessing;
+      if (pp?.activeEffects?.length) {
+        pp.activeEffects = [];
+        (viewer.renderer.raw as any).setEffects?.([]);
+      }
+      try {
+        const raw = (viewer.controls as any)?.raw ?? viewer.controls;
+        if (raw) {
+          raw.adjustHeight = false;
+          if (typeof raw.adjustCamera === "function") {
+            raw.adjustCamera(viewer.camera.raw);
+          }
+        }
+      } catch {
+        // 忽略非致命控制层调用异常
+      }
+    }
+
     if (droneOrbitController?.isOrbiting) {
       droneOrbitController.update(dt);
-      updateDroneBtn();
     }
 
     hotspotManager?.update();
@@ -863,7 +1146,7 @@ async function boot() {
 
   // Restore idle hint only if the user hasn't already started a flight, tour, or selection
   if (!flying && !touring && selectedId === null) {
-    setStatus("拖动地球 · 点击列表或按 1–8 飞向奇迹 · O 键航拍环绕");
+    setStatus("拖动地球 · 点击分类/列表快速飞向奇迹 · O 键航拍环绕 · T 键环球巡礼");
   }
 }
 

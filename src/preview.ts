@@ -48,6 +48,15 @@ const FRAMES: Record<string, { pos: [number, number, number]; look: [number, num
   machu: { pos: [70, 42, 78], look: [0, 18, 2] },
   taj: { pos: [86, 48, 108], look: [0, 28, 0] },
   christ: { pos: [26, 22, 34], look: [0, 24, 0] },
+  pentagon: { pos: [320, 160, 320], look: [0, 12, 0] },
+  fast: { pos: [380, 280, 380], look: [0, 80, 0] },
+  burj: { pos: [450, 520, 680], look: [0, 420, 0] },
+  apple: { pos: [340, 180, 340], look: [0, 15, 0] },
+  sydney: { pos: [118, 70, 128], look: [-15, 28, -15] },
+  globalcenter: { pos: [-380, 210, 310], look: [0, 55, 0] },
+  hzmb: { pos: [420, 180, 260], look: [0, 25, 0] },
+  goldengate: { pos: [360, 160, 220], look: [0, 45, 0] },
+  svalbard: { pos: [24, 16, 36], look: [0, 8, 4] },
 };
 
 void (async () => {
