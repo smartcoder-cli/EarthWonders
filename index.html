@@ -17,7 +17,11 @@
         <p class="sub">Global Architectural Wonders & Megastructures · Tellux 3D Earth</p>
       </header>
 
-      <aside class="panel">
+      <button id="btn-mobile-list" class="mobile-floating-pill" type="button">📜 奇迹列表</button>
+
+      <aside class="panel" id="panel">
+        <button id="btn-panel-close" class="panel-close-btn" type="button" aria-label="收起列表">✕</button>
+        <div class="panel-grabber" id="panel-grabber" aria-hidden="true"></div>
         <div class="panel-header">
           <h2>风貌主题</h2>
           <div class="category-tabs" id="category-tabs" role="tablist" aria-label="建筑风貌分类">
@@ -39,10 +43,13 @@
       </aside>
 
       <article id="detail" class="detail hidden">
+        <button id="detail-close" class="detail-close-btn" type="button" aria-label="关闭详情卡">✕</button>
+        <div class="sheet-grabber" id="detail-grabber" aria-hidden="true"></div>
         <div class="kicker" id="detail-kicker"></div>
         <h3 id="detail-title"></h3>
         <div class="en" id="detail-en"></div>
         <p id="detail-blurb"></p>
+        <div id="sheet-expand-hint" class="sheet-expand-hint">轻触或上滑查看详情与实景对照 ▴</div>
         <div id="detail-specs" class="detail-specs hidden"></div>
         <div id="inspection-bar" class="inspection-bar hidden">
           <div class="inspection-title">🛠️ 工程剖析 (Pentagon3D 模式)</div>

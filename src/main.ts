@@ -14,7 +14,14 @@ const ARCGIS_WORLD_IMAGERY =
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
 const listEl = document.getElementById("wonder-list");
+const panelEl = document.getElementById("panel");
+const btnMobileList = document.getElementById("btn-mobile-list");
+const btnPanelClose = document.getElementById("btn-panel-close");
+const panelGrabber = document.getElementById("panel-grabber");
 const detailEl = document.getElementById("detail");
+const detailClose = document.getElementById("detail-close");
+const detailGrabber = document.getElementById("detail-grabber");
+const sheetExpandHint = document.getElementById("sheet-expand-hint");
 const detailKicker = document.getElementById("detail-kicker");
 const detailTitle = document.getElementById("detail-title");
 const detailEn = document.getElementById("detail-en");
@@ -446,7 +453,15 @@ function showDetail(wonder: Wonder) {
       comparisonEl.classList.add("hidden");
     }
   }
-  detailEl?.classList.remove("hidden");
+
+  document.body.classList.add("has-selected");
+  panelEl?.classList.remove("mobile-open");
+  panelEl?.classList.add("mobile-hidden");
+  if (detailEl) {
+    detailEl.classList.remove("hidden");
+    detailEl.classList.remove("mobile-expanded");
+    detailEl.classList.add("mobile-peek");
+  }
 }
 function resetControlsInertia(current: InstanceType<typeof tellux.Viewer> | null | undefined) {
   if (!current) return;
@@ -489,7 +504,12 @@ function flyToSpace(): Promise<void> {
   hotspotManager?.setActiveWonder(null);
   resetInspectionMode();
   renderList();
-  detailEl?.classList.add("hidden");
+  document.body.classList.remove("has-selected");
+  panelEl?.classList.remove("mobile-hidden", "mobile-open");
+  if (detailEl) {
+    detailEl.classList.add("hidden");
+    detailEl.classList.remove("mobile-peek", "mobile-expanded");
+  }
   setStatus("返回太空视角");
   setFlying(true);
   setControlsEnabled(false);
@@ -928,6 +948,101 @@ async function boot() {
     }
     if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey) {
       btnSolarRealtime?.click();
+    }
+  });
+
+  // 绑定移动端抽屉 (Bottom Sheet) 与景点列表弹窗交互
+  const toggleDetailExpansion = () => {
+    if (!detailEl) return;
+    if (detailEl.classList.contains("mobile-expanded")) {
+      detailEl.classList.remove("mobile-expanded");
+      detailEl.classList.add("mobile-peek");
+    } else {
+      detailEl.classList.remove("mobile-peek");
+      detailEl.classList.add("mobile-expanded");
+    }
+  };
+
+  detailGrabber?.addEventListener("click", toggleDetailExpansion);
+  sheetExpandHint?.addEventListener("click", toggleDetailExpansion);
+
+  detailClose?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (detailEl?.classList.contains("mobile-expanded")) {
+      detailEl.classList.remove("mobile-expanded");
+      detailEl.classList.add("mobile-peek");
+    } else {
+      void flyToSpace();
+    }
+  });
+
+  // 移动端手势滑动：上滑展开，下滑折叠至常驻 Peek 状态
+  let touchStartY = 0;
+  let touchStartX = 0;
+  detailEl?.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length > 0) {
+        touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
+      }
+    },
+    { passive: true },
+  );
+
+  detailEl?.addEventListener(
+    "touchend",
+    (e) => {
+      if (e.changedTouches.length > 0) {
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        const deltaX = Math.abs(e.changedTouches[0].clientX - touchStartX);
+        if (Math.abs(deltaY) > 35 && Math.abs(deltaY) > deltaX) {
+          if (deltaY < 0) {
+            // 上滑展开
+            detailEl?.classList.remove("mobile-peek");
+            detailEl?.classList.add("mobile-expanded");
+          } else {
+            // 下滑折叠
+            if (!detailEl || detailEl.scrollTop <= 10) {
+              detailEl?.classList.remove("mobile-expanded");
+              detailEl?.classList.add("mobile-peek");
+            }
+          }
+        }
+      }
+    },
+    { passive: true },
+  );
+
+  // 移动端列表开关
+  btnMobileList?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    panelEl?.classList.toggle("mobile-open");
+    panelEl?.classList.remove("mobile-hidden");
+  });
+
+  btnPanelClose?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    panelEl?.classList.remove("mobile-open");
+    panelEl?.classList.add("mobile-hidden");
+  });
+
+  panelGrabber?.addEventListener("click", () => {
+    panelEl?.classList.toggle("mobile-open");
+  });
+
+  // 点击 3D 画布空白处时，自动收起抽屉与面板，释放最大沉浸感
+  const viewerEl = document.getElementById("viewer");
+  viewerEl?.addEventListener("click", () => {
+    if (window.innerWidth <= 768) {
+      if (detailEl?.classList.contains("mobile-expanded")) {
+        detailEl.classList.remove("mobile-expanded");
+        detailEl.classList.add("mobile-peek");
+      }
+      if (panelEl?.classList.contains("mobile-open")) {
+        panelEl.classList.remove("mobile-open");
+        panelEl.classList.add("mobile-hidden");
+      }
     }
   });
 

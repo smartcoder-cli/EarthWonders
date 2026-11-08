@@ -93,7 +93,7 @@ body {
 
 .category-tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   background: rgba(0, 0, 0, 0.28);
   padding: 4px;
@@ -235,6 +235,16 @@ body {
 }
 
 .detail.hidden {
+  display: none;
+}
+
+/* Mobile interaction elements - hidden on desktop by default */
+.mobile-floating-pill,
+.panel-close-btn,
+.panel-grabber,
+.detail-close-btn,
+.sheet-grabber,
+.sheet-expand-hint {
   display: none;
 }
 
@@ -396,35 +406,6 @@ body {
   border-radius: 6px;
 }
 
-@media (max-width: 720px) {
-  .hud {
-    top: 12px;
-    left: 14px;
-  }
-
-  .hud h1 {
-    font-size: 20px;
-  }
-
-  .panel {
-    top: auto;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    width: auto;
-    max-height: 42vh;
-    border-radius: 16px 16px 0 0;
-  }
-
-  .detail {
-    left: 12px;
-    right: 12px;
-    bottom: calc(42vh + 8px);
-    width: auto;
-  }
-}
-
-
 .photo-comparison {
   margin-top: 12px;
   padding-top: 10px;
@@ -458,10 +439,6 @@ body {
   color: var(--muted);
   font-size: 10px;
   line-height: 1.45;
-}
-@media (max-width: 720px) {
-  .detail { max-height: 35vh; overflow: auto; }
-  #comparison-image { max-height: 120px; }
 }
 
 /* ==========================================================================
@@ -921,7 +898,7 @@ body {
   justify-content: flex-end;
 }
 
-@media (max-width: 860px) {
+@media (min-width: 769px) and (max-width: 960px) {
   .solar-dock {
     gap: 6px;
     padding: 5px 10px;
@@ -934,21 +911,292 @@ body {
   }
 }
 
-@media (max-width: 720px) {
-  .solar-dock {
-    bottom: calc(42vh + 8px);
-    width: calc(100vw - 24px);
-    justify-content: space-between;
-    padding: 6px 10px;
-    gap: 4px;
+/* ==========================================================================
+   Mobile Responsive Layout (Three-State Bottom Sheet & Clean Canvas)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* 1. Compact HUD Pill */
+  .hud {
+    top: 10px;
+    left: 10px;
+    max-width: calc(100vw - 185px);
+    pointer-events: none;
+    z-index: 10;
   }
-  .solar-preset-btn .text { display: none; }
-  .solar-slider { width: 60px; }
+
+  .hud h1 {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  }
+
+  .hud .sub {
+    display: none;
+  }
+
+  /* 2. Solar & Orbit Dock: Top-Right Compact Icon Pill */
+  .solar-dock {
+    top: 10px;
+    right: 10px;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: auto;
+    padding: 3px 6px;
+    gap: 3px;
+    background: rgba(14, 18, 28, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    z-index: 10;
+  }
+
+  .solar-presets {
+    gap: 2px;
+  }
+
+  .solar-preset-btn {
+    padding: 4px 5px;
+    font-size: 13px;
+    min-width: 26px;
+    border-radius: 6px;
+  }
+
+  .solar-preset-btn .text {
+    display: none;
+  }
+
+  .solar-slider-wrap {
+    display: none;
+  }
+
+  .solar-dock-divider {
+    height: 16px;
+    margin: 0 2px;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .drone-orbit-btn {
+    padding: 4px 7px;
+    font-size: 13px;
+    border-radius: 6px;
+  }
+
+  .drone-orbit-btn .orbit-text {
+    display: none;
+  }
+
+  /* 3. Mobile Floating List Button */
+  .mobile-floating-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 9px 20px;
+    background: rgba(18, 22, 34, 0.9);
+    border: 1px solid var(--accent);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+    z-index: 11;
+    cursor: pointer;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    white-space: nowrap;
+  }
+
+  /* Landmark selected: list pill shrinks to top-left pill below HUD */
+  body.has-selected .mobile-floating-pill {
+    bottom: auto;
+    top: 48px;
+    left: 10px;
+    transform: none;
+    padding: 5px 12px;
+    font-size: 11px;
+    background: rgba(18, 22, 34, 0.82);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  /* Hide floating pill when panel drawer is open */
+  .panel.mobile-open ~ .mobile-floating-pill,
+  body:not(.has-selected) .panel:not(.mobile-hidden) ~ .mobile-floating-pill {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 4. Landmark List Panel Drawer */
+  .panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 54vh;
+    border-radius: 20px 20px 0 0;
+    z-index: 20;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+    padding: 10px 16px 18px;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .panel-grabber {
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.35);
+    margin: 0 auto 10px;
+    cursor: pointer;
+  }
+
+  .panel-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  /* Default when landmark selected: list panel slides down out of view */
+  body.has-selected .panel {
+    transform: translateY(105%);
+    pointer-events: none;
+  }
+
+  .panel.mobile-hidden {
+    transform: translateY(105%);
+    pointer-events: none;
+  }
+
+  /* When explicitly opened */
+  body.has-selected .panel.mobile-open,
+  .panel.mobile-open {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  /* 5. Landmark Detail Bottom Sheet (三段式轻量抽屉) */
+  .detail {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    border-radius: 22px 22px 0 0;
+    z-index: 15;
+    padding: 10px 16px 20px;
+    box-sizing: border-box;
+    box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.65);
+    transition: max-height 0.32s cubic-bezier(0.16, 1, 0.3, 1), transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sheet-grabber {
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.35);
+    margin: 0 auto 8px;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .detail-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    z-index: 5;
+  }
+
+  .detail.hidden {
+    display: none;
+  }
+
+  /* Peek State: takes only ~155px (~18% of 844px screen, leaving 82%+ open) */
+  .detail.mobile-peek {
+    max-height: 162px;
+    overflow: hidden;
+    padding-bottom: 12px;
+  }
+
+  .detail.mobile-peek #detail-specs,
+  .detail.mobile-peek #inspection-bar,
+  .detail.mobile-peek #photo-comparison {
+    display: none !important;
+  }
+
+  .detail.mobile-peek #detail-blurb {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 2px;
+  }
+
+  .sheet-expand-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--accent);
+    text-align: center;
+    padding: 4px 0 2px;
+    cursor: pointer;
+    opacity: 0.9;
+    user-select: none;
+  }
+
+  /* Expanded State: 72vh */
+  .detail.mobile-expanded {
+    max-height: 72vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .detail.mobile-expanded .sheet-expand-hint {
+    display: none;
+  }
+
+  .detail.mobile-expanded #comparison-image {
+    max-height: 175px;
+  }
+
+  /* 6. Hotspot card on mobile */
   .hotspot-card {
     left: 12px;
     right: 12px;
     width: auto;
-    bottom: calc(42vh + 60px);
-    max-height: 38vh;
+    bottom: 20px;
+    max-height: 52vh;
+    z-index: 25;
   }
 }
