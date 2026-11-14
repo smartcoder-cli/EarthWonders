@@ -181,10 +181,10 @@ const REFERENCE_PHOTOS: Record<
   },
   eiffel: {
     image: "/photos/eiffel.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/1280px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Tour_Eiffel_Wikimedia_Commons_(cropped).jpg",
-    credit: "照片：Benh LIEU SONG / Wikimedia Commons · CC BY-SA 3.0",
-    alt: "巴黎埃菲尔铁塔全景实景照片",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Eiffel_tower_from_trocadero.jpg/1280px-Eiffel_tower_from_trocadero.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Eiffel_tower_from_trocadero.jpg",
+    credit: "照片：NonOmnisMoriar / Wikimedia Commons · CC BY-SA 3.0",
+    alt: "巴黎特罗卡德罗广场眺望埃菲尔铁塔全景实景照片",
   },
   parthenon: {
     image: "/photos/parthenon.jpg",

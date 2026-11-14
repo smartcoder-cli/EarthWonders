@@ -559,7 +559,7 @@ export const WONDERS: Wonder[] = [
     flyDuration: 4.8,
     labelHeight: 135,
     lookHeight: 52,
-    modelHeading: -6.33,
+    modelHeading: 109.5,
     blurb:
       "巴黎历史中轴线（Axe historique）的现代西端终点。近乎完美的 110 米空心超立方体，中空跨度足以容纳整座巴黎圣母院。白色卡拉拉大理石门框内部悬挂特氟龙张拉膜「云朵」天幕，以 6.33° 轴线偏角巧妙避让地下高铁与公路隧道集群。",
     specs: {
