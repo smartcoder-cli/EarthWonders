@@ -154,6 +154,20 @@ const REFERENCE_PHOTOS: Record<
     credit: "照片：Superchilum / Wikimedia Commons · CC BY-SA 4.0",
     alt: "斯瓦尔巴全球种子库极地入口棱柱实景照片",
   },
+  liberty: {
+    image: "/photos/liberty.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Statue_of_Liberty_7.jpg/960px-Statue_of_Liberty_7.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Statue_of_Liberty_7.jpg",
+    credit: "照片：William Warby / Wikimedia Commons · CC BY 2.0",
+    alt: "纽约自由岛自由女神像正面实景照片",
+  },
+  defense: {
+    image: "/photos/defense.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Grande_Arche%2C_France_-_April_2011.jpg/1280px-Grande_Arche%2C_France_-_April_2011.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Grande_Arche,_France_-_April_2011.jpg",
+    credit: "照片：Diliff / Wikimedia Commons · CC BY-SA 3.0",
+    alt: "巴黎拉德芳斯新凯旋门与中轴广场实景照片",
+  },
 };
 const statusEl = document.getElementById("status");
 const btnTour = document.getElementById("btn-tour") as HTMLButtonElement | null;
@@ -932,6 +946,8 @@ async function boot() {
       "\\": 15,
       ";": 16,
       "'": 17,
+      ",": 18,
+      ".": 19,
     };
     const num = KEY_MAP[key] ?? Number(key);
     if (!isNaN(num) && num >= 1 && num <= WONDERS.length) {

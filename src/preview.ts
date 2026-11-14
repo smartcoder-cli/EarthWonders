@@ -57,6 +57,8 @@ const FRAMES: Record<string, { pos: [number, number, number]; look: [number, num
   hzmb: { pos: [420, 180, 260], look: [0, 25, 0] },
   goldengate: { pos: [360, 160, 220], look: [0, 45, 0] },
   svalbard: { pos: [24, 16, 36], look: [0, 8, 4] },
+  liberty: { pos: [65, 55, 75], look: [0, 48, 0] },
+  defense: { pos: [140, 95, 175], look: [0, 55, 0] },
 };
 
 void (async () => {
