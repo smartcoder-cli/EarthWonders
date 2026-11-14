@@ -33,6 +33,15 @@ const comparisonImage = document.getElementById("comparison-image") as HTMLImage
 const comparisonSource = document.getElementById("comparison-source") as HTMLAnchorElement | null;
 const comparisonCredit = document.getElementById("comparison-credit"); 
 
+function resolvePhotoUrl(path: string): string {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const base = import.meta.env.BASE_URL || "./";
+  const cleanBase = base.endsWith("/") ? base : `${base}/`;
+  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  return `${cleanBase}${cleanPath}`;
+}
+
 const REFERENCE_PHOTOS: Record<
   string,
   { image: string; fallbackImage?: string; page: string; credit: string; alt: string }
@@ -172,7 +181,7 @@ const REFERENCE_PHOTOS: Record<
   },
   eiffel: {
     image: "/photos/eiffel.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/800px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/1280px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg",
     page: "https://commons.wikimedia.org/wiki/File:Tour_Eiffel_Wikimedia_Commons_(cropped).jpg",
     credit: "照片：Benh LIEU SONG / Wikimedia Commons · CC BY-SA 3.0",
     alt: "巴黎埃菲尔铁塔全景实景照片",
@@ -186,14 +195,14 @@ const REFERENCE_PHOTOS: Record<
   },
   futuremuseum: {
     image: "/photos/futuremuseum.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Museum_of_the_Future.jpg/1280px-Museum_of_the_Future.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Museum_of_the_Future.jpg/1280px-Museum_of_the_Future.jpg",
     page: "https://commons.wikimedia.org/wiki/File:Museum_of_the_Future.jpg",
     credit: "照片：Александр Сигачёв / Wikimedia Commons · CC BY-SA 4.0",
     alt: "迪拜未来博物馆流线型环形建筑实景照片",
   },
   sagrada: {
     image: "/photos/sagrada.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Sagrada_Familia_01.jpg/800px-Sagrada_Familia_01.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Sagrada_Familia_01.jpg/1280px-Sagrada_Familia_01.jpg",
     page: "https://commons.wikimedia.org/wiki/File:Sagrada_Familia_01.jpg",
     credit: "照片：Bernard Gagnon / Wikimedia Commons · CC BY-SA 3.0",
     alt: "巴塞罗那圣家宗座圣殿诞生立面钟楼实景照片",
@@ -516,10 +525,12 @@ function showDetail(wonder: Wonder) {
     if (photo) {
       comparisonImage.classList.remove("image-unavailable");
       comparisonImage.alt = photo.alt;
-      comparisonImage.src = photo.image;
       comparisonSource.href = photo.page;
       comparisonCredit.textContent = photo.credit;
+
+      const primaryUrl = resolvePhotoUrl(photo.image);
       let triedFallback = false;
+
       comparisonImage.onerror = () => {
         if (!triedFallback && photo.fallbackImage && comparisonImage.src !== photo.fallbackImage) {
           triedFallback = true;
@@ -529,6 +540,12 @@ function showDetail(wonder: Wonder) {
         comparisonImage.classList.add("image-unavailable");
         comparisonCredit.textContent = `${photo.credit} · 照片加载失败，可打开来源页面查看`;
       };
+
+      comparisonImage.onload = () => {
+        comparisonImage.classList.remove("image-unavailable");
+      };
+
+      comparisonImage.src = primaryUrl;
       comparisonEl.classList.remove("hidden");
     } else {
       comparisonImage.removeAttribute("src");
