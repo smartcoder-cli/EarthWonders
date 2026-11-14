@@ -110,10 +110,10 @@
   },
   "defense": {
     "image": "/photos/defense.jpg",
-    "fallbackImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Grande_Arche%2C_France_-_April_2011.jpg/1280px-Grande_Arche%2C_France_-_April_2011.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Grande_Arche,_France_-_April_2011.jpg",
-    "credit": "照片：Diliff / Wikimedia Commons · CC BY-SA 3.0",
-    "alt": "巴黎拉德芳斯新凯旋门与中轴广场实景照片"
+    "fallbackImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Grande_Arche_%2836429257922%29.jpg/1280px-Grande_Arche_%2836429257922%29.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Grande_Arche_(36429257922).jpg",
+    "credit": "照片：xiquinhosilva / Wikimedia Commons · CC BY 2.0",
+    "alt": "巴黎拉德芳斯新凯旋门主立面与大台阶实景照片"
   },
   "eiffel": {
     "image": "/photos/eiffel.jpg",
