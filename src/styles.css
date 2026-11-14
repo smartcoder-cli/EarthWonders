@@ -1200,3 +1200,211 @@ body {
     z-index: 25;
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+   7. 明信片生成器与弹窗预览 (Postcard Generator & Modal)
+───────────────────────────────────────────────────────── */
+.postcard-trigger-btn {
+  appearance: none;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(14, 165, 233, 0.08));
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.22s ease;
+  white-space: nowrap;
+}
+
+.postcard-trigger-btn:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(14, 165, 233, 0.2));
+  border-color: rgba(56, 189, 248, 0.85);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+  transform: translateY(-1px);
+}
+
+.postcard-trigger-btn:active {
+  transform: translateY(0);
+}
+
+.postcard-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.postcard-modal.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.postcard-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 16, 0.78);
+  backdrop-filter: blur(14px);
+}
+
+.postcard-dialog {
+  position: relative;
+  z-index: 2;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85);
+  padding: 20px 24px 24px;
+  max-width: 90vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: scale(0.95) translateY(12px);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.postcard-modal.visible .postcard-dialog {
+  transform: scale(1) translateY(0);
+}
+
+.postcard-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.postcard-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.postcard-icon {
+  font-size: 20px;
+}
+
+.postcard-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+}
+
+.postcard-dialog-close {
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.postcard-dialog-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.postcard-preview-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #060911;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.postcard-preview-img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  display: block;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+}
+
+.postcard-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.postcard-download-btn {
+  appearance: none;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #fff;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+}
+
+.postcard-download-btn:hover {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  box-shadow: 0 6px 22px rgba(14, 165, 233, 0.55);
+  transform: translateY(-1px);
+}
+
+.postcard-cancel-btn {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.postcard-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .postcard-dialog {
+    padding: 14px 16px 16px;
+    max-width: 95vw;
+  }
+  .postcard-preview-img {
+    max-height: 50vh;
+  }
+  .postcard-dialog-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .postcard-download-btn,
+  .postcard-cancel-btn {
+    width: 100%;
+    text-align: center;
+  }
+  .postcard-trigger-btn .postcard-btn-text {
+    display: none;
+  }
+}

@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import tellux from "tellux";
+import { AtmosphereManager } from "./atmosphereEffects";
 import { HotspotManager } from "./hotspotManager";
 import { LANDMARK_BUILDERS } from "./landmarks";
+import { generatePostcard, showPostcardModal } from "./postcard";
 import { SolarController, DroneOrbitController, type SolarPreset } from "./solarAndOrbit";
 import { loadSurfaceKit, type SurfaceKit } from "./surfaces";
 import { installTileProvider } from "./tileProvider";
@@ -276,6 +278,7 @@ let landmarksRoot: THREE.Group | null = null;
 let hotspotManager: HotspotManager | null = null;
 let solarController: SolarController | null = null;
 let droneOrbitController: DroneOrbitController | null = null;
+let atmosphereManager: AtmosphereManager | null = null;
 let activePivotPos: THREE.Vector3 | null = null;
 let currentWonderObj: Wonder | null = null;
 
@@ -288,8 +291,41 @@ const solarTimeLabel = document.getElementById("solar-time-label");
 const solarSlider = document.getElementById("solar-slider") as HTMLInputElement | null;
 const btnTimelapse = document.getElementById("btn-timelapse") as HTMLButtonElement | null;
 const btnDroneOrbit = document.getElementById("btn-drone-orbit") as HTMLButtonElement | null;
+const btnPostcard = document.getElementById("btn-postcard") as HTMLButtonElement | null;
 const hotspotLayer = document.getElementById("hotspot-layer") as HTMLElement | null;
 const hotspotCard = document.getElementById("hotspot-card") as HTMLElement | null;
+
+function updateUrl(wonderId?: string | null, preset?: string, wireframe?: boolean, orbit?: boolean) {
+  try {
+    const url = new URL(window.location.href);
+    if (wonderId) {
+      url.searchParams.set("id", wonderId);
+      if (preset && preset !== "noon" && preset !== "realtime") {
+        url.searchParams.set("time", preset);
+      } else {
+        url.searchParams.delete("time");
+      }
+      if (wireframe) {
+        url.searchParams.set("wireframe", "1");
+      } else {
+        url.searchParams.delete("wireframe");
+      }
+      if (orbit) {
+        url.searchParams.set("orbit", "1");
+      } else {
+        url.searchParams.delete("orbit");
+      }
+    } else {
+      url.searchParams.delete("id");
+      url.searchParams.delete("time");
+      url.searchParams.delete("wireframe");
+      url.searchParams.delete("orbit");
+    }
+    window.history.replaceState({}, "", url.toString());
+  } catch {
+    // 忽略非致命 URL 异常
+  }
+}
 
 function formatHour(hour: number): string {
   const h = Math.floor(hour) % 24;
@@ -312,6 +348,14 @@ function updatePresetButtons(activePreset?: SolarPreset) {
       } else {
         btn.classList.remove("active");
       }
+    }
+  }
+  if (currentWonderObj) {
+    updateUrl(currentWonderObj.id, activePreset, wireframeOn, droneOrbitController?.isOrbiting);
+    if (activePreset === "night") {
+      atmosphereManager?.setNightMode(true);
+    } else if (activePreset === "noon" || activePreset === "dawn") {
+      atmosphereManager?.setNightMode(false);
     }
   }
 }
@@ -514,6 +558,8 @@ function flyToSpace(): Promise<void> {
   activePivotPos = null;
   droneOrbitController?.stop();
   updateDroneBtn();
+  atmosphereManager?.setWonder(null);
+  updateUrl(null);
   solarController?.setWonder(null);
   hotspotManager?.setActiveWonder(null);
   resetInspectionMode();
@@ -643,6 +689,9 @@ async function visit(wonder: Wonder) {
   solarController?.setWonder(wonder);
   updatePresetButtons("noon");
   hotspotManager?.setActiveWonder(null);
+  atmosphereManager?.setWonder(wonder, landmarkGroups.get(wonder.id));
+  atmosphereManager?.setNightMode(landmarkNightOn);
+  updateUrl(wonder.id, undefined, wireframeOn, false);
   if (btnTour) btnTour.classList.remove("active");
   showDetail(wonder);
   setStatus(`飞向 ${wonder.nameZh}`);
@@ -962,6 +1011,9 @@ async function boot() {
     if (event.key.toLowerCase() === "o" && !event.ctrlKey && !event.metaKey) {
       btnDroneOrbit?.click();
     }
+    if (event.key.toLowerCase() === "p" && !event.ctrlKey && !event.metaKey) {
+      btnPostcard?.click();
+    }
     if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey) {
       btnSolarRealtime?.click();
     }
@@ -1094,6 +1146,7 @@ async function boot() {
     btnWireframe.classList.toggle("active", wireframeOn);
     btnWireframe.textContent = wireframeOn ? "📐 线框开启" : "📐 线框网格";
     if (currentWonderObj) {
+      updateUrl(currentWonderObj.id, undefined, wireframeOn, droneOrbitController?.isOrbiting);
       const grp = landmarkGroups.get(currentWonderObj.id);
       if (grp) {
         grp.traverse((c) => {
@@ -1121,6 +1174,7 @@ async function boot() {
       if (grp && typeof grp.userData?.setNightMode === "function") {
         grp.userData.setNightMode(landmarkNightOn);
       }
+      atmosphereManager?.setNightMode(landmarkNightOn);
       if (landmarkNightOn) {
         solarController?.setPreset("night");
         updatePresetButtons("night");
@@ -1128,6 +1182,7 @@ async function boot() {
         solarController?.setPreset("noon");
         updatePresetButtons("noon");
       }
+      updateUrl(currentWonderObj.id, landmarkNightOn ? "night" : "noon", wireframeOn, droneOrbitController?.isOrbiting);
     }
   });
 
@@ -1224,6 +1279,46 @@ async function boot() {
     updateDroneBtn();
   });
 
+  btnPostcard?.addEventListener("click", () => {
+    if (!currentWonderObj || !viewer) {
+      setStatus("请先选择或飞抵一座奇迹，再生成明信片 📷");
+      return;
+    }
+    const current = viewer;
+    // 临时隐藏 3D 图钉实体标记，确保拍摄到最纯净通透的建筑摄影画面
+    const markersToRestore: Array<{ ent: any; show: boolean }> = [];
+    for (const w of WONDERS) {
+      const ent = current.entities.getById(w.id);
+      if (ent) {
+        markersToRestore.push({ ent, show: ent.show });
+        ent.show = false;
+      }
+    }
+    hotspotManager?.closeCard();
+
+    requestAnimationFrame(() => {
+      try {
+        const glCanvas = current.renderer.raw.domElement;
+        const cardCanvas = generatePostcard({
+          wonder: currentWonderObj!,
+          glCanvas,
+          solarTimeText: solarTimeLabel?.textContent ?? "12:00",
+          isWireframe: wireframeOn,
+          isNight: landmarkNightOn || btnSolarNight?.classList.contains("active"),
+        });
+        showPostcardModal(cardCanvas, currentWonderObj!);
+        setStatus(`已为「${currentWonderObj!.nameZh}」生成专属建筑明信片 📷`);
+      } catch (err) {
+        console.error("生成明信片失败:", err);
+        setStatus("生成明信片时出错，请重试");
+      } finally {
+        for (const item of markersToRestore) {
+          item.ent.show = item.show;
+        }
+      }
+    });
+  });
+
   window.addEventListener("pagehide", () => {
     current.destroy();
   });
@@ -1237,7 +1332,35 @@ async function boot() {
 
   placeLandmarks(current, kit);
 
-  // 启动高帧率连续更新循环（驱动航拍与 3D 热点投影）
+  // 初始化大气与环境动态气候管理器 (斯瓦尔巴极光、金门大桥海雾等)
+  atmosphereManager = new AtmosphereManager();
+
+  // 检查 URL 深度链接参数 (如 ?id=liberty&time=night&orbit=1)
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetId = urlParams.get("id");
+  const targetTime = urlParams.get("time") as SolarPreset | null;
+  const targetWireframe = urlParams.get("wireframe") === "1";
+  const targetOrbit = urlParams.get("orbit") === "1";
+
+  if (targetId) {
+    const targetWonder = WONDERS.find((w) => w.id === targetId);
+    if (targetWonder) {
+      void visit(targetWonder).then(() => {
+        if (targetTime && ["dawn", "noon", "golden", "night"].includes(targetTime)) {
+          solarController?.setPreset(targetTime);
+          updatePresetButtons(targetTime);
+        }
+        if (targetWireframe && btnWireframe) {
+          btnWireframe.click();
+        }
+        if (targetOrbit && btnDroneOrbit) {
+          btnDroneOrbit.click();
+        }
+      });
+    }
+  }
+
+  // 启动高帧率连续更新循环（驱动航拍、大气动态与 3D 热点投影）
   let lastFrameTime = performance.now();
   const renderLoop = (now: number) => {
     const dt = (now - lastFrameTime) / 1000;
@@ -1270,6 +1393,7 @@ async function boot() {
     }
 
     hotspotManager?.update();
+    atmosphereManager?.update(dt);
 
     requestAnimationFrame(renderLoop);
   };
