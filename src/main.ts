@@ -170,6 +170,34 @@ const REFERENCE_PHOTOS: Record<
     credit: "照片：Diliff / Wikimedia Commons · CC BY-SA 3.0",
     alt: "巴黎拉德芳斯新凯旋门与中轴广场实景照片",
   },
+  eiffel: {
+    image: "/photos/eiffel.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/800px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Tour_Eiffel_Wikimedia_Commons_(cropped).jpg",
+    credit: "照片：Benh LIEU SONG / Wikimedia Commons · CC BY-SA 3.0",
+    alt: "巴黎埃菲尔铁塔全景实景照片",
+  },
+  parthenon: {
+    image: "/photos/parthenon.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/The_Parthenon_in_Athens.jpg/1280px-The_Parthenon_in_Athens.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:The_Parthenon_in_Athens.jpg",
+    credit: "照片：Steve Swayne / Wikimedia Commons · CC BY 2.0",
+    alt: "雅典卫城帕特农神庙多立克柱廊实景照片",
+  },
+  futuremuseum: {
+    image: "/photos/futuremuseum.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Museum_of_the_Future.jpg/1280px-Museum_of_the_Future.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Museum_of_the_Future.jpg",
+    credit: "照片：Александр Сигачёв / Wikimedia Commons · CC BY-SA 4.0",
+    alt: "迪拜未来博物馆流线型环形建筑实景照片",
+  },
+  sagrada: {
+    image: "/photos/sagrada.jpg",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Sagrada_Familia_01.jpg/800px-Sagrada_Familia_01.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Sagrada_Familia_01.jpg",
+    credit: "照片：Bernard Gagnon / Wikimedia Commons · CC BY-SA 3.0",
+    alt: "巴塞罗那圣家宗座圣殿诞生立面钟楼实景照片",
+  },
 };
 const statusEl = document.getElementById("status");
 const btnTour = document.getElementById("btn-tour") as HTMLButtonElement | null;
@@ -997,6 +1025,14 @@ async function boot() {
       "'": 17,
       ",": 18,
       ".": 19,
+      "/": 20,
+      "?": 20,
+      "j": 21,
+      "J": 21,
+      "k": 22,
+      "K": 22,
+      "l": 23,
+      "L": 23,
     };
     const num = KEY_MAP[key] ?? Number(key);
     if (!isNaN(num) && num >= 1 && num <= WONDERS.length) {

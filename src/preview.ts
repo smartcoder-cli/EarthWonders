@@ -59,6 +59,10 @@ const FRAMES: Record<string, { pos: [number, number, number]; look: [number, num
   svalbard: { pos: [24, 16, 36], look: [0, 8, 4] },
   liberty: { pos: [65, 55, 75], look: [0, 48, 0] },
   defense: { pos: [140, 95, 175], look: [0, 55, 0] },
+  eiffel: { pos: [220, 160, 260], look: [0, 140, 0] },
+  parthenon: { pos: [68, 38, 85], look: [0, 12, 0] },
+  futuremuseum: { pos: [85, 55, 95], look: [0, 38, 0] },
+  sagrada: { pos: [150, 110, 170], look: [0, 85, 0] },
 };
 
 void (async () => {

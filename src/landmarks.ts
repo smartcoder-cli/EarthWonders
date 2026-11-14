@@ -2096,6 +2096,30 @@ const LANDMARK_LINE_PALETTES: Record<string, LandmarkLinePalette> = {
     thresholdAngle: 20,
     minDiagonal: 0.8,
   },
+  eiffel: {
+    color: 0x5c4218, // 埃菲尔铁塔熟铁格构与三层观景台深影轮廓线
+    opacity: 0.88,
+    thresholdAngle: 20,
+    minDiagonal: 0.6,
+  },
+  parthenon: {
+    color: 0x573b18, // 雅典帕特农神庙多立克柱凹槽与三角楣大理石轮廓线
+    opacity: 0.86,
+    thresholdAngle: 22,
+    minDiagonal: 0.5,
+  },
+  futuremuseum: {
+    color: 0x0f172a, // 迪拜未来博物馆不锈钢曲面分格与斜撑桁架锐线
+    opacity: 0.90,
+    thresholdAngle: 18,
+    minDiagonal: 0.6,
+  },
+  sagrada: {
+    color: 0x452306, // 圣家堂蜂巢钟楼、自然主义立面与树状柱分枝深影线条
+    opacity: 0.88,
+    thresholdAngle: 20,
+    minDiagonal: 0.5,
+  },
 };
 
 // ─────────────────────────────────────────────────────────
@@ -5968,6 +5992,1165 @@ export function createGrandeArche(kit: SurfaceKit) {
   return root;
 }
 
+// ─────────────────────────────────────────────────────────
+// 巴黎埃菲尔铁塔 (Eiffel Tower)
+// ─────────────────────────────────────────────────────────
+
+export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
+  const root = new THREE.Group();
+  root.name = "eiffel";
+
+  // 熟铁骨架日间材质 (Wrought Iron Puddled Antique Bronze)
+  const ironDay = new THREE.MeshStandardMaterial({
+    color: 0x544738,
+    roughness: 0.65,
+    metalness: 0.75,
+  });
+  // 熟铁骨架夜间香槟金泛光材质 (Golden Floodlit Champagne Glow)
+  const ironNight = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    roughness: 0.45,
+    metalness: 0.6,
+    emissive: 0xd97706,
+    emissiveIntensity: 0.85,
+  });
+  const masonryMat = stone(0xbdb29a, 0.9, 0.05);
+  const deckMat = new THREE.MeshStandardMaterial({
+    color: 0x3d352b,
+    roughness: 0.75,
+    metalness: 0.4,
+  });
+  const goldSpireMat = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    roughness: 0.3,
+    metalness: 0.85,
+  });
+  const glassDay = new THREE.MeshStandardMaterial({
+    color: 0x93c5fd,
+    roughness: 0.1,
+    metalness: 0.9,
+    transparent: true,
+    opacity: 0.55,
+  });
+  const glassNight = new THREE.MeshStandardMaterial({
+    color: 0xfef08a,
+    roughness: 0.2,
+    metalness: 0.3,
+    emissive: 0xfef08a,
+    emissiveIntensity: 0.9,
+    transparent: true,
+    opacity: 0.85,
+  });
+
+  const ironMeshes: THREE.Mesh[] = [];
+  const glassMeshes: THREE.Mesh[] = [];
+
+  // 1. 战神广场绿荫基座 (Champ de Mars Plinth)
+  const parkBase = box(root, stone(0x27361b, 0.95, 0.0), 160, 1.2, 160, 0, 0, 0);
+  parkBase.userData.skipLines = true;
+
+  // 2. 四足倾斜熟铁桁架基座 (Four Slanted Pylons, y = 0 ~ 57m)
+  // 底座中心：(±42, 0, ±42) -> 一层中心：(±23, 57, ±23)
+  const legPositions = [
+    { x: -42, z: -42, tx: -23, tz: -23 }, // NW
+    { x: 42, z: -42, tx: 23, tz: -23 },  // NE
+    { x: 42, z: 42, tx: 23, tz: 23 },    // SE
+    { x: -42, z: 42, tx: -23, tz: 23 },   // SW
+  ];
+
+  for (const lp of legPositions) {
+    // 混凝土与花岗岩减震基墩
+    const ped = box(root, masonryMat, 16, 4.2, 16, lp.x, 0.6, lp.z);
+    ped.userData.skipLines = true;
+
+    const legDx = lp.tx - lp.x;
+    const legDz = lp.tz - lp.z;
+    const legLen = Math.hypot(legDx, 57, legDz);
+
+    // 每条腿由四根主角柱与密布的格构腹杆组成
+    for (const sub of [0, 1, 2, 3]) {
+      const ox = (sub % 2 === 0 ? -1 : 1) * 3.8;
+      const oz = (sub < 2 ? -1 : 1) * 3.8;
+      const chord = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.85, legLen, 6),
+        ironDay
+      );
+      chord.position.set((lp.x + lp.tx) / 2 + ox * 0.7, 57 / 2, (lp.z + lp.tz) / 2 + oz * 0.7);
+      chord.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(legDx, 57, legDz).normalize()
+      );
+      root.add(chord);
+      ironMeshes.push(chord);
+    }
+
+    // 沿腿身分布的横向缀板环带
+    for (let f = 1; f <= 5; f++) {
+      const frac = f / 6;
+      const hy = frac * 57;
+      const hx = lp.x + frac * legDx;
+      const hz = lp.z + frac * legDz;
+      const tieW = 10.5 - frac * 3.5;
+      const tieRing = box(root, ironDay, tieW, 0.7, tieW, hx, hy, hz);
+      ironMeshes.push(tieRing);
+    }
+  }
+
+  // 3. 四面宏伟抛物线装饰大拱券 (Monumental Base Arches, y = 0 ~ 39m)
+  const archConfigs = [
+    { x: 0, z: -32.5, rotY: 0 },
+    { x: 32.5, z: 0, rotY: Math.PI / 2 },
+    { x: 0, z: 32.5, rotY: 0 },
+    { x: -32.5, z: 0, rotY: Math.PI / 2 },
+  ];
+  for (const ac of archConfigs) {
+    const archGroup = new THREE.Group();
+    archGroup.position.set(ac.x, 0, ac.z);
+    archGroup.rotation.y = ac.rotY;
+
+    const ptsCount = 18;
+    const archSpan = 65;
+    const archPeak = 39;
+    const archShape = new THREE.Shape();
+    archShape.moveTo(-archSpan / 2, 0);
+    for (let i = 0; i <= ptsCount; i++) {
+      const t = (i / ptsCount) * 2 - 1;
+      const y = archPeak * (1 - t * t);
+      const x = t * (archSpan / 2);
+      archShape.lineTo(x, y);
+    }
+    for (let i = ptsCount; i >= 0; i--) {
+      const t = (i / ptsCount) * 2 - 1;
+      const y = Math.max(0, (archPeak - 2.8) * (1 - t * t));
+      const x = t * ((archSpan - 4) / 2);
+      archShape.lineTo(x, y);
+    }
+    archShape.closePath();
+
+    const extrudeGeom = new THREE.ExtrudeGeometry(archShape, {
+      depth: 3.2,
+      bevelEnabled: false,
+    });
+    extrudeGeom.center();
+    const archMesh = new THREE.Mesh(extrudeGeom, ironDay);
+    archMesh.position.set(0, archPeak / 2, 0);
+    archGroup.add(archMesh);
+    ironMeshes.push(archMesh);
+
+    // 辐射状肋骨花饰
+    for (let i = 1; i < ptsCount; i++) {
+      const t = (i / ptsCount) * 2 - 1;
+      const y = (archPeak - 1.4) * (1 - t * t);
+      const x = t * (archSpan / 2);
+      const strut = box(archGroup, ironDay, 0.45, 2.8, 2.8, x, y - 1.4, 0);
+      ironMeshes.push(strut);
+    }
+
+    root.add(archGroup);
+  }
+
+  // 4. 一层双层大观景台 (Platform 1, y = 57m, 68m x 68m)
+  const p1Outer = box(root, deckMat, 68, 3.8, 68, 0, 57, 0);
+  p1Outer.userData.skipLines = true;
+  const p1Rim = box(root, ironDay, 70, 1.8, 70, 0, 59, 0);
+  ironMeshes.push(p1Rim);
+  for (const sx of [-22, 22]) {
+    for (const sz of [-22, 22]) {
+      const pav = box(root, glassDay, 10, 4.2, 10, sx, 60.8, sz);
+      pav.userData.keepUv = true;
+      glassMeshes.push(pav);
+    }
+  }
+
+  // 5. 一至二层收拢段 (Platform 1 to Platform 2, y = 57m ~ 115m)
+  // 腿身从 (±23, 57, ±23) 收拢至 (±13.5, 115, ±13.5)
+  for (const lp of legPositions) {
+    const startX = lp.tx;
+    const startZ = lp.tz;
+    const endX = (lp.tx > 0 ? 1 : -1) * 13.5;
+    const endZ = (lp.tz > 0 ? 1 : -1) * 13.5;
+    const legDx = endX - startX;
+    const legDz = endZ - startZ;
+    const legLen = Math.hypot(legDx, 58, legDz);
+
+    for (const sub of [0, 1, 2, 3]) {
+      const ox = (sub % 2 === 0 ? -1 : 1) * 2.2;
+      const oz = (sub < 2 ? -1 : 1) * 2.2;
+      const chord = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.48, 0.65, legLen, 6),
+        ironDay
+      );
+      chord.position.set((startX + endX) / 2 + ox * 0.8, 57 + 58 / 2, (startZ + endZ) / 2 + oz * 0.8);
+      chord.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(legDx, 58, legDz).normalize()
+      );
+      root.add(chord);
+      ironMeshes.push(chord);
+    }
+
+    for (const hy of [76, 95]) {
+      const frac = (hy - 57) / 58;
+      const hx = startX + frac * legDx;
+      const hz = startZ + frac * legDz;
+      const tieW = 6.2 - frac * 1.8;
+      const tie = box(root, ironDay, tieW, 0.6, tieW, hx, hy, hz);
+      ironMeshes.push(tie);
+    }
+  }
+
+  // 二层过渡腰梁
+  box(root, ironDay, 38, 1.4, 1.4, 0, 88, -18);
+  box(root, ironDay, 38, 1.4, 1.4, 0, 88, 18);
+  box(root, ironDay, 1.4, 1.4, 38, -18, 88, 0);
+  box(root, ironDay, 1.4, 1.4, 38, 18, 88, 0);
+
+  // 6. 二层观景台与凡尔纳餐厅 (Platform 2, y = 115m, 42m x 42m)
+  const p2Outer = box(root, deckMat, 42, 3.2, 42, 0, 115, 0);
+  p2Outer.userData.skipLines = true;
+  const p2Rim = box(root, ironDay, 43.5, 1.4, 43.5, 0, 116.6, 0);
+  ironMeshes.push(p2Rim);
+  box(root, deckMat, 32, 1.8, 32, 0, 118.2, 0);
+  const p2Core = box(root, glassDay, 24, 2.8, 24, 0, 120, 0);
+  p2Core.userData.keepUv = true;
+  glassMeshes.push(p2Core);
+
+  // 7. 二层至三层渐变纤细塔身柱身 (Shaft Pylons, y = 120m ~ 276m)
+  const spireSteps = [
+    { y1: 120, y2: 155, w1: 24, w2: 18 },
+    { y1: 155, y2: 195, w1: 18, w2: 13.5 },
+    { y1: 195, y2: 240, w1: 13.5, w2: 10 },
+    { y1: 240, y2: 276, w1: 10, w2: 7.8 },
+  ];
+
+  for (const step of spireSteps) {
+    const h = step.y2 - step.y1;
+    const midY = (step.y1 + step.y2) / 2;
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const r1 = (step.w1 / 2) * 0.85;
+        const r2 = (step.w2 / 2) * 0.85;
+        const col = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.35, 0.45, h, 6),
+          ironDay
+        );
+        col.position.set(sx * (r1 + r2) / 2, midY, sz * (r1 + r2) / 2);
+        const tiltX = (sx * (r2 - r1)) / h;
+        const tiltZ = (sz * (r2 - r1)) / h;
+        col.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 1, 0),
+          new THREE.Vector3(tiltX, 1, tiltZ).normalize()
+        );
+        root.add(col);
+        ironMeshes.push(col);
+      }
+    }
+
+    const tieCount = 3;
+    for (let t = 0; t <= tieCount; t++) {
+      const fy = step.y1 + (t / tieCount) * h;
+      const fw = step.w1 + (t / tieCount) * (step.w2 - step.w1);
+      const ring = box(root, ironDay, fw, 0.55, fw, 0, fy, 0);
+      ironMeshes.push(ring);
+    }
+  }
+
+  // 垂直电梯轨道立柱
+  const elevatorCore = box(root, ironDay, 3.2, 276, 3.2, 0, 0, 0);
+  elevatorCore.position.y = 276 / 2;
+  ironMeshes.push(elevatorCore);
+
+  // 8. 三层顶层观景台与埃菲尔私人公寓 (Platform 3, y = 276m ~ 295m)
+  const p3Lower = new THREE.Mesh(
+    new THREE.CylinderGeometry(7.5, 7.5, 5.5, 16),
+    glassDay
+  );
+  p3Lower.position.set(0, 276 + 5.5 / 2, 0);
+  p3Lower.userData.keepUv = true;
+  root.add(p3Lower);
+  glassMeshes.push(p3Lower);
+
+  const p3Deck = new THREE.Mesh(
+    new THREE.CylinderGeometry(8.2, 8.2, 1.2, 16),
+    deckMat
+  );
+  p3Deck.position.set(0, 282, 0);
+  root.add(p3Deck);
+
+  const p3Upper = new THREE.Mesh(
+    new THREE.CylinderGeometry(5.8, 6.2, 7.0, 16),
+    ironDay
+  );
+  p3Upper.position.set(0, 285.5, 0);
+  root.add(p3Upper);
+  ironMeshes.push(p3Upper);
+
+  // 9. 穹顶、广播天线桅杆与旋转探照灯 (Cupola Dome & Radio Mast, y = 295m ~ 330m)
+  const cupola = new THREE.Mesh(
+    new THREE.SphereGeometry(4.2, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    goldSpireMat
+  );
+  cupola.position.set(0, 295, 0);
+  root.add(cupola);
+
+  const beaconGlassMat = new THREE.MeshStandardMaterial({
+    color: 0xfef08a,
+    emissive: 0xfde047,
+    emissiveIntensity: 1.8,
+  });
+  const lantern = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.6, 3.4, 6.0, 12),
+    beaconGlassMat
+  );
+  lantern.position.set(0, 299, 0);
+  root.add(lantern);
+
+  const mastLower = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.8, 1.8, 16, 8),
+    goldSpireMat
+  );
+  mastLower.position.set(0, 310, 0);
+  root.add(mastLower);
+
+  const mastPinnacle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.8, 13, 8),
+    goldSpireMat
+  );
+  mastPinnacle.position.set(0, 323.5, 0);
+  root.add(mastPinnacle);
+
+  for (const ay of [306, 312, 318]) {
+    box(root, goldSpireMat, 4.2, 0.2, 0.2, 0, ay, 0);
+    box(root, goldSpireMat, 0.2, 0.2, 4.2, 0, ay, 0);
+  }
+
+  // 330m 巅峰红色航空障碍灯
+  const redBeacon = new THREE.Mesh(
+    new THREE.SphereGeometry(0.7, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff0044 })
+  );
+  redBeacon.position.set(0, 330, 0);
+  root.add(redBeacon);
+
+  // 10. 360° 双光束旋转探照灯 (Lighthouse Beacon)
+  const beaconGroup = new THREE.Group();
+  beaconGroup.position.set(0, 299, 0);
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0xfef08a,
+    transparent: true,
+    opacity: 0.0,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  for (const sign of [-1, 1]) {
+    const beamGeo = new THREE.ConeGeometry(9.0, 80, 16, 1, true);
+    beamGeo.rotateZ(sign * Math.PI / 2);
+    beamGeo.translate(sign * 40, 0, 0);
+    const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+    beaconGroup.add(beamMesh);
+  }
+  root.add(beaconGroup);
+
+  // 11. 夜间建筑泛光照明
+  const flood1 = new THREE.PointLight(0xf59e0b, 0, 120, 1.5);
+  flood1.position.set(0, 42, 0);
+  root.add(flood1);
+
+  const flood2 = new THREE.PointLight(0xfbbf24, 0, 100, 1.4);
+  flood2.position.set(0, 118, 0);
+  root.add(flood2);
+
+  const flood3 = new THREE.PointLight(0xfef08a, 0, 80, 1.4);
+  flood3.position.set(0, 278, 0);
+  root.add(flood3);
+
+  // 昼夜模式切换
+  root.userData.hasInspection = true;
+  root.userData.setNightMode = (night: boolean) => {
+    for (const mesh of ironMeshes) {
+      mesh.material = night ? ironNight : ironDay;
+    }
+    for (const gm of glassMeshes) {
+      gm.material = night ? glassNight : glassDay;
+    }
+    beamMat.opacity = night ? 0.38 : 0.0;
+    flood1.intensity = night ? 3.5 : 0;
+    flood2.intensity = night ? 2.6 : 0;
+    flood3.intensity = night ? 2.2 : 0;
+  };
+
+  return root;
+}
+
+// ─────────────────────────────────────────────────────────
+// 希腊雅典帕特农神庙 (Parthenon, Acropolis of Athens)
+// ─────────────────────────────────────────────────────────
+
+export function createParthenon(_kit: SurfaceKit): THREE.Group {
+  const root = new THREE.Group();
+  root.name = "parthenon";
+
+  // 彭特利库斯蜜糖色大理石 (Pentelic Honey Marble)
+  const marbleDay = stone(0xeddcc4, 0.88, 0.04);
+  const marbleNight = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    roughness: 0.75,
+    metalness: 0.08,
+    emissive: 0xb45309,
+    emissiveIntensity: 0.32,
+  });
+  const rockMat = stone(0x78716c, 0.96, 0.02);
+  const goldAthenaMat = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    roughness: 0.25,
+    metalness: 0.85,
+    emissive: 0x92400e,
+    emissiveIntensity: 0.2,
+  });
+  const darkWaterMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.1,
+    metalness: 0.8,
+  });
+
+  const marbleMeshes: THREE.Mesh[] = [];
+
+  // 1. 雅典卫城石灰岩巨岩台基 (Acropolis Limestone Rock Promontory, y = 0 ~ 5m)
+  const rockHill = box(root, rockMat, 108, 5.0, 62, 0, 0, 0);
+  rockHill.userData.skipLines = true;
+  for (const sx of [-46, 46]) {
+    const rockTier = box(root, rockMat, 16, 2.5, 54, sx, 1.2, 0);
+    rockTier.userData.skipLines = true;
+  }
+
+  // 2. 三层大理石基阶 (Three-Tier Crepidoma: Stereobate & Stylobate, y = 5.0 ~ 6.65m)
+  // Step 1: 72.5m x 33.5m
+  const step1 = box(root, marbleDay, 72.5, 0.55, 33.5, 0, 5.0, 0);
+  marbleMeshes.push(step1);
+  // Step 2: 71.0m x 32.2m
+  const step2 = box(root, marbleDay, 71.0, 0.55, 32.2, 0, 5.55, 0);
+  marbleMeshes.push(step2);
+  // Step 3 (Stylobate 台基面): 69.5m x 30.9m
+  const stylobate = box(root, marbleDay, 69.5, 0.55, 30.9, 0, 6.1, 0);
+  marbleMeshes.push(stylobate);
+
+  // 3. 多立克八柱围柱廊 (Octastyle Peripteral Colonnade, 8 x 17 = 46 主柱, y = 6.65 ~ 17.1m)
+  // 柱高 10.43m，底径 1.9m，顶径 1.48m，20 瓣多边形表现多立克垂直凹槽 (Fluting)
+  const colHeight = 10.43;
+  const colBaseY = 6.65;
+  const colGeo = new THREE.CylinderGeometry(0.74, 0.95, colHeight, 20);
+  const abacusGeo = new THREE.BoxGeometry(2.1, 0.45, 2.1);
+  const echinusGeo = new THREE.CylinderGeometry(1.08, 0.74, 0.45, 20);
+
+  const colPositions: [number, number][] = [];
+  const spanX = 64.0; // 东西长度跨度
+  const spanZ = 25.6; // 南北宽度跨度
+  const numX = 17;    // 侧翼 17 根柱
+  const numZ = 8;     // 前后 8 根柱
+
+  for (let ix = 0; ix < numX; ix++) {
+    const x = -spanX / 2 + (ix / (numX - 1)) * spanX;
+    colPositions.push([x, -spanZ / 2]);
+    colPositions.push([x, spanZ / 2]);
+  }
+  for (let iz = 1; iz < numZ - 1; iz++) {
+    const z = -spanZ / 2 + (iz / (numZ - 1)) * spanZ;
+    colPositions.push([-spanX / 2, z]);
+    colPositions.push([spanX / 2, z]);
+  }
+
+  for (const [cx, cz] of colPositions) {
+    // 柱身
+    const col = new THREE.Mesh(colGeo, marbleDay);
+    col.position.set(cx, colBaseY + colHeight / 2, cz);
+    // 模拟柱轴向内倾斜视错觉修正 (Entasis inclination)
+    col.rotation.z = -cx * 0.0006;
+    col.rotation.x = cz * 0.0006;
+    root.add(col);
+    marbleMeshes.push(col);
+
+    // 柱头圆盘 (Echinus)
+    const echinus = new THREE.Mesh(echinusGeo, marbleDay);
+    echinus.position.set(cx, colBaseY + colHeight + 0.22, cz);
+    root.add(echinus);
+    marbleMeshes.push(echinus);
+
+    // 柱顶方座 (Abacus)
+    const abacus = new THREE.Mesh(abacusGeo, marbleDay);
+    abacus.position.set(cx, colBaseY + colHeight + 0.65, cz);
+    root.add(abacus);
+    marbleMeshes.push(abacus);
+  }
+
+  // 4. 楣梁与多立克排档三进饰中楣 (Architrave & Doric Frieze, y = 18.0 ~ 21.0m)
+  // 下层大理石额枋 (Architrave)
+  box(root, marbleDay, 67.5, 1.4, 2.0, 0, 17.8, -spanZ / 2);
+  box(root, marbleDay, 67.5, 1.4, 2.0, 0, 17.8, spanZ / 2);
+  box(root, marbleDay, 2.0, 1.4, 28.5, -spanX / 2, 17.8, 0);
+  box(root, marbleDay, 2.0, 1.4, 28.5, spanX / 2, 17.8, 0);
+
+  // 中层多立克排档饰 (Frieze with Triglyphs & Metopes)
+  const friezeY = 19.2;
+  const friezeLong = box(root, marbleDay, 67.5, 1.4, 1.8, 0, friezeY, -spanZ / 2);
+  const friezeLong2 = box(root, marbleDay, 67.5, 1.4, 1.8, 0, friezeY, spanZ / 2);
+  const friezeShort1 = box(root, marbleDay, 1.8, 1.4, 28.5, -spanX / 2, friezeY, 0);
+  const friezeShort2 = box(root, marbleDay, 1.8, 1.4, 28.5, spanX / 2, friezeY, 0);
+  marbleMeshes.push(friezeLong, friezeLong2, friezeShort1, friezeShort2);
+
+  // 浮雕三竖线条纹排档块 (Triglyphs)
+  for (let ix = 0; ix < numX * 2; ix++) {
+    const tx = -spanX / 2 + (ix / (numX * 2 - 1)) * spanX;
+    box(root, stone(0x78350f, 0.9, 0.1), 0.55, 1.35, 0.2, tx, friezeY, -spanZ / 2 - 0.95);
+    box(root, stone(0x78350f, 0.9, 0.1), 0.55, 1.35, 0.2, tx, friezeY, spanZ / 2 + 0.95);
+  }
+
+  // 5. 东西三角楣山花 (East & West Pediments with Sculptures, y = 20.6 ~ 25.2m)
+  for (const sx of [-spanX / 2, spanX / 2]) {
+    const pedShape = new THREE.Shape();
+    pedShape.moveTo(-15.0, 0);
+    pedShape.lineTo(15.0, 0);
+    pedShape.lineTo(0, 4.4);
+    pedShape.closePath();
+
+    const pedGeo = new THREE.ExtrudeGeometry(pedShape, {
+      depth: 2.2,
+      bevelEnabled: true,
+      bevelThickness: 0.4,
+      bevelSize: 0.35,
+    });
+    pedGeo.center();
+    const pedMesh = new THREE.Mesh(pedGeo, marbleDay);
+    pedMesh.rotation.y = Math.PI / 2;
+    pedMesh.position.set(sx, 22.8, 0);
+    root.add(pedMesh);
+    marbleMeshes.push(pedMesh);
+
+    // 三角楣内菲狄亚斯众神浮雕剪影 (Sculptural Relief Group)
+    for (const oz of [-9, -4.5, 0, 4.5, 9]) {
+      const statueH = 3.6 - Math.abs(oz) * 0.25;
+      const statue = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.45, statueH, 8),
+        marbleDay
+      );
+      statue.position.set(sx + (sx > 0 ? 1.0 : -1.0), 20.6 + statueH / 2, oz);
+      root.add(statue);
+      marbleMeshes.push(statue);
+    }
+  }
+
+  // 6. 大理石双坡屋顶 (Marble Tiled Gable Roof, y = 20.6 ~ 25.4m)
+  const roofSlope1 = box(root, marbleDay, 66.5, 0.45, 16.0, 0, 23.2, -7.5);
+  roofSlope1.rotation.x = 0.28;
+  const roofSlope2 = box(root, marbleDay, 66.5, 0.45, 16.0, 0, 23.2, 7.5);
+  roofSlope2.rotation.x = -0.28;
+  marbleMeshes.push(roofSlope1, roofSlope2);
+
+  // 7. 内殿主室与黄金雅典娜神像 (Inner Cella / Naos, y = 6.65 ~ 18.0m)
+  // 主殿大理石厚墙
+  const cellaWall1 = box(root, marbleDay, 48.0, 11.2, 1.4, 0, 6.65, -9.2);
+  const cellaWall2 = box(root, marbleDay, 48.0, 11.2, 1.4, 0, 6.65, 9.2);
+  const cellaBack = box(root, marbleDay, 1.4, 11.2, 18.4, -24.0, 6.65, 0);
+  marbleMeshes.push(cellaWall1, cellaWall2, cellaBack);
+
+  // 浅水池 (Olive Oil Reflecting Pool)
+  box(root, darkWaterMat, 14.0, 0.2, 7.5, 2.0, 6.68, 0);
+
+  // 雅典娜·帕特农神像 (Athena Parthenos Statue, 12m)
+  const athenaGroup = new THREE.Group();
+  athenaGroup.position.set(-10.0, 6.65, 0);
+  // 神像台基
+  box(athenaGroup, marbleDay, 3.6, 1.2, 3.6, 0, 0, 0);
+  // 女神长袍躯干
+  const torso = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.85, 1.15, 8.5, 12),
+    goldAthenaMat
+  );
+  torso.position.set(0, 1.2 + 8.5 / 2, 0);
+  athenaGroup.add(torso);
+  // 金头盔与胜利女神手持
+  const helm = new THREE.Mesh(new THREE.SphereGeometry(0.75, 10, 10), goldAthenaMat);
+  helm.position.set(0, 10.4, 0);
+  athenaGroup.add(helm);
+  cyl(athenaGroup, goldAthenaMat, 0.08, 0.08, 11.5, -1.2, 0, 0.8, 6);
+  root.add(athenaGroup);
+
+  // 8. 夜间古典泛光照明
+  const spotEast = new THREE.PointLight(0xf59e0b, 0, 50, 1.8);
+  spotEast.position.set(38.0, 8.0, 0);
+  root.add(spotEast);
+
+  const spotWest = new THREE.PointLight(0xf59e0b, 0, 50, 1.8);
+  spotWest.position.set(-38.0, 8.0, 0);
+  root.add(spotWest);
+
+  const spotCella = new THREE.PointLight(0xfbbf24, 0, 35, 1.5);
+  spotCella.position.set(-8.0, 12.0, 0);
+  root.add(spotCella);
+
+  root.userData.hasInspection = true;
+  root.userData.setNightMode = (night: boolean) => {
+    for (const mm of marbleMeshes) {
+      mm.material = night ? marbleNight : marbleDay;
+    }
+    spotEast.intensity = night ? 2.8 : 0;
+    spotWest.intensity = night ? 2.8 : 0;
+    spotCella.intensity = night ? 2.2 : 0;
+  };
+
+  return root;
+}
+
+// ─────────────────────────────────────────────────────────
+// 迪拜未来博物馆 (Museum of the Future, Dubai)
+// ─────────────────────────────────────────────────────────
+
+function makeMuseumArabicTexture(isNight: boolean): THREE.CanvasTexture {
+  const w = 1024;
+  const h = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+
+  // 金属底色
+  ctx.fillStyle = isNight ? "#0f172a" : "#d1d5db";
+  ctx.fillRect(0, 0, w, h);
+
+  // 1,024 块三角形拓扑网格分格线 (Parametric Diagrid)
+  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.14)" : "rgba(71,85,105,0.35)";
+  ctx.lineWidth = 1.8;
+  for (let x = 0; x < w; x += 48) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 24, h);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 24, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+  for (let y = 0; y < h; y += 48) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  // 阿拉伯书法诗句窗带 (Arabic Calligraphy Window Bands)
+  ctx.strokeStyle = isNight ? "#38bdf8" : "#0f172a";
+  ctx.fillStyle = isNight ? "#38bdf8" : "#0f172a";
+  ctx.lineWidth = isNight ? 7 : 5;
+  if (isNight) {
+    ctx.shadowColor = "#38bdf8";
+    ctx.shadowBlur = 16;
+  }
+
+  // 绘制 5 道横贯立面的优美阿拉伯书法长卷与变音符
+  const bands = [80, 160, 256, 350, 430];
+  for (let b = 0; b < bands.length; b++) {
+    const cy = bands[b];
+    ctx.beginPath();
+    ctx.moveTo(20, cy);
+    for (let x = 20; x < w - 20; x += 35) {
+      const freq = (x / w) * Math.PI * (6 + b);
+      const dy = Math.sin(freq) * 32 + ((x % 70 === 0) ? -24 : 16);
+      ctx.quadraticCurveTo(x + 12, cy + dy, x + 30, cy + dy * 0.3);
+    }
+    ctx.stroke();
+
+    for (let x = 40; x < w - 40; x += 60) {
+      const dotY = cy + Math.sin(x * 0.1) * 36;
+      ctx.beginPath();
+      ctx.arc(x, dotY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+export function createMuseumOfTheFuture(_kit: SurfaceKit): THREE.Group {
+  const root = new THREE.Group();
+  root.name = "futuremuseum";
+
+  // 材质
+  const grassMat = stone(0x2d5a27, 0.95, 0.0);
+  const concreteMat = stone(0x94a3b8, 0.85, 0.05);
+
+  const texDay = makeMuseumArabicTexture(false);
+  const texNight = makeMuseumArabicTexture(true);
+
+  const torusMatDay = new THREE.MeshStandardMaterial({
+    map: texDay,
+    color: 0xffffff,
+    roughness: 0.28,
+    metalness: 0.88,
+  });
+  const torusMatNight = new THREE.MeshStandardMaterial({
+    map: texNight,
+    color: 0xffffff,
+    roughness: 0.35,
+    metalness: 0.4,
+    emissiveMap: texNight,
+    emissive: 0xffffff,
+    emissiveIntensity: 1.25,
+  });
+
+  const steelMat = new THREE.MeshStandardMaterial({
+    color: 0x475569,
+    roughness: 0.35,
+    metalness: 0.8,
+  });
+  const glassDay = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    roughness: 0.1,
+    metalness: 0.9,
+    transparent: true,
+    opacity: 0.6,
+  });
+
+  // 1. 三层起伏覆土绿丘生态基座 (Landscaped Green Podium Hill, y = 0 ~ 12m)
+  // 底座主覆土体：长 116m x 宽 72m x 高 10m
+  const hillMain = box(root, grassMat, 116, 9.5, 72, 0, 0, 0);
+  hillMain.userData.skipLines = true;
+  for (const sz of [-36, 36]) {
+    const tier = box(root, grassMat, 96, 5.0, 18, 0, 0, sz);
+    tier.userData.skipLines = true;
+  }
+  // 入口迎宾广场与镜面水池
+  box(root, stone(0x0f172a, 0.15, 0.85), 45, 0.4, 24, 0, 9.6, 28);
+  // 玻璃入口大堂
+  const lobbyGlass = box(root, glassDay, 38, 4.5, 12, 0, 9.8, 22);
+  lobbyGlass.userData.keepUv = true;
+
+  // 2. 标志性无柱中空圆环环面 (Iconic Torus Ring with Elliptical Void, y = 10m ~ 77m)
+  // 外轮廓椭圆：长半轴 a=48m, 短半轴 b=33.5m (总高 67m，加上底座正好 77m)
+  // 内部中空椭圆：长半轴 a=22m, 短半轴 b=13.5m
+  const torusShape = new THREE.Shape();
+  const outerRx = 48.0;
+  const outerRy = 33.5;
+  const innerRx = 21.0;
+  const innerRy = 13.0;
+
+  // 外轮廓顺时针椭圆
+  const outerPts = 48;
+  for (let i = 0; i <= outerPts; i++) {
+    const theta = (i / outerPts) * Math.PI * 2;
+    const px = Math.cos(theta) * outerRx;
+    const py = Math.sin(theta) * outerRy;
+    if (i === 0) torusShape.moveTo(px, py);
+    else torusShape.lineTo(px, py);
+  }
+
+  // 内部中空空洞逆时针内孔 (Hole)
+  const holePath = new THREE.Path();
+  const innerPts = 36;
+  for (let i = 0; i <= innerPts; i++) {
+    const theta = -(i / innerPts) * Math.PI * 2;
+    const px = Math.cos(theta) * innerRx;
+    const py = Math.sin(theta) * innerRy;
+    if (i === 0) holePath.moveTo(px, py);
+    else holePath.lineTo(px, py);
+  }
+  torusShape.holes.push(holePath);
+
+  // 挤出形成厚度 28m 的饱满圆润环面
+  const extrudeSettings: THREE.ExtrudeGeometryOptions = {
+    depth: 26.0,
+    bevelEnabled: true,
+    bevelThickness: 3.8,
+    bevelSize: 3.2,
+    bevelSegments: 6,
+    curveSegments: 36,
+  };
+
+  const torusGeo = new THREE.ExtrudeGeometry(torusShape, extrudeSettings);
+  torusGeo.center();
+
+  // 精确将长 96m x 高 67m 的环面顶点坐标归一化映射至 [0, 1] UV 空间，使阿拉伯书法与三角形分格完美覆贴
+  const posAttr = torusGeo.attributes.position;
+  const uvAttr = torusGeo.attributes.uv;
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const y = posAttr.getY(i);
+    uvAttr.setXY(i, (x + 48.0) / 96.0, (y + 33.5) / 67.0);
+  }
+  uvAttr.needsUpdate = true;
+
+  const torusMesh = new THREE.Mesh(torusGeo, torusMatDay);
+  torusMesh.position.set(0, 43.5, 0);
+  torusMesh.userData.keepUv = true;
+  root.add(torusMesh);
+
+  // 3. 空洞内斜撑钢管桁架与观景悬挑天桥 (Diagrid Lattice & Void Observation Deck)
+  // 悬空观景挑台 (y = 43.5m)
+  const deck = box(root, concreteMat, 18, 1.2, 24, 0, 31.0, 0);
+  deck.userData.skipLines = true;
+  box(root, steelMat, 18.2, 1.1, 0.3, 0, 32.2, 11.8);
+  box(root, steelMat, 18.2, 1.1, 0.3, 0, 32.2, -11.8);
+
+  // 内部斜撑钢柱 (Diagrid Columns inside the void)
+  for (let ix = -16; ix <= 16; ix += 8) {
+    const col1 = cyl(root, steelMat, 0.35, 0.35, 24, ix, 43.5, 9.5, 8);
+    col1.rotation.z = (ix / 16) * 0.45;
+    const col2 = cyl(root, steelMat, 0.35, 0.35, 24, ix, 43.5, -9.5, 8);
+    col2.rotation.z = -(ix / 16) * 0.45;
+  }
+
+  // 4. 周边地铁连廊与现代柱廊 (Metro Link Bridge)
+  const bridge = box(root, concreteMat, 14, 3.2, 85, 42, 7.5, 0);
+  bridge.userData.skipLines = true;
+
+  // 5. 夜间未来科技泛光与激光光束
+  const voidLight = new THREE.PointLight(0x38bdf8, 0, 75, 1.8);
+  voidLight.position.set(0, 43.5, 0);
+  root.add(voidLight);
+
+  const hillSpot = new THREE.PointLight(0x34d399, 0, 60, 1.5);
+  hillSpot.position.set(0, 14, 25);
+  root.add(hillSpot);
+
+  root.userData.hasInspection = true;
+  root.userData.setNightMode = (night: boolean) => {
+    torusMesh.material = night ? torusMatNight : torusMatDay;
+    voidLight.intensity = night ? 3.2 : 0;
+    hillSpot.intensity = night ? 2.4 : 0;
+  };
+
+  return root;
+}
+
+// ─────────────────────────────────────────────────────────
+// 巴塞罗那圣家堂 (Basílica de la Sagrada Família)
+// ─────────────────────────────────────────────────────────
+
+function makeSagradaStainedGlassTexture(isEastDawn: boolean): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#1e1e1e";
+  ctx.fillRect(0, 0, size, size);
+
+  // 仿高迪马赛克与彩绘玻璃 (Stained Glass Windows)
+  // 东侧诞生立面清晨：深蓝、天青、翡翠绿；西侧受难立面落日：琥珀金、橘红、深绯红
+  const coldColors = ["#0284c7", "#06b6d4", "#0d9488", "#10b981", "#3b82f6", "#6366f1"];
+  const warmColors = ["#ea580c", "#f97316", "#eab308", "#ef4444", "#b91c1c", "#f59e0b"];
+  const palette = isEastDawn ? coldColors : warmColors;
+
+  const cols = 8;
+  const rows = 12;
+  const cellW = size / cols;
+  const cellH = size / rows;
+
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      ctx.fillStyle = palette[(c * 3 + r * 7) % palette.length];
+      ctx.fillRect(c * cellW + 3, r * cellH + 3, cellW - 6, cellH - 6);
+    }
+  }
+
+  // 铅条花格网
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 4;
+  for (let c = 0; c <= cols; c++) {
+    ctx.beginPath();
+    ctx.moveTo(c * cellW, 0);
+    ctx.lineTo(c * cellW, size);
+    ctx.stroke();
+  }
+  for (let r = 0; r <= rows; r++) {
+    ctx.beginPath();
+    ctx.moveTo(0, r * cellH);
+    ctx.lineTo(size, r * cellH);
+    ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+export function createSagradaFamilia(_kit: SurfaceKit): THREE.Group {
+  const root = new THREE.Group();
+  root.name = "sagrada";
+
+  // 加泰罗尼亚砂岩材质 (Montjuïc Sandstone)
+  const stoneDay = stone(0xc29b68, 0.88, 0.05);
+  const stoneNight = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    roughness: 0.65,
+    metalness: 0.1,
+    emissive: 0x92400e,
+    emissiveIntensity: 0.35,
+  });
+
+  // 威尼斯彩色玻璃马赛克碎瓷 (Trencadís Mosaic)
+  const mosaicMat = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    roughness: 0.2,
+    metalness: 0.7,
+  });
+  const crossWhiteMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.15,
+    metalness: 0.4,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.6,
+  });
+  const starCrystalMat = new THREE.MeshStandardMaterial({
+    color: 0xe0f2fe,
+    roughness: 0.1,
+    metalness: 0.3,
+    emissive: 0x38bdf8,
+    emissiveIntensity: 1.2,
+  });
+
+  // 彩绘玻璃材质
+  const texEast = makeSagradaStainedGlassTexture(true);
+  const texWest = makeSagradaStainedGlassTexture(false);
+  const glassEastDay = new THREE.MeshStandardMaterial({
+    map: texEast,
+    color: 0xffffff,
+    roughness: 0.2,
+    metalness: 0.3,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const glassEastNight = new THREE.MeshStandardMaterial({
+    map: texEast,
+    color: 0xffffff,
+    emissiveMap: texEast,
+    emissive: 0xffffff,
+    emissiveIntensity: 1.6,
+  });
+  const glassWestDay = new THREE.MeshStandardMaterial({
+    map: texWest,
+    color: 0xffffff,
+    roughness: 0.2,
+    metalness: 0.3,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const glassWestNight = new THREE.MeshStandardMaterial({
+    map: texWest,
+    color: 0xffffff,
+    emissiveMap: texWest,
+    emissive: 0xffffff,
+    emissiveIntensity: 1.6,
+  });
+
+  const stoneMeshes: THREE.Mesh[] = [];
+  const glassEastMeshes: THREE.Mesh[] = [];
+  const glassWestMeshes: THREE.Mesh[] = [];
+
+  // 1. 大教堂地坪基台 (Latin Cross Basilica Podium, y = 0 ~ 3.5m)
+  const basePlinth = box(root, stone(0x3e3427, 0.95, 0.0), 96, 3.5, 62, 0, 0, 0);
+  basePlinth.userData.skipLines = true;
+
+  // 2. 中殿与侧厅大理石主体 (Nave & Aisles Walls, y = 3.5 ~ 46m)
+  // 中殿主墙体 (长 82m x 宽 32m x 高 36m)
+  const naveBody = box(root, stoneDay, 82, 34, 32, 0, 3.5, 0);
+  stoneMeshes.push(naveBody);
+
+  // 耳堂横翼 (Transept, 跨度 56m)
+  const transept = box(root, stoneDay, 34, 34, 56, 0, 3.5, 0);
+  stoneMeshes.push(transept);
+
+  // 东西两侧彩绘大高侧窗带 (Stained Glass Lancets)
+  // 东侧 (Z = +16.2m)
+  for (let x = -28; x <= 28; x += 14) {
+    const win = new THREE.Mesh(new THREE.BoxGeometry(8.5, 24, 0.6), glassEastDay);
+    win.position.set(x, 24, 16.2);
+    win.userData.keepUv = true;
+    root.add(win);
+    glassEastMeshes.push(win);
+  }
+  // 西侧 (Z = -16.2m)
+  for (let x = -28; x <= 28; x += 14) {
+    const win = new THREE.Mesh(new THREE.BoxGeometry(8.5, 24, 0.6), glassWestDay);
+    win.position.set(x, 24, -16.2);
+    win.userData.keepUv = true;
+    root.add(win);
+    glassWestMeshes.push(win);
+  }
+
+  // 3. 诞生立面与受难立面八座蜂巢钟楼 (Eight Apostles Bell Towers, y = 35 ~ 115m)
+  // 诞生立面 (东侧 X = +28m, Z = -18, -6, +6, +18)
+  // 受难立面 (西侧 X = -28m, Z = -18, -6, +6, +18)
+  const towerClusters = [
+    { x: 28, sign: 1 },
+    { x: -28, sign: -1 },
+  ];
+
+  for (const tc of towerClusters) {
+    const zOffsets = [-17, -5.5, 5.5, 17];
+    for (let i = 0; i < zOffsets.length; i++) {
+      const tz = zOffsets[i];
+      const isInner = (i === 1 || i === 2);
+      const towerH = isInner ? 115 : 107;
+      const shaftH = towerH - 35;
+
+      // 钟楼镂空百叶身部 (Perforated Bell Spire Shaft)
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.2, 3.4, shaftH, 12),
+        stoneDay
+      );
+      shaft.position.set(tc.x, 35 + shaftH / 2, tz);
+      root.add(shaft);
+      stoneMeshes.push(shaft);
+
+      // 钟楼顶部彩色碎瓷马赛克塔尖 (Trencadís Mosaic Finials, 12m)
+      const finialBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.6, 2.2, 5.0, 10),
+        mosaicMat
+      );
+      finialBase.position.set(tc.x, towerH + 2.5, tz);
+      root.add(finialBase);
+
+      // 塔顶丰饶金球风向十字
+      const finialSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(1.4, 10, 10),
+        mosaicMat
+      );
+      finialSphere.position.set(tc.x, towerH + 6.0, tz);
+      root.add(finialSphere);
+
+      box(root, crossWhiteMat, 2.4, 0.5, 0.5, tc.x, towerH + 8.0, tz);
+      box(root, crossWhiteMat, 0.5, 3.2, 0.5, tc.x, towerH + 7.5, tz);
+    }
+  }
+
+  // 4. 中央六座核心圣塔 (Central Tower Complex, y = 35 ~ 172.5m)
+  // A. 中央耶稣基督之塔 (Tower of Jesus Christ, 规划总高 172.5m)
+  const christTowerH = 132;
+  const christTower = new THREE.Mesh(
+    new THREE.CylinderGeometry(5.2, 8.8, christTowerH, 16),
+    stoneDay
+  );
+  christTower.position.set(0, 35 + christTowerH / 2, 0);
+  root.add(christTower);
+  stoneMeshes.push(christTower);
+
+  // 基督塔顶 15 米四臂高迪十字架 (The Monumental Four-Armed Cross)
+  const crossGroup = new THREE.Group();
+  crossGroup.position.set(0, 167, 0);
+  // 垂直十字臂
+  box(crossGroup, crossWhiteMat, 2.2, 11.0, 2.2, 0, 0, 0);
+  // 水平 X 臂
+  box(crossGroup, crossWhiteMat, 9.5, 2.2, 2.2, 0, 1.5, 0);
+  // 水平 Z 臂
+  box(crossGroup, crossWhiteMat, 2.2, 2.2, 9.5, 0, 1.5, 0);
+  root.add(crossGroup);
+
+  // B. 圣母玛利亚之塔 (Tower of the Virgin Mary, 138m, 位于后殿 X = 0, Z = -24m)
+  const maryH = 98;
+  const maryTower = new THREE.Mesh(
+    new THREE.CylinderGeometry(4.2, 6.8, maryH, 14),
+    stoneDay
+  );
+  maryTower.position.set(0, 35 + maryH / 2, -24);
+  root.add(maryTower);
+  stoneMeshes.push(maryTower);
+
+  // 圣母塔顶璀璨十二芒星 (Stella Matutina / 12-pointed Luminous Star)
+  const maryStar = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(3.5, 1),
+    starCrystalMat
+  );
+  maryStar.position.set(0, 137.5, -24);
+  root.add(maryStar);
+
+  // C. 四福音传教士之塔 (Four Evangelists Towers, 135m, 环绕基督塔)
+  const evangelistOffsets = [
+    { x: -9, z: -9 },
+    { x: 9, z: -9 },
+    { x: 9, z: 9 },
+    { x: -9, z: 9 },
+  ];
+  for (const eo of evangelistOffsets) {
+    const evH = 95;
+    const evTower = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.6, 4.2, evH, 10),
+      stoneDay
+    );
+    evTower.position.set(eo.x, 35 + evH / 2, eo.z);
+    root.add(evTower);
+    stoneMeshes.push(evTower);
+
+    // 福音象征翼雕
+    const evStatue = new THREE.Mesh(
+      new THREE.SphereGeometry(1.8, 8, 8),
+      crossWhiteMat
+    );
+    evStatue.position.set(eo.x, 133.5, eo.z);
+    root.add(evStatue);
+  }
+
+  // 5. 诞生立面雕刻大门洞与自然树木雕塑 (Nativity Façade Triple Portals)
+  const portalHope = box(root, stoneDay, 3.5, 14, 10, 31, 3.5, -12);
+  const portalCharity = box(root, stoneDay, 4.5, 18, 12, 31.5, 3.5, 0);
+  const portalFaith = box(root, stoneDay, 3.5, 14, 10, 31, 3.5, 12);
+  stoneMeshes.push(portalHope, portalCharity, portalFaith);
+
+  // 生命之树丝柏常青树雕塑 (Cypress Tree of Life)
+  const cypress = new THREE.Mesh(
+    new THREE.ConeGeometry(3.2, 14, 10),
+    stone(0x166534, 0.9, 0.05)
+  );
+  cypress.position.set(32.5, 28, 0);
+  root.add(cypress);
+
+  // 6. 圣殿内部仿生树状倾斜石柱森林 (Branching Tree Columns inside the Nave)
+  for (let x = -20; x <= 20; x += 10) {
+    for (const z of [-6, 6]) {
+      cyl(root, stone(0x78716c, 0.7, 0.1), 0.85, 1.1, 22, x, 3.5, z, 8);
+      // 分叉树枝 (Branching boughs)
+      for (const rotZ of [-0.35, 0.35]) {
+        const branch = cyl(root, stone(0x78716c, 0.7, 0.1), 0.5, 0.7, 8, x, 24, z, 6);
+        branch.rotation.z = rotZ;
+      }
+    }
+  }
+
+  // 7. 夜间金辉泛光与圣光漫射
+  const spotNativity = new THREE.PointLight(0xf59e0b, 0, 75, 1.8);
+  spotNativity.position.set(45, 25, 0);
+  root.add(spotNativity);
+
+  const spotPassion = new THREE.PointLight(0xf59e0b, 0, 75, 1.8);
+  spotPassion.position.set(-45, 25, 0);
+  root.add(spotPassion);
+
+  const spotChristCross = new THREE.PointLight(0xffffff, 0, 50, 1.5);
+  spotChristCross.position.set(0, 168, 0);
+  root.add(spotChristCross);
+
+  root.userData.hasInspection = true;
+  root.userData.setNightMode = (night: boolean) => {
+    for (const sm of stoneMeshes) {
+      sm.material = night ? stoneNight : stoneDay;
+    }
+    for (const gm of glassEastMeshes) {
+      gm.material = night ? glassEastNight : glassEastDay;
+    }
+    for (const gm of glassWestMeshes) {
+      gm.material = night ? glassWestNight : glassWestDay;
+    }
+    spotNativity.intensity = night ? 3.0 : 0;
+    spotPassion.intensity = night ? 3.0 : 0;
+    spotChristCross.intensity = night ? 2.5 : 0;
+  };
+
+  return root;
+}
+
 function withMeterUvs(id: string, build: (kit: SurfaceKit) => THREE.Group) {
   return (kit: SurfaceKit) => {
     const group = build(kit);
@@ -5997,4 +7180,8 @@ export const LANDMARK_BUILDERS: Record<string, (kit: SurfaceKit) => THREE.Group>
   svalbard: withMeterUvs("svalbard", createSvalbardSeedVault),
   liberty: withMeterUvs("liberty", createStatueOfLiberty),
   defense: withMeterUvs("defense", createGrandeArche),
+  eiffel: withMeterUvs("eiffel", createEiffelTower),
+  parthenon: withMeterUvs("parthenon", createParthenon),
+  futuremuseum: withMeterUvs("futuremuseum", createMuseumOfTheFuture),
+  sagrada: withMeterUvs("sagrada", createSagradaFamilia),
 };
