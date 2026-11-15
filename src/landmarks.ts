@@ -5749,19 +5749,20 @@ function makeCarraraMarbleTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-// 45° 倒角巨门几何体 (45° Chamfered Portal Geometry for Front & Rear Facades)
+// 45° 倒角巨门几何体 (Direct-Cut 45° Chamfered Portal Geometry for Front & Rear Facades)
 function createChamferPortalGeometry(
   voidW: number = 70.0,
   voidH: number = 74.0,
-  bevelW: number = 10.0,
-  bevelD: number = 10.0,
+  outerW: number = 105.0,
+  outerH: number = 95.4,
   baseY: number = 14.0,
+  bevelD: number = 15.0,
   isRear: boolean = false
 ): THREE.BufferGeometry {
   const halfW = voidW / 2; // 35.0
-  const topY = baseY + voidH; // 88.0
-  const outerHalfW = halfW + bevelW; // 45.0
-  const outerTopY = topY + bevelW; // 98.0
+  const innerTopY = baseY + voidH; // 88.0
+  const outerHalfW = outerW / 2; // 52.5
+  const outerTopY = baseY + outerH; // 109.4
 
   const zOuter = isRear ? -56.0 : 56.0;
   const zInner = isRear ? (-56.0 + bevelD) : (56.0 - bevelD);
@@ -5772,9 +5773,9 @@ function createChamferPortalGeometry(
     // 1: Left-bottom inner
     -halfW, baseY, zInner,
     // 2: Left-junction outer
-    -outerHalfW, topY, zOuter,
+    -outerHalfW, innerTopY, zOuter,
     // 3: Left-junction inner
-    -halfW, topY, zInner,
+    -halfW, innerTopY, zInner,
     // 4: Left-top miter corner outer
     -outerHalfW, outerTopY, zOuter,
     // 5: Top-left outer
@@ -5784,9 +5785,9 @@ function createChamferPortalGeometry(
     // 7: Right-top miter corner outer
     +outerHalfW, outerTopY, zOuter,
     // 8: Right-junction inner
-    +halfW, topY, zInner,
+    +halfW, innerTopY, zInner,
     // 9: Right-junction outer
-    +outerHalfW, topY, zOuter,
+    +outerHalfW, innerTopY, zOuter,
     // 10: Right-bottom inner
     +halfW, baseY, zInner,
     // 11: Right-bottom outer
@@ -5797,17 +5798,21 @@ function createChamferPortalGeometry(
   if (!isRear) {
     indices = [
       0, 1, 3,  0, 3, 2,
-      2, 3, 5,  2, 5, 4,
-      3, 8, 6,  3, 6, 5,
-      8, 9, 7,  8, 7, 6,
+      2, 3, 4,
+      4, 3, 5,
+      5, 3, 8,  5, 8, 6,
+      6, 8, 7,
+      7, 8, 9,
       8, 10, 11,  8, 11, 9,
     ];
   } else {
     indices = [
       0, 3, 1,  0, 2, 3,
-      2, 5, 3,  2, 4, 5,
-      3, 6, 8,  3, 5, 6,
-      8, 7, 9,  8, 6, 7,
+      2, 4, 3,
+      4, 5, 3,
+      5, 8, 3,  5, 6, 8,
+      6, 7, 8,
+      7, 9, 8,
       8, 11, 10,  8, 9, 11,
     ];
   }
@@ -5966,80 +5971,85 @@ export function createGrandeArche(kit: SurfaceKit) {
 
   // B. 超立方体南北立柱塔楼 (South & North Office Pylons, y = 12m ~ 110.9m)
   // 1) 南侧立柱塔楼 (South Tower / Left Pylon)
-  // 外侧主塔体 (Outer Shell: X from -54m to -41.5m, W=12.5, H=98.9, D=112)
-  const southOuter = box(archCore, marbleWhite, 12.5, 98.9, 112.0, -47.75, 12.0, 0);
+  // 外侧纤薄主立面与边墙 (Outer Wall Shell: X from -54m to -52.5m, W=1.5, H=98.9, D=112)
+  const southOuter = box(archCore, marbleWhite, 1.5, 98.9, 112.0, -53.25, 12.0, 0);
   southOuter.userData.keepUv = true;
-  // 内侧塔体 (Inner Body behind 6.5m bevel: X from -41.5m to -35m, W=6.5, H=76, D=99)
-  const southInner = box(archCore, marbleWhite, 6.5, 76.0, 99.0, -38.25, 12.0, 0);
+  // 塔楼主办公区 (Tower Office Core: X from -52.5m to -35m, W=17.5, H=76.0, D=82, Z from -41 to +41)
+  const southInner = box(archCore, marbleWhite, 17.5, 76.0, 82.0, -43.75, 12.0, 0);
   southInner.userData.keepUv = true;
 
   // 2) 北侧立柱塔楼 (North Tower / Right Pylon)
-  // 外侧主塔体 (Outer Shell: X from +41.5m to +54m, W=12.5, H=98.9, D=112)
-  const northOuter = box(archCore, marbleWhite, 12.5, 98.9, 112.0, +47.75, 12.0, 0);
+  // 外侧纤薄主立面与边墙 (Outer Wall Shell: X from +52.5m to +54m, W=1.5, H=98.9, D=112)
+  const northOuter = box(archCore, marbleWhite, 1.5, 98.9, 112.0, +53.25, 12.0, 0);
   northOuter.userData.keepUv = true;
-  // 内侧塔体 (Inner Body behind 6.5m bevel: X from +35m to +41.5m, W=6.5, H=76, D=99)
-  const northInner = box(archCore, marbleWhite, 6.5, 76.0, 99.0, +38.25, 12.0, 0);
+  // 塔楼主办公区 (Tower Office Core: X from +35m to +52.5m, W=17.5, H=76.0, D=82, Z from -41 to +41)
+  const northInner = box(archCore, marbleWhite, 17.5, 76.0, 82.0, +43.75, 12.0, 0);
   northInner.userData.keepUv = true;
 
   // C. 顶层天桥跨梁与空中展厅 (Upper Roof Bridge & Sky Promenade, y = 88m ~ 110.9m)
-  // 上部屋面主跨体 (Upper Roof: X from -41.5m to +41.5m, W=83, H=16.4, D=112, y = 94.5 ~ 110.9)
-  const roofUpper = box(archCore, marbleWhite, 83.0, 16.4, 112.0, 0, 94.5, 0);
+  // 顶层观景露台与平顶板 (Top Roof Slab & Promenade Cap: W=105, H=1.5, D=112, y = 109.4 ~ 110.9)
+  const roofUpper = box(archCore, marbleWhite, 105.0, 1.5, 112.0, 0, 109.4, 0);
   roofUpper.userData.keepUv = true;
-  // 下部屋面梁体 (Lower Roof behind top 6.5m bevel: X from -35m to +35m, W=70, H=6.5, D=99, y = 88 ~ 94.5)
-  const roofLower = box(archCore, marbleWhite, 70.0, 6.5, 99.0, 0, 88.0, 0);
+  // 中空跨梁核心体 (Central Roof Core above Void: X from -35m to +35m, W=70, H=21.4, D=82, y = 88 ~ 109.4)
+  const roofLower = box(archCore, marbleWhite, 70.0, 21.4, 82.0, 0, 88.0, 0);
   roofLower.userData.keepUv = true;
+  // 顶跨左右过渡实体 (Roof Bridge Flank Blocks: W=17.5, H=21.4, D=82, y = 88 ~ 109.4)
+  const roofFlankL = box(archCore, marbleWhite, 17.5, 21.4, 82.0, -43.75, 88.0, 0);
+  roofFlankL.userData.keepUv = true;
+  const roofFlankR = box(archCore, marbleWhite, 17.5, 21.4, 82.0, +43.75, 88.0, 0);
+  roofFlankR.userData.keepUv = true;
 
-  // D. 标志性 6.5 米黄金比例 45° 倒角立体超门框 (Calibrated 6.5m 45° Chamfered Portal Porticos)
-  // 前门洞 45° 倒角立体包边 (Front Chamfer: Z = 49.5m ~ 56m)
-  const frontChamferGeo = createChamferPortalGeometry(70.0, 74.0, 6.5, 6.5, 14.0, false);
+  // D. 斯普雷克尔森四维超立方体 45° 标志性直切巨门倒角 (Spreckelsen Hypercube Direct-Cut 45° Chamfered Portal Porticos)
+  // 前门洞 45° 直切大倒角 (Front Chamfer: Z = 41.0m ~ 56.0m, 直接从外轮廓切入中空中庭)
+  const frontChamferGeo = createChamferPortalGeometry(70.0, 74.0, 105.0, 95.4, 14.0, 15.0, false);
   const frontChamfer = new THREE.Mesh(frontChamferGeo, marbleBevel);
   frontChamfer.userData.keepUv = true;
   archCore.add(frontChamfer);
 
-  // 后门洞 45° 倒角立体包边 (Rear Chamfer: Z = -56m ~ -49.5m)
-  const rearChamferGeo = createChamferPortalGeometry(70.0, 74.0, 6.5, 6.5, 14.0, true);
+  // 后门洞 45° 直切大倒角 (Rear Chamfer: Z = -56.0m ~ -41.0m)
+  const rearChamferGeo = createChamferPortalGeometry(70.0, 74.0, 105.0, 95.4, 14.0, 15.0, true);
   const rearChamfer = new THREE.Mesh(rearChamferGeo, marbleBevel);
   rearChamfer.userData.keepUv = true;
   archCore.add(rearChamfer);
 
   // 倒角外缘 45° 建筑极简深影嵌线 (Sharp Negative Shadow Reveals along Outer Bevel Perimeters)
   for (const fz of [-56.0, +56.0]) {
-    box(archCore, steelMat, 0.4, 80.5, 0.35, -41.5, 14.0, fz);
-    box(archCore, steelMat, 0.4, 80.5, 0.35, +41.5, 14.0, fz);
-    box(archCore, steelMat, 83.0, 0.4, 0.35, 0, 94.5, fz);
+    box(archCore, steelMat, 0.4, 95.4, 0.35, -52.5, 14.0, fz);
+    box(archCore, steelMat, 0.4, 95.4, 0.35, +52.5, 14.0, fz);
+    box(archCore, steelMat, 105.0, 0.4, 0.35, 0, 109.4, fz);
   }
 
-  // E. 门洞两侧 35 层通透玻璃幕墙与水平遮阳百叶 (35-Story Reflective Glass Atrium Walls, Z = -49.5m ~ +49.5m)
-  const leftGlass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 74.0, 99.0), glassDay);
+  // E. 门洞两侧 35 层通透玻璃幕墙与水平遮阳百叶 (35-Story Reflective Glass Atrium Walls, Z = -41.0m ~ +41.0m)
+  const leftGlass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 74.0, 82.0), glassDay);
   leftGlass.position.set(-34.7, 51.0, 0);
   leftGlass.userData.isOfficeGlass = true;
   leftGlass.userData.keepUv = true;
   archCore.add(leftGlass);
 
-  const rightGlass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 74.0, 99.0), glassDay);
+  const rightGlass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 74.0, 82.0), glassDay);
   rightGlass.position.set(+34.7, 51.0, 0);
   rightGlass.userData.isOfficeGlass = true;
   rightGlass.userData.keepUv = true;
   archCore.add(rightGlass);
 
-  // 幕墙 35 层水平楼板挑檐与垂直龙骨 (Spandrel Louvers & Structural Fins)
+  // 幕墙 35 层水平楼板挑檐与垂直龙骨 (Spandrel Louvers & Structural Fins across 82m Atrium Depth)
   for (let fl = 1; fl <= 35; fl++) {
     const fy = 14.0 + fl * 2.08;
-    box(archCore, steelMat, 0.8, 0.22, 99.0, -34.7, fy, 0);
-    box(archCore, steelMat, 0.8, 0.22, 99.0, +34.7, fy, 0);
+    box(archCore, steelMat, 0.8, 0.22, 82.0, -34.7, fy, 0);
+    box(archCore, steelMat, 0.8, 0.22, 82.0, +34.7, fy, 0);
   }
-  for (let mi = -9; mi <= 9; mi++) {
-    const mz = mi * 5.2;
+  for (let mi = -8; mi <= 8; mi++) {
+    const mz = mi * 4.8;
     box(archCore, steelMat, 0.8, 74.0, 0.25, -34.7, 14.0, mz);
     box(archCore, steelMat, 0.8, 74.0, 0.25, +34.7, 14.0, mz);
   }
 
-  // F. 拱洞顶棚结构网格与下照灯 (Underside Coffered Space Frame & Recessed Downlights at y = 88.0m)
-  box(archCore, marbleDark, 69.6, 0.5, 98.6, 0, 87.8, 0);
+  // F. 拱洞顶棚结构网格与下照灯 (Underside Coffered Space Frame & Recessed Downlights at y = 88.0m, Z = -41m ~ +41m)
+  box(archCore, marbleDark, 69.6, 0.5, 81.6, 0, 87.8, 0);
   for (let rx = -3; rx <= 3; rx++) {
-    box(archCore, steelMat, 0.4, 0.6, 98.6, rx * 9.5, 87.6, 0);
+    box(archCore, steelMat, 0.4, 0.6, 81.6, rx * 9.5, 87.6, 0);
   }
-  for (let rz = -4; rz <= 4; rz++) {
+  for (let rz = -3; rz <= 3; rz++) {
     box(archCore, steelMat, 69.6, 0.6, 0.4, 0, 87.6, rz * 11.0);
   }
 
@@ -7262,7 +7272,8 @@ function createMuseumTorusGeometry(
   return geo;
 }
 
-function makeMuseumArabicTexture(isNight: boolean): THREE.CanvasTexture {
+// 漫反射基础贴图 (Diffuse Surface Map)
+function makeMuseumArabicDiffuse(isNight: boolean): THREE.CanvasTexture {
   const w = 2048;
   const h = 1024;
   const canvas = document.createElement("canvas");
@@ -7273,19 +7284,20 @@ function makeMuseumArabicTexture(isNight: boolean): THREE.CanvasTexture {
   // 1. 特种不锈钢拉丝金属底色渐变
   const bgGrad = ctx.createLinearGradient(0, 0, w, h);
   if (isNight) {
-    bgGrad.addColorStop(0, "#0b1120");
-    bgGrad.addColorStop(0.5, "#0f172a");
-    bgGrad.addColorStop(1, "#090d16");
+    bgGrad.addColorStop(0, "#030712");
+    bgGrad.addColorStop(0.5, "#080e1a");
+    bgGrad.addColorStop(1, "#02050d");
   } else {
-    bgGrad.addColorStop(0, "#e2e8f0");
-    bgGrad.addColorStop(0.5, "#cbd5e1");
+    bgGrad.addColorStop(0, "#f8fafc");
+    bgGrad.addColorStop(0.35, "#e2e8f0");
+    bgGrad.addColorStop(0.7, "#cbd5e1");
     bgGrad.addColorStop(1, "#f1f5f9");
   }
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, w, h);
 
   // 金属表面微细水平拉丝纹理
-  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.025)" : "rgba(255,255,255,0.2)";
+  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.45)";
   ctx.lineWidth = 1;
   for (let y = 0; y < h; y += 4) {
     ctx.beginPath();
@@ -7295,7 +7307,7 @@ function makeMuseumArabicTexture(isNight: boolean): THREE.CanvasTexture {
   }
 
   // 2. 1,024 块复杂曲面三角形拓扑分格线 (Parametric Diagrid)
-  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.12)" : "rgba(71,85,105,0.28)";
+  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.06)" : "rgba(100,116,139,0.32)";
   ctx.lineWidth = 1.2;
   for (let x = 0; x < w; x += 48) {
     ctx.beginPath();
@@ -7308,80 +7320,231 @@ function makeMuseumArabicTexture(isNight: boolean): THREE.CanvasTexture {
     ctx.stroke();
   }
 
-  // 3. 迪拜酋长穆罕默德名言真实阿拉伯书法长卷 (Authentic Thuluth Arabic Calligraphy Ribbons)
-  // "لن نعيش مئات السنين ولكن يمكن أن نبدع شيئاً يستمر لمئات السنين"
-  // "المستقبل سيكون لمن يستطيع تخيله وتصميمه وتنفيذه"
-  // "سر تجدد الحياة وتطور الحضارة وتقدم البشرية هو كلمة واحدة: الابتكار"
+  // 3. 迪拜未来博物馆阿拉伯书法窗带 (Luminous Glass Ribbon Windows, NOT dark cracks)
   const tracks = [140, 300, 480, 680, 860];
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
   for (let t = 0; t < tracks.length; t++) {
     const cy = tracks[t];
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+
+    const drawScriptPath = () => {
+      let curX = 24;
+      ctx.beginPath();
+      ctx.moveTo(curX, cy);
+      while (curX < w - 30) {
+        const segW = 85 + ((curX * 17) % 75);
+        const waveY = Math.sin((curX / w) * Math.PI * 10 + t) * 36;
+        ctx.quadraticCurveTo(curX + segW * 0.45, cy + waveY + 24, curX + segW, cy + waveY * 0.4);
+
+        if (curX % 120 < 60) {
+          const ascH = 55 + (curX % 30);
+          ctx.moveTo(curX + segW * 0.7, cy + waveY);
+          ctx.quadraticCurveTo(curX + segW * 0.72, cy + waveY - ascH, curX + segW * 0.85, cy + waveY - ascH);
+          ctx.moveTo(curX + segW, cy + waveY * 0.4);
+        }
+        if (curX % 140 < 70) {
+          const descH = 42 + (curX % 25);
+          ctx.moveTo(curX + segW * 0.3, cy + waveY);
+          ctx.bezierCurveTo(
+            curX + segW * 0.35, cy + waveY + descH,
+            curX + segW * 0.6, cy + waveY + descH,
+            curX + segW * 0.65, cy + waveY + 8
+          );
+          ctx.moveTo(curX + segW, cy + waveY * 0.4);
+        }
+        curX += segW + 15;
+      }
+      ctx.stroke();
+    };
+
+    const drawScriptDots = () => {
+      for (let dx = 40; dx < w - 40; dx += 90 + (dx % 45)) {
+        const dy = cy + Math.sin(dx * 0.08 + t) * 22;
+        const isAbove = (dx % 2 === 0);
+        const dotY = isAbove ? (dy - 36) : (dy + 34);
+
+        ctx.beginPath();
+        ctx.arc(dx, dotY, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (dx % 90 === 0) {
+          ctx.lineWidth = 5.0;
+          ctx.beginPath();
+          ctx.moveTo(dx - 10, dotY - 12);
+          ctx.lineTo(dx + 8, dotY - 3);
+          ctx.stroke();
+        }
+      }
+    };
 
     if (isNight) {
-      ctx.strokeStyle = "#e0f2fe";
-      ctx.fillStyle = "#e0f2fe";
-      ctx.shadowColor = "#38bdf8";
-      ctx.shadowBlur = 16;
+      // 夜间：深色背景上的发光青蓝书法带
+      ctx.strokeStyle = "rgba(14, 165, 233, 0.45)";
+      ctx.lineWidth = 18;
+      drawScriptPath();
+
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 12;
+      drawScriptPath();
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 5;
+      drawScriptPath();
+
+      ctx.fillStyle = "#ffffff";
+      drawScriptDots();
     } else {
-      ctx.strokeStyle = "#0f172a";
-      ctx.fillStyle = "#0f172a";
-      ctx.shadowColor = "rgba(0,0,0,0.3)";
-      ctx.shadowBlur = 4;
+      // 日间：绝非黑纹暗痕！乃是精密嵌合在不锈钢曲面中的采光透光玻璃带
+      // 1) 边缘微细金属嵌槽
+      ctx.strokeStyle = "rgba(51, 65, 85, 0.4)";
+      ctx.lineWidth = 18;
+      drawScriptPath();
+
+      // 2) 莹润明亮的冰青白色透光玻璃长卷
+      ctx.strokeStyle = "#cffafe";
+      ctx.lineWidth = 13;
+      drawScriptPath();
+
+      // 3) 中心阳光高光耀斑
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 6;
+      drawScriptPath();
+
+      // 4) 闪亮透光音符点
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#38bdf8";
+      drawScriptDots();
     }
+  }
 
-    ctx.lineWidth = isNight ? 7.0 : 5.5;
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
 
-    let curX = 24;
-    ctx.beginPath();
-    ctx.moveTo(curX, cy);
-    while (curX < w - 30) {
-      const segW = 45 + ((curX * 11) % 55);
-      const waveY = Math.sin((curX / w) * Math.PI * 8 + t) * 22;
-      ctx.quadraticCurveTo(curX + segW * 0.5, cy + waveY + 12, curX + segW, cy + waveY * 0.4);
+// 纯自发光贴图 (Pure Emissive Map with Absolute Pitch-Black Background)
+function makeMuseumArabicEmissive(isNight: boolean): THREE.CanvasTexture {
+  const w = 2048;
+  const h = 1024;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
 
-      // 竖向高耸笔画 (Alif / Lam 竖笔)
-      if (curX % 80 < 35) {
-        const ascH = 36 + (curX % 20);
-        ctx.moveTo(curX + segW * 0.7, cy + waveY);
-        ctx.quadraticCurveTo(curX + segW * 0.75, cy + waveY - ascH, curX + segW * 0.85, cy + waveY - ascH);
-        ctx.moveTo(curX + segW, cy + waveY * 0.4);
-      }
-      // 下沉回转笔画 (Waw / Ra / Nun 优美回钩)
-      if (curX % 110 < 45) {
-        const descH = 28 + (curX % 18);
-        ctx.moveTo(curX + segW * 0.3, cy + waveY);
-        ctx.bezierCurveTo(
-          curX + segW * 0.35, cy + waveY + descH,
-          curX + segW * 0.6, cy + waveY + descH,
-          curX + segW * 0.65, cy + waveY + 6
-        );
-        ctx.moveTo(curX + segW, cy + waveY * 0.4);
-      }
-      curX += segW + 10;
-    }
-    ctx.stroke();
+  // 严格纯黑底色，确保不发光的金属主体在夜间保持深邃质感，不发生泛灰泛光
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, w, h);
 
-    // 阿拉伯变音符与画龙点睛的菱形/圆形点 (Nuqta & Harakat)
-    for (let dx = 35; dx < w - 35; dx += 60 + (dx % 35)) {
-      const dy = cy + Math.sin(dx * 0.08 + t) * 16;
-      const isAbove = (dx % 2 === 0);
-      const dotY = isAbove ? (dy - 24) : (dy + 22);
+  const tracks = [140, 300, 480, 680, 860];
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
 
+  for (let t = 0; t < tracks.length; t++) {
+    const cy = tracks[t];
+
+    const drawScriptPath = () => {
+      let curX = 24;
       ctx.beginPath();
-      ctx.arc(dx, dotY, 4.2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(curX, cy);
+      while (curX < w - 30) {
+        const segW = 85 + ((curX * 17) % 75);
+        const waveY = Math.sin((curX / w) * Math.PI * 10 + t) * 36;
+        ctx.quadraticCurveTo(curX + segW * 0.45, cy + waveY + 24, curX + segW, cy + waveY * 0.4);
 
-      if (dx % 75 === 0) {
-        ctx.lineWidth = 2.8;
-        ctx.beginPath();
-        ctx.moveTo(dx - 7, dotY - 8);
-        ctx.lineTo(dx + 5, dotY - 2);
-        ctx.stroke();
+        if (curX % 120 < 60) {
+          const ascH = 55 + (curX % 30);
+          ctx.moveTo(curX + segW * 0.7, cy + waveY);
+          ctx.quadraticCurveTo(curX + segW * 0.72, cy + waveY - ascH, curX + segW * 0.85, cy + waveY - ascH);
+          ctx.moveTo(curX + segW, cy + waveY * 0.4);
+        }
+        if (curX % 140 < 70) {
+          const descH = 42 + (curX % 25);
+          ctx.moveTo(curX + segW * 0.3, cy + waveY);
+          ctx.bezierCurveTo(
+            curX + segW * 0.35, cy + waveY + descH,
+            curX + segW * 0.6, cy + waveY + descH,
+            curX + segW * 0.65, cy + waveY + 8
+          );
+          ctx.moveTo(curX + segW, cy + waveY * 0.4);
+        }
+        curX += segW + 15;
       }
+      ctx.stroke();
+    };
+
+    const drawScriptDots = () => {
+      for (let dx = 40; dx < w - 40; dx += 90 + (dx % 45)) {
+        const dy = cy + Math.sin(dx * 0.08 + t) * 22;
+        const isAbove = (dx % 2 === 0);
+        const dotY = isAbove ? (dy - 36) : (dy + 34);
+
+        ctx.beginPath();
+        ctx.arc(dx, dotY, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (dx % 90 === 0) {
+          ctx.lineWidth = 5.0;
+          ctx.beginPath();
+          ctx.moveTo(dx - 10, dotY - 12);
+          ctx.lineTo(dx + 8, dotY - 3);
+          ctx.stroke();
+        }
+      }
+    };
+
+    if (isNight) {
+      // 夜间极光级璀璨霓虹自发光 (Crisp, High-Contrast Multi-Pass Radiant Bloom)
+      ctx.save();
+      // Pass 1: 紧致的青蓝环境光晕 (Tight Cyan Halo Bloom)
+      ctx.strokeStyle = "#0284c7";
+      ctx.shadowColor = "#00b4d8";
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = 20;
+      drawScriptPath();
+
+      // Pass 2: 鲜明电光青蓝中层 (Vibrant Electric Cyan Ribbon)
+      ctx.strokeStyle = "#38bdf8";
+      ctx.shadowColor = "#00f0ff";
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 12;
+      drawScriptPath();
+
+      // Pass 3: 纯白激光核心 (Pure White Core LED Line)
+      ctx.strokeStyle = "#ffffff";
+      ctx.shadowColor = "#ffffff";
+      ctx.shadowBlur = 4;
+      ctx.lineWidth = 6;
+      drawScriptPath();
+
+      // 闪烁书法重音点
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#00f0ff";
+      ctx.shadowBlur = 12;
+      drawScriptDots();
+      ctx.restore();
+    } else {
+      // 日间莹亮透光玻璃自发光：彻底消除日间“暗纹”，让书法玻璃带在明亮日光下如宝石般晶莹发亮
+      ctx.save();
+      ctx.strokeStyle = "#e0f2fe";
+      ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = 8;
+      ctx.lineWidth = 12;
+      drawScriptPath();
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.shadowColor = "#ffffff";
+      ctx.shadowBlur = 4;
+      ctx.lineWidth = 6;
+      drawScriptPath();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = 6;
+      drawScriptDots();
+      ctx.restore();
     }
-    ctx.restore();
   }
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -7400,23 +7563,28 @@ export function createMuseumOfTheFuture(_kit: SurfaceKit): THREE.Group {
   const concreteMat = stone(0x94a3b8, 0.75, 0.1);
   const poolWater = stone(0x090d16, 0.08, 0.95);
 
-  const texDay = makeMuseumArabicTexture(false);
-  const texNight = makeMuseumArabicTexture(true);
+  const diffDay = makeMuseumArabicDiffuse(false);
+  const diffNight = makeMuseumArabicDiffuse(true);
+  const emissiveDay = makeMuseumArabicEmissive(false);
+  const emissiveNight = makeMuseumArabicEmissive(true);
 
   const torusMatDay = new THREE.MeshStandardMaterial({
-    map: texDay,
-    color: 0xffffff,
-    roughness: 0.22,
-    metalness: 0.92,
-  });
-  const torusMatNight = new THREE.MeshStandardMaterial({
-    map: texNight,
+    map: diffDay,
     color: 0xffffff,
     roughness: 0.32,
-    metalness: 0.5,
-    emissiveMap: texNight,
+    metalness: 0.32,
+    emissiveMap: emissiveDay,
+    emissive: 0x38bdf8,
+    emissiveIntensity: 0.55,
+  });
+  const torusMatNight = new THREE.MeshStandardMaterial({
+    map: diffNight,
+    color: 0x0a0f1d,
+    roughness: 0.65,
+    metalness: 0.15,
+    emissiveMap: emissiveNight,
     emissive: 0xffffff,
-    emissiveIntensity: 1.45,
+    emissiveIntensity: 3.2,
   });
 
   const steelMat = new THREE.MeshStandardMaterial({
@@ -7504,11 +7672,11 @@ export function createMuseumOfTheFuture(_kit: SurfaceKit): THREE.Group {
   }
 
   // 5. 夜间未来科技泛光与激光光束
-  const voidLight = new THREE.PointLight(0x38bdf8, 0, 80, 2.0);
+  const voidLight = new THREE.PointLight(0x38bdf8, 0.3, 80, 1.6);
   voidLight.position.set(0, 43.5, 0);
   root.add(voidLight);
 
-  const hillSpot = new THREE.PointLight(0x34d399, 0, 65, 1.6);
+  const hillSpot = new THREE.PointLight(0x00f0ff, 0, 60, 1.8);
   hillSpot.position.set(0, 12.0, 28.0);
   root.add(hillSpot);
 
@@ -7516,8 +7684,8 @@ export function createMuseumOfTheFuture(_kit: SurfaceKit): THREE.Group {
   root.userData.setNightMode = (night: boolean) => {
     torusMesh.material = night ? torusMatNight : torusMatDay;
     lobbyGlass.material = night ? glassNight : glassDay;
-    voidLight.intensity = night ? 3.5 : 0;
-    hillSpot.intensity = night ? 2.6 : 0;
+    voidLight.intensity = night ? 1.6 : 0.3;
+    hillSpot.intensity = night ? 1.0 : 0;
   };
 
   return root;

@@ -174,10 +174,10 @@ const REFERENCE_PHOTOS: Record<
   },
   defense: {
     image: "/photos/defense.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Grande_Arche_%2836429257922%29.jpg/1280px-Grande_Arche_%2836429257922%29.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Grande_Arche_(36429257922).jpg",
-    credit: "照片：xiquinhosilva / Wikimedia Commons · CC BY 2.0",
-    alt: "巴黎拉德芳斯新凯旋门主立面与大台阶实景照片",
+    fallbackImage: "https://thumb.wikimedia.org/wikipedia/fr/thumb/1/10/Grande_Arche_Janvier_2023.jpeg/1280px-Grande_Arche_Janvier_2023.jpeg",
+    page: "https://fr.wikipedia.org/wiki/Fichier:Grande_Arche_Janvier_2023.jpeg",
+    credit: "照片：Arthur Weidmann / Wikimedia · CC BY-SA 3.0",
+    alt: "巴黎拉德芳斯新凯旋门全景实景照片 (Grande Arche de la Défense)",
   },
   eiffel: {
     image: "/photos/eiffel.jpg",
@@ -389,10 +389,17 @@ function updatePresetButtons(activePreset?: SolarPreset) {
   }
   if (currentWonderObj) {
     updateUrl(currentWonderObj.id, activePreset, wireframeOn, droneOrbitController?.isOrbiting);
-    if (activePreset === "night") {
-      atmosphereManager?.setNightMode(true);
-    } else if (activePreset === "noon" || activePreset === "dawn") {
-      atmosphereManager?.setNightMode(false);
+    const isNight = activePreset === "night";
+    landmarkNightOn = isNight;
+    atmosphereManager?.setNightMode(isNight);
+    const grp = landmarkGroups.get(currentWonderObj.id);
+    if (grp && typeof grp.userData?.setNightMode === "function") {
+      grp.userData.setNightMode(isNight);
+    }
+    const btnNightEl = document.getElementById("btn-nightmode");
+    if (btnNightEl) {
+      btnNightEl.classList.toggle("active", isNight);
+      btnNightEl.textContent = isNight ? "🌙 夜间窗光" : "🌓 窗光夜景";
     }
   }
 }
