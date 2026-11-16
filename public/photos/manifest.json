@@ -138,9 +138,9 @@
   },
   "sagrada": {
     "image": "/photos/sagrada.jpg",
-    "fallbackImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Sagrada_Familia_01.jpg/1280px-Sagrada_Familia_01.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Sagrada_Familia_01.jpg",
-    "credit": "照片：Bernard Gagnon / Wikimedia Commons · CC BY-SA 3.0",
-    "alt": "巴塞罗那圣家宗座圣殿诞生立面钟楼实景照片"
+    "fallbackImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Gaudis_Sagrada_Familia%2C_reflection.jpg/1280px-Gaudis_Sagrada_Familia%2C_reflection.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Gaudis_Sagrada_Familia,_reflection.jpg",
+    "credit": "照片：Jesus Solana / Wikimedia Commons · CC BY 2.0",
+    "alt": "巴塞罗那圣家宗座圣殿诞生立面与中央塔群水池倒影全景实景照片 (Gaudí's Sagrada Família, Reflection)"
   }
 }

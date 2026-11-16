@@ -128,7 +128,7 @@ export class DroneOrbitController {
   private isOrbitingState = false;
   private currentWonder: Wonder | null = null;
   private pivotPos: THREE.Vector3 = new THREE.Vector3();
-  private speedDegPerSec = 4.5; // 电影级慢速航拍速度
+  private speedDegPerSec = 8.0; // 黄金电影级航拍速率（一圈约 45 秒，流畅舒适）
   private onStateChange?: (isOrbiting: boolean) => void;
 
   private _up = new THREE.Vector3();
@@ -145,12 +145,18 @@ export class DroneOrbitController {
     this.viewer = viewer;
     this.onStateChange = onStateChange;
 
-    // 当用户在画布上手动拖动鼠标交互时，优雅暂停/退出无人机航拍
-    viewer.controls.addEventListener("start", () => {
-      if (this.isOrbitingState) {
-        this.stop();
-      }
-    });
+    // 当用户在画布上手动交互（指针按下、滚轮滑动、移动端触控）时，即刻平滑交出控制权并退出航拍
+    const dom = (viewer as any).domElement ?? viewer.renderer?.raw?.domElement;
+    if (dom && typeof dom.addEventListener === "function") {
+      const handleUserGesture = () => {
+        if (this.isOrbitingState) {
+          this.stop();
+        }
+      };
+      dom.addEventListener("pointerdown", handleUserGesture);
+      dom.addEventListener("wheel", handleUserGesture, { passive: true });
+      dom.addEventListener("touchstart", handleUserGesture, { passive: true });
+    }
   }
 
   public start(wonder: Wonder, pivot: THREE.Vector3) {
@@ -214,24 +220,28 @@ export class DroneOrbitController {
         getUpDirection?: (point: THREE.Vector3, target: THREE.Vector3) => void;
         rotationSpeed?: number;
         pivotPoint?: THREE.Vector3;
+        rotationInertia?: THREE.Vector2;
+        dragInertia?: THREE.Vector3;
+        globeInertia?: THREE.Matrix4;
       };
       _applyRotation?: (x: number, y: number, pivotPoint: THREE.Vector3) => void;
       getUpDirection?: (point: THREE.Vector3, target: THREE.Vector3) => void;
       rotationSpeed?: number;
       pivotPoint?: THREE.Vector3;
+      rotationInertia?: THREE.Vector2;
+      dragInertia?: THREE.Vector3;
+      globeInertia?: THREE.Matrix4;
     });
     const ctrl = rawControls.raw ?? rawControls;
 
-    // 优先使用 GlobeControls 原生 _applyRotation（与用户右键拖动完全同源，保持地平姿态与地表椭球法线严密一致）
+    // 优先使用 GlobeControls 原生 _applyRotation（若存在则使用）
     if (typeof ctrl?._applyRotation === "function") {
       const rotSpeed = ctrl.rotationSpeed || 1;
-      // 在 EnvironmentControls._applyRotation 中：azimuth = - x * rotationSpeed
-      // 传入 x = - deltaAngleRad / rotSpeed，使方位角平滑转动，绝不破坏地平姿态
       ctrl._applyRotation(-deltaAngleRad / rotSpeed, 0, this.pivotPos);
       return;
     }
 
-    // 回退方案：通过严格的空间四元数沿当地椭球法线旋转相机世界矩阵，绝不调用 camera.lookAt 避免上下颠倒
+    // 通过严格空间四元数沿当地椭球表面法线旋转相机世界矩阵，锁定地平姿态
     if (typeof ctrl?.getUpDirection === "function") {
       ctrl.getUpDirection(this.pivotPos, this._up);
     } else {
@@ -249,5 +259,15 @@ export class DroneOrbitController {
     camera.matrixWorld.premultiply(this._rotMat);
     camera.matrixWorld.decompose(camera.position, camera.quaternion, this._scale);
     camera.updateMatrixWorld(true);
+
+    // 同步刷新控制器锚点并清空冲突惯性，确保用户随时接管时画面丝滑无跳跃
+    if (ctrl) {
+      if (ctrl.pivotPoint) {
+        ctrl.pivotPoint.copy(this.pivotPos);
+      }
+      ctrl.rotationInertia?.set(0, 0);
+      ctrl.dragInertia?.set(0, 0, 0);
+      ctrl.globeInertia?.identity();
+    }
   }
 }

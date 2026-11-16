@@ -141,11 +141,15 @@ npm run preview
 ```
 EarthWonders/
 ├── public/
-│   ├── photos/              # 19 个地标官方高清实景照片与版权清单 (manifest.json)
+│   ├── photos/              # 23 个地标官方高清实景照片与版权清单 (manifest.json)
 │   ├── textures/            # 程序化材质贴图 (砂岩、玄武岩、草皮、大理石等)
 │   └── assets/              # Tellux 天文、星空、大气与地形物理数据
 ├── src/
-│   ├── landmarks.ts         # 核心程序化三维建模器 (19 组地标特征建模函数)
+│   ├── landmarks/           # 模块化程序化三维建模器 (23 个独立地标构建模块 + 动态按需加载器)
+│   │   ├── _shared.ts       # 参数化几何原语、材质与拱券/柱廊工具
+│   │   ├── _lines.ts        # 建筑锐利结构线框拓扑引擎
+│   │   ├── giza.ts ~ sagrada.ts # 23 组地标独立参数化建模源码
+│   │   └── index.ts         # 统一导出与动态 import 代码分割注册表
 │   ├── wonders.ts           # 地标定义、地理坐标、初始视角航向与参数配置
 │   ├── main.ts              # 主逻辑：三维场景、镜头运镜、实景卡片与交互事件
 │   ├── solarAndOrbit.ts     # 太阳光影控制器与无人机 360° 航拍控制器
@@ -155,6 +159,7 @@ EarthWonders/
 │   ├── hotspots.ts          # 空间热点与注记系统
 │   ├── surfaces.ts          # 材质与 UV 贴图适配套件
 │   └── styles.css           # 界面样式与响应式视口布局
+├── tests/                   # 自动化单元测试套件 (Vitest 覆盖几何算子、数据完整性与动态加载)
 ├── scripts/
 │   ├── capture_previews.mjs # 自动化无头浏览器地标与全景截屏脚本
 │   └── prep_textures.py     # 贴图预处理脚本
@@ -175,7 +180,7 @@ EarthWonders/
    ```bash
    git init
    git add .
-   git commit -m "feat: complete Earth Wonders on Tellux with 17 landmarks"
+   git commit -m "feat: complete Earth Wonders on Tellux with 23 landmarks"
    git branch -M main
    git remote add origin https://github.com/<你的用户名>/EarthWonders.git
    git push -u origin main

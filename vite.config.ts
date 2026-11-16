@@ -13,6 +13,26 @@ export default defineConfig({
     port: 4173,
     strictPort: true,
   },
+  build: {
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/three/")) {
+            return "vendor-three";
+          }
+          if (
+            id.includes("node_modules/tellux/") ||
+            id.includes("node_modules/3d-tiles-renderer/") ||
+            id.includes("node_modules/@takram/") ||
+            id.includes("node_modules/postprocessing/")
+          ) {
+            return "vendor-tellux";
+          }
+        },
+      },
+    },
+  },
   optimizeDeps: {
     include: [
       "three",

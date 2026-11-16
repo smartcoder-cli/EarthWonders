@@ -2,7 +2,7 @@ import * as THREE from "three";
 import tellux from "tellux";
 import { AtmosphereManager } from "./atmosphereEffects";
 import { HotspotManager } from "./hotspotManager";
-import { LANDMARK_BUILDERS } from "./landmarks";
+import { loadLandmarkBuilder } from "./landmarks";
 import { generatePostcard, showPostcardModal } from "./postcard";
 import { SolarController, DroneOrbitController, type SolarPreset } from "./solarAndOrbit";
 import { loadSurfaceKit, type SurfaceKit } from "./surfaces";
@@ -202,10 +202,10 @@ const REFERENCE_PHOTOS: Record<
   },
   sagrada: {
     image: "/photos/sagrada.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Sagrada_Familia_01.jpg/1280px-Sagrada_Familia_01.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Sagrada_Familia_01.jpg",
-    credit: "照片：Bernard Gagnon / Wikimedia Commons · CC BY-SA 3.0",
-    alt: "巴塞罗那圣家宗座圣殿诞生立面钟楼实景照片",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Gaudis_Sagrada_Familia%2C_reflection.jpg/1280px-Gaudis_Sagrada_Familia%2C_reflection.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Gaudis_Sagrada_Familia,_reflection.jpg",
+    credit: "照片：Jesus Solana / Wikimedia Commons · CC BY 2.0",
+    alt: "巴塞罗那圣家宗座圣殿诞生立面与中央塔群水池倒影全景实景照片 (Gaudí's Sagrada Família, Reflection)",
   },
 };
 const statusEl = document.getElementById("status");
@@ -741,6 +741,11 @@ async function visit(wonder: Wonder) {
   solarController?.setWonder(wonder);
   updatePresetButtons("noon");
   hotspotManager?.setActiveWonder(null);
+
+  // 飞行途中并行加载目标地标模型
+  if (surfaceKit) {
+    void loadLandmarkModel(viewer, wonder, surfaceKit);
+  }
   atmosphereManager?.setWonder(wonder, landmarkGroups.get(wonder.id));
   atmosphereManager?.setNightMode(landmarkNightOn);
   updateUrl(wonder.id, undefined, wireframeOn, false);
@@ -748,8 +753,11 @@ async function visit(wonder: Wonder) {
   showDetail(wonder);
   setStatus(`飞向 ${wonder.nameZh}`);
   await flyToWonder(wonder);
+  const loadedGroup = surfaceKit ? await loadLandmarkModel(viewer, wonder, surfaceKit) : undefined;
   // An older visit must not overwrite the status of a newer selection or tour.
   if (selectedId === wonder.id && !touring) {
+    atmosphereManager?.setWonder(wonder, loadedGroup);
+    atmosphereManager?.setNightMode(landmarkNightOn);
     setStatus(`${wonder.nameZh} · ${wonder.place}`);
   }
 }
@@ -827,35 +835,79 @@ function addMarker(current: InstanceType<typeof tellux.Viewer>, wonder: Wonder) 
   });
 }
 
-function placeLandmarks(
+let surfaceKit: SurfaceKit | null = null;
+const loadingLandmarks = new Map<string, Promise<THREE.Group | undefined>>();
+
+async function loadLandmarkModel(
+  current: InstanceType<typeof tellux.Viewer>,
+  wonder: Wonder,
+  kit: SurfaceKit,
+): Promise<THREE.Group | undefined> {
+  const existing = landmarkGroups.get(wonder.id);
+  if (existing) return existing;
+
+  const inFlight = loadingLandmarks.get(wonder.id);
+  if (inFlight) return inFlight;
+
+  const promise = (async () => {
+    try {
+      const build = await loadLandmarkBuilder(wonder.id);
+      if (!build || !landmarksRoot) return undefined;
+      const group = build(kit);
+      group.name = wonder.id;
+      group.userData.wonderId = wonder.id;
+      group.matrixAutoUpdate = false;
+      current.cartographicToMatrix4(
+        [wonder.longitude, wonder.latitude, wonder.modelHeight ?? 0],
+        { heading: wonder.modelHeading ?? 0 },
+        group.matrix,
+      );
+      group.updateMatrixWorld(true);
+      group.traverse((object) => {
+        object.frustumCulled = false;
+        object.raycast = () => {};
+      });
+      landmarksRoot.add(group);
+      landmarkGroups.set(wonder.id, group);
+      return group;
+    } catch (err) {
+      console.error(`加载地标 ${wonder.nameZh} 失败:`, err);
+      return undefined;
+    } finally {
+      loadingLandmarks.delete(wonder.id);
+    }
+  })();
+
+  loadingLandmarks.set(wonder.id, promise);
+  return promise;
+}
+
+function initLandmarksContainer(
   current: InstanceType<typeof tellux.Viewer>,
   kit: SurfaceKit,
 ) {
+  surfaceKit = kit;
   const root = new THREE.Group();
   root.name = "earth-wonders-landmarks";
   current.scene.raw.add(root);
   landmarksRoot = root;
+}
 
-  for (const wonder of WONDERS) {
-    const build = LANDMARK_BUILDERS[wonder.id];
-    if (!build) continue;
-    const group = build(kit);
-    group.name = wonder.id;
-    group.userData.wonderId = wonder.id;
-    group.matrixAutoUpdate = false;
-    current.cartographicToMatrix4(
-      [wonder.longitude, wonder.latitude, wonder.modelHeight ?? 0],
-      { heading: wonder.modelHeading ?? 0 },
-      group.matrix,
-    );
-    group.updateMatrixWorld(true);
-    group.traverse((object) => {
-      object.frustumCulled = false;
-      object.raycast = () => {};
-    });
-    root.add(group);
-    landmarkGroups.set(wonder.id, group);
-  }
+function preloadBackgroundLandmarks(current: InstanceType<typeof tellux.Viewer>, kit: SurfaceKit) {
+  let idx = 0;
+  const preloadNext = () => {
+    if (idx >= WONDERS.length) return;
+    const w = WONDERS[idx++];
+    if (!landmarkGroups.has(w.id)) {
+      void loadLandmarkModel(current, w, kit);
+    }
+    if ("requestIdleCallback" in window) {
+      (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback(preloadNext, { timeout: 3000 });
+    } else {
+      setTimeout(preloadNext, 1000);
+    }
+  };
+  setTimeout(preloadNext, 2000);
 }
 
 function wonderIdFromObject(start: THREE.Object3D | null | undefined) {
@@ -1257,8 +1309,11 @@ async function boot() {
   });
 
   // 初始化无人机航拍控制器
-  droneOrbitController = new DroneOrbitController(current, () => {
+  droneOrbitController = new DroneOrbitController(current, (isOrbiting) => {
     updateDroneBtn();
+    if (!isOrbiting && currentWonderObj && !flying && !touring) {
+      setStatus(`${currentWonderObj.nameZh} · ${currentWonderObj.place}`);
+    }
   });
 
   // 初始化 3D 热点管理器
@@ -1329,12 +1384,31 @@ async function boot() {
         setStatus("正在飞行中，飞抵后即可开启航拍环绕");
         return;
       }
-      if (!currentWonderObj || !activePivotPos) {
+      if (!currentWonderObj) {
         setStatus("请先选择一个奇迹，再开启航拍环绕");
+        return;
+      }
+      // 容错保障：若 activePivotPos 偶尔未就绪，使用当前建筑大地测量坐标现场重构中心
+      if (!activePivotPos && viewer) {
+        try {
+          const targetMat = new THREE.Matrix4();
+          viewer.cartographicToMatrix4(
+            [currentWonderObj.longitude, currentWonderObj.latitude, currentWonderObj.lookHeight ?? 24],
+            {},
+            targetMat,
+          );
+          activePivotPos = new THREE.Vector3().setFromMatrixPosition(targetMat);
+        } catch {
+          // ignore
+        }
+      }
+      if (!activePivotPos) {
+        setStatus("正在对齐建筑中心，请稍候重试");
         return;
       }
       droneOrbitController?.start(currentWonderObj, activePivotPos);
       hotspotManager?.closeCard();
+      setStatus(`已开启「${currentWonderObj.nameZh}」360° 航拍环绕 · 拖动鼠标或按 O 键退出`);
     }
     updateDroneBtn();
   });
@@ -1390,7 +1464,8 @@ async function boot() {
   performance.measure("earthwonders-viewer-startup", "earthwonders-boot-start", "earthwonders-viewer-created");
   performance.measure("earthwonders-texture-loading", "earthwonders-textures-start", "earthwonders-textures-ready");
 
-  placeLandmarks(current, kit);
+  initLandmarksContainer(current, kit);
+  preloadBackgroundLandmarks(current, kit);
 
   // 初始化大气与环境动态气候管理器 (斯瓦尔巴极光、金门大桥海雾等)
   atmosphereManager = new AtmosphereManager();

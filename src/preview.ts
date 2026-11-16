@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { LANDMARK_BUILDERS } from "./landmarks";
+import { loadLandmarkBuilder } from "./landmarks";
 import { loadSurfaceKit } from "./surfaces";
 import { WONDERS } from "./wonders";
 
@@ -67,7 +67,7 @@ const FRAMES: Record<string, { pos: [number, number, number]; look: [number, num
 
 void (async () => {
   const kit = await loadSurfaceKit();
-  const build = LANDMARK_BUILDERS[wonder.id];
+  const build = await loadLandmarkBuilder(wonder.id);
   if (!build) {
     label.textContent = `missing builder ${wonder.id}`;
     return;
@@ -88,6 +88,7 @@ void (async () => {
   }
   label.textContent = `${wonder.index} ${wonder.nameZh} · ${wonder.nameEn}`;
   label.dataset.ready = "1";
+  (window as any).__preview = { camera, scene, group };
   const tick = () => {
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
