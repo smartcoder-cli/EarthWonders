@@ -97,9 +97,10 @@
   },
   "svalbard": {
     "image": "/photos/svalbard.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Longyearbyen,_Svalbard_Global_Seed_Vault.JPG",
-    "credit": "照片：Superchilum / Wikimedia Commons · CC BY-SA 4.0",
-    "alt": "斯瓦尔巴全球种子库极地入口棱柱实景照片"
+    "fallbackImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Svalbard_seed_vault.jpg/1920px-Svalbard_seed_vault.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Svalbard_seed_vault.jpg",
+    "credit": "照片：Einar Jørgen Haraldseid / Wikimedia Commons · CC BY-SA 2.0",
+    "alt": "斯瓦尔巴全球种子库极地斜向混凝土棱柱与《永久回响》艺术装置全景实景照片 (Svalbard Seed Vault)"
   },
   "liberty": {
     "image": "/photos/liberty.jpg",

@@ -9,11 +9,11 @@
  *    对于 99% 的正常高清卫星瓦片（尺寸 > 3500 字节），直接原样返回原生 Response，
  *    完全走浏览器原生流式加载、原生 HTTP/2 多路复用与硬盘缓存，0ms 额外开销，绝对不堵塞并发网络。
  * 2. 精准占位图拦截 (Surgical Placeholder Interception)：
- *    仅当瓦片为 404 或尺寸 <= 3500 字节且确认为 ArcGIS 灰色占位图（2521 字节或 MD5 命中）时触发回退。
+ *    仅当瓦片为 404 或尺寸 <= 3500 字节且确认为 ArcGIS 灰色占位图时触发回退。
  * 3. 祖先瓦片聚合共享缓存 (Coalesced Ancestor Reuse)：
  *    缺失区域的所有子瓦片共享同一块已覆盖的父级卫星瓦片 (z=15 或 16)。
  *    仅需 1 次网络请求即可在内存中毫秒级为周边所有缺失瓦片完成四叉树平滑重采样合成，
- *    杜绝递归深层瀑布请求对浏览器 6 个 HTTP 连接槽位的死锁耗尽。
+ *    杜绝递归深层瀑布请求对浏览器连接槽位的死锁耗尽。
  */
 
 export interface TileCoords {
@@ -50,144 +50,35 @@ function coordKey(baseUrl: string, z: number, y: number, x: number): string {
   return `${baseUrl}${z}/${y}/${x}`;
 }
 
-// 已知 ArcGIS "Map data not yet available" 占位图 MD5 指纹
-const KNOWN_PLACEHOLDER_MD5 = new Set([
-  "f27d9de7f80c13501f470595e327aa6d",
-  "8faad7340d8aa531473fa5812eefcceb",
-  "ae3e9ff740f9c2d7f8a7e0a81d77cbef",
-  "97dd8fc2d226de59b369527ec3c3fe70",
-  "2eec5a8120fa26f6ebff2a30364d9f78",
-  "c8df81c81cf63d085df5e2361d7a36cb",
-  "0bfeb0ef6ab0c7329fbfa56fa08ddab4",
-  "3fb15de7361cd8c16ca61c80ae55f417",
-  "df3a8d11624c96aa91136cbb8a379374",
-  "21e25e983ba4353cbaf8ec3ee5aa8cfb",
-]);
+// 占位图常见精确字节大小
+const PLACEHOLDER_EXACT_SIZES = new Set([2521, 1033, 2419, 2568, 2816]);
 
-function computeMd5(buffer: ArrayBuffer): string {
+/**
+ * 快速 32 位 FNV-1a 哈希计算，替代庞大的历史 MD5 实现
+ */
+export function fastHash32(buffer: ArrayBuffer): number {
   const bytes = new Uint8Array(buffer);
-  const len = bytes.length;
-  const words: number[] = new Array(Math.ceil((len + 8) / 4) + 16).fill(0);
-  for (let i = 0; i < len; i++) {
-    words[i >> 2] |= bytes[i] << ((i % 4) * 8);
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    hash ^= bytes[i];
+    hash = Math.imul(hash, 0x01000193);
   }
-  words[len >> 2] |= 0x80 << ((len % 4) * 8);
-  words[(((len + 8) >> 6) << 4) + 14] = (len * 8) & 0xffffffff;
-  words[(((len + 8) >> 6) << 4) + 15] = Math.floor((len * 8) / 0x100000000);
-
-  function cmn(q: number, a: number, b: number, x: number, s: number, t: number): number {
-    a = (a + q + x + t) | 0;
-    return (((a << s) | (a >>> (32 - s))) + b) | 0;
-  }
-  function ff(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
-    return cmn((b & c) | (~b & d), a, b, x, s, t);
-  }
-  function gg(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
-    return cmn((b & d) | (c & ~d), a, b, x, s, t);
-  }
-  function hh(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
-    return cmn(b ^ c ^ d, a, b, x, s, t);
-  }
-  function ii(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
-    return cmn(c ^ (b | ~d), a, b, x, s, t);
-  }
-
-  let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
-  for (let i = 0; i < words.length; i += 16) {
-    const olda = a, oldb = b, oldc = c, oldd = d;
-    a = ff(a, b, c, d, words[i + 0] || 0, 7, -680876936);
-    d = ff(d, a, b, c, words[i + 1] || 0, 12, -389564586);
-    c = ff(c, d, a, b, words[i + 2] || 0, 17, 606105819);
-    b = ff(b, c, d, a, words[i + 3] || 0, 22, -1044525330);
-    a = ff(a, b, c, d, words[i + 4] || 0, 7, -176418897);
-    d = ff(d, a, b, c, words[i + 5] || 0, 12, 1200080426);
-    c = ff(c, d, a, b, words[i + 6] || 0, 17, -1473231341);
-    b = ff(b, c, d, a, words[i + 7] || 0, 22, -45705983);
-    a = ff(a, b, c, d, words[i + 8] || 0, 7, 1770035416);
-    d = ff(d, a, b, c, words[i + 9] || 0, 12, -1958414417);
-    c = ff(c, d, a, b, words[i + 10] || 0, 17, -42063);
-    b = ff(b, c, d, a, words[i + 11] || 0, 22, -1990404162);
-    a = ff(a, b, c, d, words[i + 12] || 0, 7, 1804603682);
-    d = ff(d, a, b, c, words[i + 13] || 0, 12, -40341101);
-    c = ff(c, d, a, b, words[i + 14] || 0, 17, -1502002290);
-    b = ff(b, c, d, a, words[i + 15] || 0, 22, 1236535329);
-
-    a = gg(a, b, c, d, words[i + 1] || 0, 5, -165796510);
-    d = gg(d, a, b, c, words[i + 6] || 0, 9, -1069501632);
-    c = gg(c, d, a, b, words[i + 11] || 0, 14, 643717713);
-    b = gg(b, c, d, a, words[i + 0] || 0, 20, -373897302);
-    a = gg(a, b, c, d, words[i + 5] || 0, 5, -701558691);
-    d = gg(d, a, b, c, words[i + 10] || 0, 9, 38016083);
-    c = gg(c, d, a, b, words[i + 15] || 0, 14, -660478335);
-    b = gg(b, c, d, a, words[i + 4] || 0, 20, -405537848);
-    a = gg(a, b, c, d, words[i + 9] || 0, 5, 568446438);
-    d = gg(d, a, b, c, words[i + 14] || 0, 9, -1019803690);
-    c = gg(c, d, a, b, words[i + 3] || 0, 14, -187363961);
-    b = gg(b, c, d, a, words[i + 8] || 0, 20, 1163531501);
-    a = gg(a, b, c, d, words[i + 13] || 0, 5, -1444681467);
-    d = gg(d, a, b, c, words[i + 2] || 0, 9, -51403784);
-    c = gg(c, d, a, b, words[i + 7] || 0, 14, 1735328473);
-    b = gg(b, c, d, a, words[i + 12] || 0, 20, -1926607734);
-
-    a = hh(a, b, c, d, words[i + 5] || 0, 4, -378558);
-    d = hh(d, a, b, c, words[i + 8] || 0, 11, -2022574463);
-    c = hh(c, d, a, b, words[i + 11] || 0, 16, 1839030562);
-    b = hh(b, c, d, a, words[i + 14] || 0, 23, -35309556);
-    a = hh(a, b, c, d, words[i + 1] || 0, 4, -1530992060);
-    d = hh(d, a, b, c, words[i + 4] || 0, 11, 1272893353);
-    c = hh(c, d, a, b, words[i + 7] || 0, 16, -155497632);
-    b = hh(b, c, d, a, words[i + 10] || 0, 23, -1094730640);
-    a = hh(a, b, c, d, words[i + 13] || 0, 4, 681279174);
-    d = hh(d, a, b, c, words[i + 0] || 0, 11, -358537222);
-    c = hh(c, d, a, b, words[i + 3] || 0, 16, -722521979);
-    b = hh(b, c, d, a, words[i + 6] || 0, 23, 76029189);
-    a = hh(a, b, c, d, words[i + 9] || 0, 4, -640364487);
-    d = hh(d, a, b, c, words[i + 12] || 0, 11, -421815835);
-    c = hh(c, d, a, b, words[i + 15] || 0, 16, 530742520);
-    b = hh(b, c, d, a, words[i + 2] || 0, 23, -995338651);
-
-    a = ii(a, b, c, d, words[i + 0] || 0, 6, -198630844);
-    d = ii(d, a, b, c, words[i + 7] || 0, 10, 1126891415);
-    c = ii(c, d, a, b, words[i + 14] || 0, 15, -1416354905);
-    b = ii(b, c, d, a, words[i + 5] || 0, 21, -57434055);
-    a = ii(a, b, c, d, words[i + 12] || 0, 6, 1700485571);
-    d = ii(d, a, b, c, words[i + 3] || 0, 10, -1894986606);
-    c = ii(c, d, a, b, words[i + 10] || 0, 15, -1051523);
-    b = ii(b, c, d, a, words[i + 1] || 0, 21, -2054922799);
-    a = ii(a, b, c, d, words[i + 8] || 0, 6, 1873313359);
-    d = ii(d, a, b, c, words[i + 15] || 0, 10, -30611744);
-    c = ii(c, d, a, b, words[i + 6] || 0, 15, -1560198380);
-    b = ii(b, c, d, a, words[i + 13] || 0, 21, 1309151649);
-    a = ii(a, b, c, d, words[i + 4] || 0, 6, -145523070);
-    d = ii(d, a, b, c, words[i + 11] || 0, 10, -1120210379);
-    c = ii(c, d, a, b, words[i + 2] || 0, 15, 718787259);
-    b = ii(b, c, d, a, words[i + 9] || 0, 21, -343485551);
-
-    a = (a + olda) | 0;
-    b = (b + oldb) | 0;
-    c = (c + oldc) | 0;
-    d = (d + oldd) | 0;
-  }
-
-  let out = "";
-  for (const v of [a, b, c, d]) {
-    for (let j = 0; j < 4; j++) {
-      out += ((v >>> (j * 8)) & 0xff).toString(16).padStart(2, "0");
-    }
-  }
-  return out;
+  return hash >>> 0;
 }
 
+/**
+ * 判断给定瓦片数据是否为已知 ArcGIS 缺失占位图
+ */
 export function isPlaceholderTile(buffer: ArrayBuffer): boolean {
   const byteLen = buffer.byteLength;
-  if (byteLen === 2521 || byteLen === 1033 || byteLen === 2419 || byteLen === 2568 || byteLen === 2816) {
+  if (PLACEHOLDER_EXACT_SIZES.has(byteLen)) {
     return true;
   }
   if (byteLen <= 3500) {
-    const hash = computeMd5(buffer);
-    if (KNOWN_PLACEHOLDER_MD5.has(hash)) return true;
     const text = new TextDecoder("latin1").decode(new Uint8Array(buffer, 0, Math.min(byteLen, 1024)));
-    if (text.includes("not yet available") || text.includes("Map data not yet")) return true;
+    if (text.includes("not yet available") || text.includes("Map data not yet") || text.includes("No Data Available")) {
+      return true;
+    }
   }
   return false;
 }
@@ -236,6 +127,22 @@ async function getAncestorBitmap(
   return fetchPromise;
 }
 
+let supportsOffscreenCanvas2D: boolean | null = null;
+function checkOffscreenCanvas2DSupport(): boolean {
+  if (supportsOffscreenCanvas2D !== null) return supportsOffscreenCanvas2D;
+  try {
+    if (typeof OffscreenCanvas !== "undefined") {
+      const testCanvas = new OffscreenCanvas(1, 1);
+      supportsOffscreenCanvas2D = Boolean(testCanvas.getContext("2d"));
+      return supportsOffscreenCanvas2D;
+    }
+  } catch {
+    // ignore
+  }
+  supportsOffscreenCanvas2D = false;
+  return false;
+}
+
 /**
  * 从祖先位图按四叉树象限截取并超分辨率合成 256x256 瓦片
  */
@@ -253,20 +160,18 @@ async function resampleFromBitmap(
   const subX = (childX % scale) * subW;
   const subY = (childY % scale) * subH;
 
-  const canvas =
-    typeof OffscreenCanvas !== "undefined"
-      ? new OffscreenCanvas(256, 256)
-      : document.createElement("canvas");
+  const useOffscreen = checkOffscreenCanvas2DSupport();
+  const canvas = useOffscreen ? new OffscreenCanvas(256, 256) : document.createElement("canvas");
   canvas.width = 256;
   canvas.height = 256;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
   if (!ctx) throw new Error("Canvas context failed");
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(ancestorBitmap, subX, subY, subW, subH, 0, 0, 256, 256);
 
-  if ("convertToBlob" in canvas) {
+  if (useOffscreen && "convertToBlob" in canvas) {
     const blob = await (canvas as OffscreenCanvas).convertToBlob({
       type: "image/jpeg",
       quality: 0.88,
@@ -291,8 +196,6 @@ async function synthesizeFallbackTile(
   originalFetch: typeof window.fetch,
 ): Promise<ArrayBuffer | null> {
   const { baseUrl, z, y, x, search } = coords;
-
-  // 优先尝试寻找最近的有效祖先：对于高放大区域（如 z=17/18），直接定位覆盖完备的 z=15 或 z=16
   const targetLevels = [Math.min(16, z - 1), 15, 14].filter((lvl) => lvl < z && lvl >= 10);
 
   for (const pz of targetLevels) {
@@ -317,7 +220,7 @@ async function synthesizeFallbackTile(
 let providerInstalled = false;
 
 /**
- * 安装智能瓦片提供器
+ * 安装智能瓦片提供器拦截器
  */
 export function installTileProvider(): void {
   if (providerInstalled) return;
@@ -355,22 +258,20 @@ export function installTileProvider(): void {
         return res;
       }
 
-      // (B) 若为 200 但尺寸极小 (<= 3500 字节)，检验是否为带有“Map data not yet available”的占位图
+      // (B) 若为 200 但尺寸极小 (<= 3500 字节)，检验是否为带有占位图标记的残缺图
       let rawBuf: ArrayBuffer | null = null;
       if (res.status === 200) {
         rawBuf = await res.arrayBuffer();
         if (!isPlaceholderTile(rawBuf)) {
-          // 真实的小图（如某些特定单色地貌），返回包装 Response
           return new Response(rawBuf, {
             status: 200,
             statusText: "OK",
             headers: res.headers,
           });
         }
-        // 是占位图，继续向下执行合成逻辑
       }
 
-      // (C) 走到这里说明是 404 或拦截到了占位图，立即启动祖先快速重采样
+      // (C) 404 或命中占位图，启动祖先快速重采样
       if (!signal?.aborted) {
         const synthesizedBuf = await synthesizeFallbackTile(coords, originalFetch);
         if (synthesizedBuf) {
@@ -395,7 +296,6 @@ export function installTileProvider(): void {
       }
       return res;
     } catch (err) {
-      // 遇到中止直接抛出，让 3D 引擎正常清理
       if ((err instanceof DOMException && err.name === "AbortError") || signal?.aborted) {
         throw err instanceof DOMException ? err : new DOMException("The user aborted a request.", "AbortError");
       }

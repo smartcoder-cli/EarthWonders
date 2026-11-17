@@ -18,7 +18,7 @@ const CATEGORY_NAMES: Record<string, string> = {
 /**
  * 格式化经纬度为标准大地测量坐标字符串 (如 48°53'34"N · 2°14'09"E)
  */
-function formatCoordinates(lat: number, lon: number): string {
+export function formatCoordinates(lat: number, lon: number): string {
   const latDir = lat >= 0 ? "N" : "S";
   const lonDir = lon >= 0 ? "E" : "W";
   const absLat = Math.abs(lat);
@@ -50,7 +50,8 @@ export function generatePostcard(options: PostcardCaptureOptions): HTMLCanvasEle
   const canvas = document.createElement("canvas");
   canvas.width = cardW;
   canvas.height = cardH;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
 
   // 1. 卡片哑光深色背景与典雅金属质感边框
   const bgGrad = ctx.createLinearGradient(0, 0, 0, cardH);
@@ -69,8 +70,8 @@ export function generatePostcard(options: PostcardCaptureOptions): HTMLCanvasEle
   ctx.strokeRect(16, 16, cardW - 32, cardH - 32);
 
   // 2. 绘制 3D 渲染画面 (Cover 填充)
-  const srcW = glCanvas.width;
-  const srcH = glCanvas.height;
+  const srcW = glCanvas.width || 1;
+  const srcH = glCanvas.height || 1;
   const srcAspect = srcW / srcH;
   const dstAspect = photoW / photoH;
 
@@ -93,7 +94,13 @@ export function generatePostcard(options: PostcardCaptureOptions): HTMLCanvasEle
   ctx.restore();
 
   // 绘制视口画面
-  ctx.drawImage(glCanvas, sX, sY, sW, sH, padding, padding, photoW, photoH);
+  try {
+    ctx.drawImage(glCanvas, sX, sY, sW, sH, padding, padding, photoW, photoH);
+  } catch {
+    // 降级填充纯黑底
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(padding, padding, photoW, photoH);
+  }
 
   // 画面边框金线与角落裁切标
   ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
@@ -135,7 +142,7 @@ export function generatePostcard(options: PostcardCaptureOptions): HTMLCanvasEle
   ctx.textAlign = "right";
   ctx.fillText("TELLUX 3D ENGINE · PROCEDURAL ARCHITECTURE", padding + photoW - 12, padding + photoH - 12);
 
-  // 4. 底部排版区域 (从 y = 730 起)
+  // 4. 底部排版区域 (从 y = 744 起)
   const textStartY = 744;
 
   // 左侧主要信息
@@ -204,7 +211,7 @@ export function generatePostcard(options: PostcardCaptureOptions): HTMLCanvasEle
   ctx.fillStyle = "#38bdf8";
   ctx.fillText("OFFICIAL", stampCenterX, stampCenterY + 16);
 
-  // 编号印章 (如 No. 18 / 19)
+  // 编号印章 (如 INDEX #18)
   ctx.font = "bold 13px monospace";
   ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
   ctx.textAlign = "right";
@@ -212,6 +219,8 @@ export function generatePostcard(options: PostcardCaptureOptions): HTMLCanvasEle
 
   return canvas;
 }
+
+let modalKeydownBound = false;
 
 /**
  * 弹出明信片预览与下载弹窗
@@ -254,11 +263,14 @@ export function showPostcardModal(canvas: HTMLCanvasElement, wonder: Wonder) {
     document.getElementById("btn-postcard-close")?.addEventListener("click", closeHandler);
     document.getElementById("btn-postcard-dismiss")?.addEventListener("click", closeHandler);
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal?.classList.contains("visible")) {
-        closeHandler();
-      }
-    });
+    if (!modalKeydownBound) {
+      modalKeydownBound = true;
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && modal?.classList.contains("visible")) {
+          modal.classList.remove("visible");
+        }
+      });
+    }
   }
 
   const previewImg = document.getElementById("postcard-preview-img") as HTMLImageElement | null;
