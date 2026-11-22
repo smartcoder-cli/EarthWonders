@@ -543,7 +543,10 @@ async function boot() {
   // 初始化无人机航拍控制器
   droneOrbitController = new DroneOrbitController(current, (isOrbiting) => {
     updateDroneBtn();
-    if (!isOrbiting && currentWonderObj && !flightController?.isFlying && !tourManager?.isTouring) {
+    hotspotManager?.setOrbitMode(isOrbiting);
+    if (isOrbiting) {
+      setStatus("🚁 航拍环绕中 (自适应瓦片防抖与全景渲染) · 点击或拖动任意处停止");
+    } else if (currentWonderObj && !flightController?.isFlying && !tourManager?.isTouring) {
       setStatus(`${currentWonderObj.nameZh} · ${currentWonderObj.place}`);
     }
   });

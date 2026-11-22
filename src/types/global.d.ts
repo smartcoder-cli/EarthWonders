@@ -21,10 +21,18 @@ export interface TelluxRawControls {
 
 export interface OptimizedTileset {
   errorTarget?: number;
+  maxTilesProcessed?: number;
   downloadQueue?: {
     items: unknown[];
     currJobs: number;
+    maxJobs?: number;
     priorityCallback: ((a: unknown, b: unknown) => number) | null;
+  };
+  lruCache?: {
+    minSize: number;
+    maxSize: number;
+    minBytesSize?: number;
+    maxBytesSize?: number;
   };
 }
 

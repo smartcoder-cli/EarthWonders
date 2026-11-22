@@ -48,11 +48,29 @@ function createMockViewer() {
     },
   };
 
+  const tilesetManager = {
+    surfaceTileset: {
+      errorTarget: 1.0,
+      maxTilesProcessed: 250,
+      downloadQueue: {
+        maxJobs: 25,
+        items: [],
+        currJobs: 0,
+        priorityCallback: null,
+      },
+      lruCache: {
+        minSize: 6000,
+        maxSize: 8000,
+      },
+    },
+  };
+
   return {
     camera,
     clock,
     domElement,
     controls,
+    tilesetManager,
   } as any;
 }
 
@@ -165,5 +183,30 @@ describe("DroneOrbitController Unit Tests", () => {
     expect(orbit.isOrbiting).toBe(true);
     viewer.domElement.emit("wheel");
     expect(orbit.isOrbiting).toBe(false);
+  });
+
+  it("should adaptively switch tileset errorTarget, maxTilesProcessed and download queue on orbit start/stop", () => {
+    const viewer = createMockViewer();
+    const orbit = new DroneOrbitController(viewer);
+    const wonder = WONDERS[0];
+    const pivot = new THREE.Vector3(0, 0, 0);
+
+    const tileset = viewer.tilesetManager.surfaceTileset;
+    expect(tileset.errorTarget).toBe(1.0);
+    expect(tileset.maxTilesProcessed).toBe(250);
+    expect(tileset.downloadQueue.maxJobs).toBe(25);
+
+    // 开启航拍：瓦片防抖自适应启动
+    orbit.start(wonder, pivot);
+    expect(tileset.errorTarget).toBe(5.5);
+    expect(tileset.maxTilesProcessed).toBe(80);
+    expect(tileset.downloadQueue.maxJobs).toBe(4);
+    expect(tileset.lruCache.maxSize).toBe(15000);
+
+    // 退出航拍：恢复极清与初始并发
+    orbit.stop();
+    expect(tileset.errorTarget).toBe(1.0);
+    expect(tileset.maxTilesProcessed).toBe(250);
+    expect(tileset.downloadQueue.maxJobs).toBe(25);
   });
 });

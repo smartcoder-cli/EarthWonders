@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type tellux from "tellux";
 import type { Wonder } from "./wonders";
+import { setTilesetOrbitMode } from "./tileOptimization";
 
 export type SolarPreset = "realtime" | "dawn" | "noon" | "golden" | "night";
 
@@ -130,6 +131,7 @@ export class DroneOrbitController {
   private pivotPos: THREE.Vector3 = new THREE.Vector3();
   private speedDegPerSec = 8.0; // 黄金电影级航拍速率（一圈约 45 秒，流畅舒适）
   private onStateChange?: (isOrbiting: boolean) => void;
+  private _smoothedDt = 0.016;
 
   private _up = new THREE.Vector3();
   private _quat = new THREE.Quaternion();
@@ -163,6 +165,8 @@ export class DroneOrbitController {
     this.currentWonder = wonder;
     this.pivotPos.copy(pivot);
     this.isOrbitingState = true;
+    this._smoothedDt = 0.016;
+    setTilesetOrbitMode(this.viewer, true);
     this.syncPivot();
     this.onStateChange?.(true);
   }
@@ -170,6 +174,7 @@ export class DroneOrbitController {
   public stop() {
     if (this.isOrbitingState) {
       this.isOrbitingState = false;
+      setTilesetOrbitMode(this.viewer, false);
       this.onStateChange?.(false);
     }
   }
@@ -211,8 +216,10 @@ export class DroneOrbitController {
     if (!this.isOrbitingState || !this.currentWonder) return;
 
     const camera = this.viewer.camera.raw;
-    const clampedDelta = Math.min(deltaTime, 0.1);
-    const deltaAngleRad = THREE.MathUtils.degToRad(this.speedDegPerSec * clampedDelta);
+    // 动态滤波平滑（EMA filter）：过滤偶发 GC 或单帧纹理上传卡顿，限制最大步长杜绝镜头突兀“瞬移”
+    const clampedDelta = Math.min(deltaTime, 0.04);
+    this._smoothedDt = this._smoothedDt * 0.82 + clampedDelta * 0.18;
+    const deltaAngleRad = THREE.MathUtils.degToRad(this.speedDegPerSec * this._smoothedDt);
 
     const rawControls = (this.viewer.controls as unknown as {
       raw?: {

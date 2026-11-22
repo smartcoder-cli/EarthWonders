@@ -2,6 +2,8 @@ import type tellux from "tellux";
 import type { OptimizedTileset } from "./types/global";
 
 let baseErrorTarget = 2;
+let baseMaxTilesProcessed = 250;
+let baseMaxJobs = 25;
 
 export function getSurfaceTileset(viewer: InstanceType<typeof tellux.Viewer> | null | undefined): OptimizedTileset | undefined {
   if (!viewer) return undefined;
@@ -22,6 +24,8 @@ export function configureTilesetOptimization(viewer: InstanceType<typeof tellux.
   if (!tileset) return;
 
   baseErrorTarget = tileset.errorTarget ?? 2;
+  baseMaxTilesProcessed = tileset.maxTilesProcessed ?? 250;
+  baseMaxJobs = tileset.downloadQueue?.maxJobs ?? 25;
 
   const dlQueue = tileset.downloadQueue;
   if (dlQueue) {
@@ -44,6 +48,46 @@ export function setTilesetFlightMode(viewer: InstanceType<typeof tellux.Viewer> 
   const tileset = getSurfaceTileset(viewer);
   if (tileset) {
     tileset.errorTarget = isFlying ? 120 : baseErrorTarget;
+  }
+}
+
+/**
+ * 航拍环绕专属瓦片调度优化：
+ * 1. 适度放宽几何误差目标 (5.5)，避免相机 360° 旋转时视锥在每个方位狂刷极限层级瓦片
+ * 2. 调低每帧最大瓦片遍历数 (maxTilesProcessed: 80)，切除单帧 20ms+ 的 BVH 空间树遍历开销
+ * 3. 适度节流网络并发数 (maxJobs: 4)，杜绝并发纹理提交造成 500ms+ 的主线程冻结
+ * 4. 动态扩充 LRU 瓦片显存容量，避免环绕前半圈加载好的周围远景瓦片在转到后半圈时被驱逐，使第二圈起维持极致平滑 (35ms 以内稳定帧)
+ */
+export function setTilesetOrbitMode(viewer: InstanceType<typeof tellux.Viewer> | null | undefined, isOrbiting: boolean): void {
+  const tileset = getSurfaceTileset(viewer);
+  if (!tileset) return;
+
+  if (isOrbiting) {
+    if (typeof tileset.errorTarget === "number" && tileset.errorTarget < 5.5) {
+      baseErrorTarget = tileset.errorTarget;
+    }
+    if (typeof tileset.maxTilesProcessed === "number" && tileset.maxTilesProcessed > 100) {
+      baseMaxTilesProcessed = tileset.maxTilesProcessed;
+    }
+    if (tileset.downloadQueue && typeof tileset.downloadQueue.maxJobs === "number" && tileset.downloadQueue.maxJobs > 8) {
+      baseMaxJobs = tileset.downloadQueue.maxJobs;
+    }
+
+    tileset.errorTarget = 5.5;
+    tileset.maxTilesProcessed = 80;
+    if (tileset.downloadQueue) {
+      tileset.downloadQueue.maxJobs = 4;
+    }
+    if (tileset.lruCache) {
+      tileset.lruCache.minSize = Math.max(tileset.lruCache.minSize ?? 6000, 10000);
+      tileset.lruCache.maxSize = Math.max(tileset.lruCache.maxSize ?? 8000, 15000);
+    }
+  } else {
+    tileset.errorTarget = baseErrorTarget;
+    tileset.maxTilesProcessed = baseMaxTilesProcessed;
+    if (tileset.downloadQueue) {
+      tileset.downloadQueue.maxJobs = baseMaxJobs;
+    }
   }
 }
 

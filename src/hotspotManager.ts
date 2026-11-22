@@ -15,6 +15,9 @@ export class HotspotManager {
 
   private _tempVec = new THREE.Vector3();
   private _camPos = new THREE.Vector3();
+  private _dirToHotspot = new THREE.Vector3();
+  private _projected = new THREE.Vector3();
+  private _isOrbiting = false;
   private _dummyTarget = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1));
 
   constructor(
@@ -176,9 +179,25 @@ export class HotspotManager {
   }
 
   /**
+   * 航拍模式自适应：环绕期间隐藏所有 3D 浮动图钉，杜绝每帧 DOM 变换与视锥计算，恢复电影级沉浸视角
+   */
+  public setOrbitMode(isOrbiting: boolean) {
+    this._isOrbiting = isOrbiting;
+    if (isOrbiting) {
+      for (const [, pin] of this.pinElements) {
+        if (pin.style.display !== "none") {
+          pin.style.display = "none";
+        }
+      }
+    }
+  }
+
+  /**
    * 逐帧更新热点浮动图标在屏幕上的投影坐标与可视性
    */
   public update() {
+    if (this._isOrbiting) return;
+
     if (!this.currentWonder) {
       if (this.pinElements.size > 0) this.clearPins();
       return;
@@ -201,31 +220,31 @@ export class HotspotManager {
       this._tempVec.set(...hotspot.position);
       this._tempVec.applyMatrix4(group.matrix);
 
-      // 计算视线方向与表面法线夹角进行地表地平线遮挡检测
-      const dirToHotspot = this._tempVec.clone().sub(this._camPos);
-      const dist = dirToHotspot.length();
-      dirToHotspot.normalize();
+      // 计算视线方向与表面法线夹角进行地表地平线遮挡检测（复用向量，零 GC 分配）
+      this._dirToHotspot.copy(this._tempVec).sub(this._camPos);
+      const dist = this._dirToHotspot.length();
+      this._dirToHotspot.normalize();
 
       // 投影到归一化设备坐标 (NDC: -1 到 1)
-      const projected = this._tempVec.clone().project(camera);
+      this._projected.copy(this._tempVec).project(camera);
 
       // 若在相机背后，或超出合理可视距离，隐藏
-      if (projected.z > 1.0 || dist > 2500) {
-        pin.style.display = "none";
+      if (this._projected.z > 1.0 || dist > 2500) {
+        if (pin.style.display !== "none") pin.style.display = "none";
         continue;
       }
 
       // 屏幕像素坐标
-      const screenX = (projected.x * 0.5 + 0.5) * width;
-      const screenY = (-projected.y * 0.5 + 0.5) * height;
+      const screenX = (this._projected.x * 0.5 + 0.5) * width;
+      const screenY = (-this._projected.y * 0.5 + 0.5) * height;
 
       // 边缘剔除
       if (screenX < -60 || screenX > width + 60 || screenY < -60 || screenY > height + 60) {
-        pin.style.display = "none";
+        if (pin.style.display !== "none") pin.style.display = "none";
         continue;
       }
 
-      pin.style.display = "flex";
+      if (pin.style.display !== "flex") pin.style.display = "flex";
       pin.style.transform = `translate3d(${screenX}px, ${screenY}px, 0)`;
 
       if (this.activeHotspot?.id === hotspot.id) {
