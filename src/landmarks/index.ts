@@ -44,6 +44,7 @@ export const LANDMARK_LOADERS: Record<string, () => Promise<LandmarkBuilder>> = 
   parthenon: async () => withMeterUvs("parthenon", (await import("./parthenon")).createParthenon),
   futuremuseum: async () => withMeterUvs("futuremuseum", (await import("./futuremuseum")).createMuseumOfTheFuture),
   sagrada: async () => withMeterUvs("sagrada", (await import("./sagrada")).createSagradaFamilia),
+  himeji: async () => withMeterUvs("himeji", (await import("./himeji")).createHimeji),
 };
 
 const _builderCache = new Map<string, LandmarkBuilder>();

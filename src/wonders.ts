@@ -692,6 +692,37 @@ export const WONDERS: Wonder[] = [
     },
     hasInspection: true,
   },
+  {
+    id: "himeji",
+    index: 24,
+    category: "ancient",
+    nameZh: "姬路城 · 白鹭城",
+    nameEn: "Himeji Castle (White Heron Castle)",
+    place: "日本 · 兵库县姬路市",
+    completed: "1609 年 (庆长14年 池田辉政大改修完成)",
+    color: "#f8fafc",
+    longitude: 134.6939,
+    latitude: 34.8394,
+    flyDistance: 165,
+    flyHeading: 215,
+    flyPitch: -10,
+    flyDuration: 4.8,
+    labelHeight: 88,
+    lookHeight: 26,
+    modelHeight: 45.6,
+    modelHeading: 0,
+    blurb:
+      "日本第一名城与木构城郭建筑巅峰，被誉为「白鹭城」。伫立于姬山之巅，大天守与东、西、干三座小天守通过四段全封闭渡橹严密合围，构成防御森严的连立式天守群。通体厚覆耐火白漆喰，扇之勾配石垣陡拔如削，千鸟破风与唐破风重叠交错，脊顶金光鯱瓦傲立长空。",
+    specs: {
+      "天守形制": "五重六阶地下一阶 (连立式天守群)",
+      "建筑高度": "大天守木构 31.5 米 (石垣台基高 14.85 米，总海拔 92 米)",
+      "石垣工艺": "扇之勾配 (打込接高石垣，近顶陡直如刃)",
+      "屋檐艺术": "千鸟破风、比翼千鸟破风与波浪唐破风交错叠映",
+      "防火外壁": "白漆喰总涂笼造 (耐高温抗火绳枪弹)",
+      "脊顶神兽": "一对高近 2 米青铜金箔【鯱瓦】(虎头鱼身螭吻)",
+    },
+    hasInspection: true,
+  },
 ];
 
 export const SPACE_VIEW = {

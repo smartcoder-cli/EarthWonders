@@ -146,6 +146,12 @@ const LANDMARK_LINE_PALETTES: Record<string, LandmarkLinePalette> = {
     thresholdAngle: 20,
     minDiagonal: 0.5,
   },
+  himeji: {
+    color: 0x1e242d, // 姬路城黑瓦当瓦垄与纯白漆喰反曲飞檐深影轮廓线
+    opacity: 0.86,
+    thresholdAngle: 22,
+    minDiagonal: 0.5,
+  },
 };
 
 

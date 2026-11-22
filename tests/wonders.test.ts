@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CATEGORIES, WONDERS } from "../src/wonders";
 
 describe("Wonders Metadata Verification", () => {
-  it("should have exactly 23 global landmarks", () => {
-    expect(WONDERS).toHaveLength(23);
+  it("should have exactly 24 global landmarks", () => {
+    expect(WONDERS).toHaveLength(24);
   });
 
   it("should have unique IDs and consecutive 1-based indices", () => {
@@ -18,8 +18,8 @@ describe("Wonders Metadata Verification", () => {
       indices.add(w.index);
     });
 
-    expect(ids.size).toBe(23);
-    expect(indices.size).toBe(23);
+    expect(ids.size).toBe(24);
+    expect(indices.size).toBe(24);
   });
 
   it("should have valid latitude [-90, 90] and longitude [-180, 180]", () => {

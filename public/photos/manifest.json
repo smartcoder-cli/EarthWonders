@@ -143,5 +143,12 @@
     "page": "https://commons.wikimedia.org/wiki/File:Gaudis_Sagrada_Familia,_reflection.jpg",
     "credit": "照片：Jesus Solana / Wikimedia Commons · CC BY 2.0",
     "alt": "巴塞罗那圣家宗座圣殿诞生立面与中央塔群水池倒影全景实景照片 (Gaudí's Sagrada Família, Reflection)"
+  },
+  "himeji": {
+    "image": "/photos/himeji.jpg",
+    "fallbackImage": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Ch%C3%A2teau_de_Himeji02.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Ch%C3%A2teau_de_Himeji02.jpg",
+    "credit": "照片：Bernard Gagnon / Wikimedia Commons · CC BY-SA 3.0",
+    "alt": "姬路城大天守、西小天守与扇之勾配石垣全景实景照片 (Château de Himeji)"
   }
 }

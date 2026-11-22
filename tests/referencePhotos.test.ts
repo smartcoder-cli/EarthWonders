@@ -3,8 +3,8 @@ import { getReferencePhoto, REFERENCE_PHOTOS, resolvePhotoUrl } from "../src/dat
 import { WONDERS } from "../src/wonders";
 
 describe("Reference Photos Catalog & URL Resolver", () => {
-  it("covers all 23 wonders with valid reference photo entries", () => {
-    expect(Object.keys(REFERENCE_PHOTOS).length).toBe(23);
+  it("covers all 24 wonders with valid reference photo entries", () => {
+    expect(Object.keys(REFERENCE_PHOTOS).length).toBe(24);
 
     for (const wonder of WONDERS) {
       const photo = getReferencePhoto(wonder.id);
