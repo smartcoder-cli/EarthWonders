@@ -17,13 +17,72 @@ export interface DetailPanelElements {
   panelEl: HTMLElement | null;
   btnWireframe: HTMLElement | null;
   btnNightmode: HTMLElement | null;
+  btnMinimize?: HTMLElement | null;
+  headingRow?: HTMLElement | null;
 }
 
 export class DetailPanelController {
   private els: DetailPanelElements;
+  private isMinimizedState = false;
 
   constructor(elements: DetailPanelElements) {
     this.els = elements;
+    this.initMinimizeEvents();
+  }
+
+  private initMinimizeEvents(): void {
+    const { detailEl, btnMinimize, headingRow } = this.els;
+    btnMinimize?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.toggleMinimize();
+    });
+
+    // 当卡片处于最小化药丸态时，点击药丸主体可快速展开
+    headingRow?.addEventListener("click", () => {
+      if (this.isMinimizedState) {
+        this.expand();
+      }
+    });
+
+    detailEl?.addEventListener("click", () => {
+      if (this.isMinimizedState) {
+        this.expand();
+      }
+    });
+  }
+
+  public get isMinimized(): boolean {
+    return this.isMinimizedState;
+  }
+
+  public toggleMinimize(): void {
+    if (this.isMinimizedState) {
+      this.expand();
+    } else {
+      this.minimize();
+    }
+  }
+
+  public minimize(): void {
+    const { detailEl, btnMinimize } = this.els;
+    this.isMinimizedState = true;
+    detailEl?.classList.add("minimized");
+    if (btnMinimize) {
+      btnMinimize.textContent = "▼";
+      btnMinimize.title = "展开详情卡 [M]";
+      btnMinimize.setAttribute("aria-label", "展开详情卡");
+    }
+  }
+
+  public expand(): void {
+    const { detailEl, btnMinimize } = this.els;
+    this.isMinimizedState = false;
+    detailEl?.classList.remove("minimized");
+    if (btnMinimize) {
+      btnMinimize.textContent = "▲";
+      btnMinimize.title = "收起详情卡 [M]";
+      btnMinimize.setAttribute("aria-label", "收起详情卡");
+    }
   }
 
   public resetInspectionMode(): void {
@@ -149,7 +208,13 @@ export class DetailPanelController {
     panelEl?.classList.remove("mobile-hidden", "mobile-open");
     if (detailEl) {
       detailEl.classList.add("hidden");
-      detailEl.classList.remove("mobile-peek", "mobile-expanded");
+      detailEl.classList.remove("mobile-peek", "mobile-expanded", "minimized");
+    }
+    this.isMinimizedState = false;
+    if (this.els.btnMinimize) {
+      this.els.btnMinimize.textContent = "▲";
+      this.els.btnMinimize.title = "收起详情卡 [M]";
+      this.els.btnMinimize.setAttribute("aria-label", "收起详情卡");
     }
     this.resetInspectionMode();
   }

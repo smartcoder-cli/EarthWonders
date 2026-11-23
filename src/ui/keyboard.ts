@@ -7,6 +7,9 @@ export interface KeyboardActions {
   onToggleOrbit: () => void;
   onPostcard: () => void;
   onRealtimeSolar: () => void;
+  onToggleZen?: () => void;
+  onToggleMinimize?: () => void;
+  onToggleList?: () => void;
 }
 
 const KEY_MAP: Record<string, number> = {
@@ -67,6 +70,21 @@ export function setupKeyboardShortcuts(actions: KeyboardActions): () => void {
 
     if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey) {
       actions.onRealtimeSolar();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "z" && !event.ctrlKey && !event.metaKey) {
+      actions.onToggleZen?.();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "m" && !event.ctrlKey && !event.metaKey) {
+      actions.onToggleMinimize?.();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "l" && !event.ctrlKey && !event.metaKey) {
+      actions.onToggleList?.();
       return;
     }
   };

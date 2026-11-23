@@ -5,6 +5,7 @@ import { keepCameraTuned, suppressBlackscreenEffects } from "./controlsCompat";
 import { FlightController } from "./flight";
 import { HotspotManager } from "./hotspotManager";
 import { LandmarkManager } from "./landmarkManager";
+import { LandmarkOrbitManager } from "./landmarkOrbit";
 import { generatePostcard, showPostcardModal } from "./postcard";
 import { DroneOrbitController, SolarController, type SolarPreset } from "./solarAndOrbit";
 import { loadSurfaceKit } from "./surfaces";
@@ -74,6 +75,8 @@ const detailPanel = new DetailPanelController({
   panelEl,
   btnWireframe: document.getElementById("btn-wireframe"),
   btnNightmode: document.getElementById("btn-nightmode"),
+  btnMinimize: document.getElementById("detail-minimize"),
+  headingRow: document.getElementById("detail-heading-row"),
 });
 
 function showError(err: unknown) {
@@ -102,6 +105,53 @@ let activePivotPos: THREE.Vector3 | null = null;
 let activeCategory = "all";
 let wireframeOn = false;
 let landmarkNightOn = false;
+let zenModeActive = false;
+let zenToastTimeout: number | undefined;
+
+function collapsePanel() {
+  panelEl?.classList.add("collapsed");
+  panelEl?.classList.add("mobile-hidden");
+  panelEl?.classList.remove("mobile-open");
+}
+
+function expandPanel() {
+  panelEl?.classList.remove("collapsed");
+  panelEl?.classList.remove("mobile-hidden");
+  panelEl?.classList.add("mobile-open");
+}
+
+function togglePanel() {
+  if (panelEl?.classList.contains("collapsed") || panelEl?.classList.contains("mobile-hidden")) {
+    expandPanel();
+  } else {
+    collapsePanel();
+  }
+}
+
+function toggleZenMode(forceState?: boolean) {
+  zenModeActive = typeof forceState === "boolean" ? forceState : !zenModeActive;
+  document.body.classList.toggle("zen-mode", zenModeActive);
+
+  const zenToast = document.getElementById("zen-toast");
+  const btnZen = document.getElementById("btn-zen");
+  if (btnZen) {
+    btnZen.classList.toggle("active", zenModeActive);
+  }
+
+  if (zenModeActive) {
+    if (zenToast) {
+      zenToast.classList.remove("hidden");
+      if (zenToastTimeout) window.clearTimeout(zenToastTimeout);
+      zenToastTimeout = window.setTimeout(() => {
+        zenToast.classList.add("hidden");
+      }, 2600);
+    }
+  } else {
+    if (zenToast) {
+      zenToast.classList.add("hidden");
+    }
+  }
+}
 
 let flightController: FlightController | null = null;
 let tourManager: TourManager | null = null;
@@ -110,6 +160,7 @@ let hotspotManager: HotspotManager | null = null;
 let solarController: SolarController | null = null;
 let droneOrbitController: DroneOrbitController | null = null;
 let atmosphereManager: AtmosphereManager | null = null;
+let landmarkOrbitManager: LandmarkOrbitManager | null = null;
 
 function updateUrl(wonderId?: string | null, preset?: string, wireframe?: boolean, orbit?: boolean) {
   try {
@@ -245,6 +296,8 @@ async function visit(wonder: Wonder) {
   const arrivedPivot = await flightController.flyToWonder(wonder);
   if (arrivedPivot) {
     activePivotPos = arrivedPivot;
+    landmarkOrbitManager?.activate(wonder, arrivedPivot);
+    collapsePanel(); // 智能自适应收起列表抽屉，还用户 100% 满屏 3D 全景
   }
 
   const loadedGroup = landmarkManager ? await landmarkManager.loadLandmark(wonder) : undefined;
@@ -260,6 +313,7 @@ async function flyToSpace() {
   selectedId = null;
   currentWonderObj = null;
   activePivotPos = null;
+  landmarkOrbitManager?.deactivate();
   tourManager?.stopTour();
   droneOrbitController?.stop();
   updateDroneBtn();
@@ -268,6 +322,7 @@ async function flyToSpace() {
   solarController?.setWonder(null);
   hotspotManager?.setActiveWonder(null);
   detailPanel.hideDetail();
+  expandPanel(); // 返回太空视角时自动展开景点列表
   renderList();
   setStatus("返回太空视角");
   await flightController.flyToSpace();
@@ -438,6 +493,7 @@ async function boot() {
   });
 
   btnTour?.addEventListener("click", () => {
+    landmarkOrbitManager?.deactivate();
     if (tourManager?.isTouring) {
       tourManager.stopTour();
       setStatus("已停止巡礼");
@@ -467,7 +523,13 @@ async function boot() {
   // 绑定键盘快捷键
   setupKeyboardShortcuts({
     onVisitWonder: (w) => void visit(w),
-    onEscape: () => void flyToSpace(),
+    onEscape: () => {
+      if (zenModeActive) {
+        toggleZenMode(false);
+        return;
+      }
+      void flyToSpace();
+    },
     onToggleTour: () => {
       if (tourManager?.isTouring) tourManager.stopTour();
       else void tourManager?.runTour(activeCategory);
@@ -475,6 +537,25 @@ async function boot() {
     onToggleOrbit: () => btnDroneOrbit?.click(),
     onPostcard: () => btnPostcard?.click(),
     onRealtimeSolar: () => btnSolarRealtime?.click(),
+    onToggleZen: () => toggleZenMode(),
+    onToggleMinimize: () => detailPanel.toggleMinimize(),
+    onToggleList: () => togglePanel(),
+  });
+
+  // PC 端列表展开与收起事件绑定
+  btnPanelClose?.addEventListener("click", () => collapsePanel());
+  btnMobileList?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    togglePanel();
+  });
+
+  // 全局沉浸模式事件绑定
+  const btnZen = document.getElementById("btn-zen");
+  const zenToast = document.getElementById("zen-toast");
+  btnZen?.addEventListener("click", () => toggleZenMode());
+  zenToast?.addEventListener("click", () => toggleZenMode(false));
+  container.addEventListener("dblclick", () => {
+    if (zenModeActive) toggleZenMode(false);
   });
 
   // 绑定主题风貌分类切换
@@ -540,13 +621,24 @@ async function boot() {
     }
   });
 
+  // 初始化地标微观检视控制器 (Landmark Orbit & Viewport Controls)
+  landmarkOrbitManager = new LandmarkOrbitManager({
+    viewer: current,
+    container,
+    onResetRequested: () => {
+      if (currentWonderObj) void flightController?.flyToWonder(currentWonderObj);
+    },
+  });
+
   // 初始化无人机航拍控制器
   droneOrbitController = new DroneOrbitController(current, (isOrbiting) => {
     updateDroneBtn();
     hotspotManager?.setOrbitMode(isOrbiting);
     if (isOrbiting) {
+      landmarkOrbitManager?.deactivate();
       setStatus("🚁 航拍环绕中 (自适应瓦片防抖与全景渲染) · 点击或拖动任意处停止");
-    } else if (currentWonderObj && !flightController?.isFlying && !tourManager?.isTouring) {
+    } else if (currentWonderObj && activePivotPos && !flightController?.isFlying && !tourManager?.isTouring) {
+      landmarkOrbitManager?.activate(currentWonderObj, activePivotPos);
       setStatus(`${currentWonderObj.nameZh} · ${currentWonderObj.place}`);
     }
   });
@@ -693,6 +785,7 @@ async function boot() {
   });
 
   window.addEventListener("pagehide", () => {
+    landmarkOrbitManager?.destroy();
     landmarkManager?.destroy();
     current.destroy();
   });
@@ -736,7 +829,9 @@ async function boot() {
       keepCameraTuned(viewer);
     }
 
-    if (droneOrbitController?.isOrbiting) {
+    if (landmarkOrbitManager?.isActive) {
+      landmarkOrbitManager.update(dt);
+    } else if (droneOrbitController?.isOrbiting) {
       droneOrbitController.update(dt);
     }
 

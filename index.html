@@ -17,10 +17,8 @@
         <p class="sub">Global Architectural Wonders & Megastructures · Tellux 3D Earth</p>
       </header>
 
-      <button id="btn-mobile-list" class="mobile-floating-pill" type="button">📜 奇迹列表</button>
-
       <aside class="panel" id="panel">
-        <button id="btn-panel-close" class="panel-close-btn" type="button" aria-label="收起列表">✕</button>
+        <button id="btn-panel-close" class="panel-close-btn" type="button" aria-label="收起列表" title="收起列表 [L]">▲</button>
         <div class="panel-grabber" id="panel-grabber" aria-hidden="true"></div>
         <div class="panel-header">
           <h2>风貌主题</h2>
@@ -42,11 +40,36 @@
         </p>
       </aside>
 
+      <button id="btn-mobile-list" class="mobile-floating-pill" type="button" title="展开/收起奇迹列表 [L]">📜 奇迹列表</button>
+
+      <!-- 独立视口 3D 罗盘仪 (Compass Gizmo) -->
+      <aside id="viewport-controls" class="viewport-controls hidden">
+        <button id="compass-gizmo" class="compass-gizmo" type="button" title="点击罗盘回正正北朝上 (North) [N]">
+          <div class="compass-dial" id="compass-dial">
+            <div class="compass-needle-n">N</div>
+            <div class="compass-arrow-north"></div>
+            <div class="compass-needle-s">S</div>
+            <div class="compass-needle-w">W</div>
+            <div class="compass-needle-e">E</div>
+            <div class="compass-axis"></div>
+          </div>
+        </button>
+      </aside>
+
       <article id="detail" class="detail hidden">
-        <button id="detail-close" class="detail-close-btn" type="button" aria-label="关闭详情卡">✕</button>
         <div class="sheet-grabber" id="detail-grabber" aria-hidden="true"></div>
-        <div class="kicker" id="detail-kicker"></div>
-        <h3 id="detail-title"></h3>
+        <div class="detail-header" id="detail-header">
+          <div class="detail-title-wrap">
+            <div class="kicker" id="detail-kicker"></div>
+            <div class="detail-heading-row" id="detail-heading-row">
+              <h3 id="detail-title"></h3>
+            </div>
+          </div>
+          <div class="detail-header-actions" id="detail-header-actions">
+            <button id="detail-minimize" class="detail-min-btn" type="button" aria-label="收起详情卡" title="收起详情卡 [M]">▲</button>
+            <button id="detail-close" class="detail-close-btn" type="button" aria-label="关闭详情卡" title="关闭详情卡 [Esc]">✕</button>
+          </div>
+        </div>
         <div class="en" id="detail-en"></div>
         <p id="detail-blurb"></p>
         <div id="sheet-expand-hint" class="sheet-expand-hint">轻触或上滑查看详情与实景对照 ▴</div>
@@ -123,12 +146,39 @@
           <span class="orbit-icon">🛸</span>
           <span class="orbit-text">航拍环绕</span>
         </button>
+        <div class="solar-dock-divider camera-dock-divider hidden" id="dock-camera-divider"></div>
+        <!-- 视口机位构图预设 (Landmark Camera Presets) -->
+        <div class="dock-camera-presets hidden" id="dock-camera-presets" aria-label="相机机位构图">
+          <button id="dock-preset-golden" class="solar-preset-btn active" type="button" title="黄金透视 (20°) [官方视角]">
+            <span class="icon">📐</span>
+            <span class="text">透视</span>
+          </button>
+          <button id="dock-preset-top" class="solar-preset-btn" type="button" title="垂直正顶俯视 (90°)">
+            <span class="icon">🧭</span>
+            <span class="text">俯瞰</span>
+          </button>
+          <button id="dock-preset-eye" class="solar-preset-btn" type="button" title="地表仰视 (0°)">
+            <span class="icon">👁️</span>
+            <span class="text">平视</span>
+          </button>
+          <button id="dock-preset-reset" class="solar-preset-btn" type="button" title="复位机位 [F]">
+            <span class="icon">🎯</span>
+            <span class="text">复位</span>
+          </button>
+        </div>
         <div class="solar-dock-divider"></div>
         <button id="btn-postcard" class="postcard-trigger-btn" type="button" title="一键生成专属建筑明信片海报 [P]">
           <span class="postcard-btn-icon">📷</span>
           <span class="postcard-btn-text">生成明信片</span>
         </button>
+        <div class="solar-dock-divider"></div>
+        <button id="btn-zen" class="solar-preset-btn btn-zen-toggle" type="button" title="全局沉浸纯享模式 [Z]">
+          <span class="icon">⛶</span>
+          <span class="text">纯享</span>
+        </button>
       </nav>
+
+      <div id="zen-toast" class="zen-toast hidden" role="status" aria-live="polite">已进入沉浸纯享模式 · 按 Z 键或点击任意处退出</div>
 
       <div id="status" class="status">正在初始化地球…</div>
 
