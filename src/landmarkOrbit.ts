@@ -10,6 +10,7 @@ export interface LandmarkOrbitConfig {
   container: HTMLElement;
   onViewChange?: (heading: number, pitch: number, distance: number) => void;
   onResetRequested?: () => void;
+  onSpaceAlignNorth?: () => void;
 }
 
 export class LandmarkOrbitManager {
@@ -17,6 +18,7 @@ export class LandmarkOrbitManager {
   private container: HTMLElement;
   private onViewChange?: (heading: number, pitch: number, distance: number) => void;
   private onResetRequested?: () => void;
+  private onSpaceAlignNorth?: () => void;
 
   private currentWonder: Wonder | null = null;
   private pivotPos = new THREE.Vector3();
@@ -68,11 +70,17 @@ export class LandmarkOrbitManager {
     eyelevel: null,
   };
 
+  private _spaceNorth = new THREE.Vector3(0, 0, 6378137);
+  private _spaceCenter = new THREE.Vector3(0, 0, 0);
+  private _projNorth = new THREE.Vector3();
+  private _projCenter = new THREE.Vector3();
+
   constructor(config: LandmarkOrbitConfig) {
     this.viewer = config.viewer;
     this.container = config.container;
     this.onViewChange = config.onViewChange;
     this.onResetRequested = config.onResetRequested;
+    this.onSpaceAlignNorth = config.onSpaceAlignNorth;
 
     this.bindDOMEvents();
     this.createUI();
@@ -167,8 +175,9 @@ export class LandmarkOrbitManager {
     this.isPointerDown = false;
 
     if (this.uiRoot) {
-      this.uiRoot.classList.remove("visible");
-      this.uiRoot.classList.add("hidden");
+      // 保持罗盘在太空全局漫游视角下依然可见
+      this.uiRoot.classList.remove("hidden");
+      this.uiRoot.classList.add("visible");
     }
     if (typeof document !== "undefined") {
       const dockPresets = document.getElementById("dock-camera-presets");
@@ -236,6 +245,10 @@ export class LandmarkOrbitManager {
    * 罗盘点击一键回正正北
    */
   public alignNorth(): void {
+    if (!this.isActiveState) {
+      this.onSpaceAlignNorth?.();
+      return;
+    }
     // 寻找最近的 0° / 360° 目标
     const currentNorm = ((this.currentHeading % 360) + 360) % 360;
     if (currentNorm > 180) {
@@ -243,6 +256,54 @@ export class LandmarkOrbitManager {
     } else {
       this.targetHeading = this.currentHeading - currentNorm;
     }
+  }
+
+  /**
+   * 聚焦特定构件热点（平滑过渡，不打断轨道状态）
+   */
+  public focusOnHotspot(worldPos: THREE.Vector3, distance?: number, pitch?: number, heading?: number): void {
+    if (!this.isActiveState) return;
+    this.pivotPos.copy(worldPos);
+    this.computeLocalBasis(worldPos);
+    this.targetDist = THREE.MathUtils.clamp(distance ?? 60, this.minDistance, this.maxDistance);
+    if (typeof pitch === "number") {
+      this.targetPitch = THREE.MathUtils.clamp(pitch, this.minPitch, this.maxPitch);
+    }
+    if (typeof heading === "number") {
+      this.targetHeading = heading;
+    }
+    this.updatePresetActiveState(null);
+  }
+
+  /**
+   * 退出热点特写，复位回建筑整体全貌
+   */
+  public resetToOverview(): void {
+    if (!this.isActiveState || !this.currentWonder) return;
+    this.pivotPos.copy(this.originalPivot);
+    this.computeLocalBasis(this.originalPivot);
+    this.targetDist = this.currentWonder.flyDistance ?? 150;
+    this.targetPitch = this.currentWonder.flyPitch ?? -16;
+    this.targetHeading = this.currentWonder.flyHeading ?? this.currentHeading;
+    this.updatePresetActiveState("golden");
+  }
+
+  /**
+   * 太空漫游视角下同步更新 3D 罗盘指向（指向地理北极点）
+   */
+  public updateSpaceCompass(camera: THREE.Camera): void {
+    if (this.isActiveState || !this.compassDial) return;
+    this._projNorth.copy(this._spaceNorth).project(camera);
+    this._projCenter.copy(this._spaceCenter).project(camera);
+
+    const dx = this._projNorth.x - this._projCenter.x;
+    const dy = this._projNorth.y - this._projCenter.y;
+    let angleDeg = 0;
+    if (Math.hypot(dx, dy) > 0.001) {
+      // NDC 中 +y 为上，+x 为右；屏幕角度自正上方顺时针旋转
+      angleDeg = -THREE.MathUtils.radToDeg(Math.atan2(dx, dy));
+    }
+    this.compassDial.style.transform = `rotate(${angleDeg.toFixed(1)}deg)`;
   }
 
   /**
@@ -433,8 +494,12 @@ export class LandmarkOrbitManager {
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerUp);
 
-    // 键盘快捷键 (F 键复位)
+    // 键盘快捷键 (F 键复位, N 键回正正北)
     window.addEventListener("keydown", (e) => {
+      if (e.key === "n" || e.key === "N") {
+        this.alignNorth();
+        return;
+      }
       if (!this.isActiveState) return;
       if (e.key === "f" || e.key === "F") {
         e.preventDefault();

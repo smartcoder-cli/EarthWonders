@@ -1,8 +1,5 @@
 import * as THREE from "three";
 import { mapped, type SurfaceKit } from "../surfaces";
-import {
-  pyramidGeo,
-} from "./_shared";
 
 export function createFastTelescope(kit: SurfaceKit): THREE.Group {
   const group = new THREE.Group();
@@ -29,20 +26,6 @@ export function createFastTelescope(kit: SurfaceKit): THREE.Group {
   basinFloor.position.set(0, 5, 0);
   basinFloor.receiveShadow = true;
   group.add(basinFloor);
-
-  // Outer karst peaks
-  for (let i = 0; i < 14; i++) {
-    const angle = (i * 2 * Math.PI) / 14 + (i % 3) * 0.1;
-    const dist = dishRadius + 150 + ((i * 37) % 70);
-    const peakH = 80 + ((i * 47) % 80);
-    const peakW = 120 + ((i * 29) % 60);
-    const peak = new THREE.Mesh(
-      pyramidGeo(peakW, peakH),
-      mapped(kit.machu, { color: 0x485844, roughness: 0.95, metersPerTile: 16 }),
-    );
-    peak.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
-    group.add(peak);
-  }
 
   // 2. 500m 口径主反射面（严格凹面朝天：中心低、边缘高）
   const dishPts: THREE.Vector2[] = [];

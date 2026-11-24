@@ -6,6 +6,7 @@ import { FlightController } from "./flight";
 import { HotspotManager } from "./hotspotManager";
 import { LandmarkManager } from "./landmarkManager";
 import { LandmarkOrbitManager } from "./landmarkOrbit";
+import { initLandmarkMarkers, updateMarkerOcclusion, type LandmarkMarkerInfo } from "./markerOcclusion";
 import { generatePostcard, showPostcardModal } from "./postcard";
 import { DroneOrbitController, SolarController, type SolarPreset } from "./solarAndOrbit";
 import { loadSurfaceKit } from "./surfaces";
@@ -161,6 +162,7 @@ let solarController: SolarController | null = null;
 let droneOrbitController: DroneOrbitController | null = null;
 let atmosphereManager: AtmosphereManager | null = null;
 let landmarkOrbitManager: LandmarkOrbitManager | null = null;
+let landmarkMarkerList: LandmarkMarkerInfo[] = [];
 
 function updateUrl(wonderId?: string | null, preset?: string, wireframe?: boolean, orbit?: boolean) {
   try {
@@ -317,6 +319,13 @@ async function flyToSpace() {
   tourManager?.stopTour();
   droneOrbitController?.stop();
   updateDroneBtn();
+  if (btnTour) {
+    btnTour.disabled = false;
+    btnTour.classList.remove("active");
+  }
+  if (btnSpace) {
+    btnSpace.disabled = false;
+  }
   atmosphereManager?.setWonder(null);
   updateUrl(null);
   solarController?.setWonder(null);
@@ -464,6 +473,7 @@ async function boot() {
   current.controls.minDistance = 40;
 
   for (const wonder of WONDERS) addMarker(current, wonder);
+  landmarkMarkerList = initLandmarkMarkers(current, WONDERS);
   bindViewerEvents(current);
 
   // 初始化飞行与巡礼子系统
@@ -628,6 +638,9 @@ async function boot() {
     onResetRequested: () => {
       if (currentWonderObj) void flightController?.flyToWonder(currentWonderObj);
     },
+    onSpaceAlignNorth: () => {
+      void flyToSpace();
+    },
   });
 
   // 初始化无人机航拍控制器
@@ -657,7 +670,21 @@ async function boot() {
       hotspotLayer,
       hotspotCard,
       () => {
-        if (currentWonderObj) void flightController?.flyToWonder(currentWonderObj);
+        landmarkOrbitManager?.resetToOverview();
+        detailPanel.expand();
+      },
+      (hotspot, worldPos) => {
+        detailPanel.minimize();
+        landmarkOrbitManager?.focusOnHotspot(
+          worldPos,
+          hotspot.focusDistance,
+          hotspot.focusPitch,
+          hotspot.focusHeading,
+        );
+      },
+      () => {
+        landmarkOrbitManager?.resetToOverview();
+        detailPanel.expand();
       },
     );
   }
@@ -829,10 +856,31 @@ async function boot() {
       keepCameraTuned(viewer);
     }
 
+    if (landmarkMarkerList.length > 0 && viewer) {
+      const domCanvas = viewer.renderer.raw.domElement;
+      updateMarkerOcclusion({
+        camera: viewer.camera.raw,
+        canvasWidth: domCanvas?.clientWidth ?? window.innerWidth,
+        canvasHeight: domCanvas?.clientHeight ?? window.innerHeight,
+        markers: landmarkMarkerList,
+        selectedId,
+        activeCategory,
+        setEntityVisibility: (id, visible) => {
+          const ent = viewer?.entities.getById(id);
+          if (ent && ent.show !== visible) {
+            ent.show = visible;
+          }
+        },
+      });
+    }
+
     if (landmarkOrbitManager?.isActive) {
       landmarkOrbitManager.update(dt);
-    } else if (droneOrbitController?.isOrbiting) {
-      droneOrbitController.update(dt);
+    } else {
+      if (viewer) landmarkOrbitManager?.updateSpaceCompass(viewer.camera.raw);
+      if (droneOrbitController?.isOrbiting) {
+        droneOrbitController.update(dt);
+      }
     }
 
     hotspotManager?.update();

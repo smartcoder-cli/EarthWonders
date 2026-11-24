@@ -12,6 +12,8 @@ export class HotspotManager {
   private pinElements: Map<string, HTMLElement> = new Map();
   private activeHotspot: Hotspot | null = null;
   private onReturnToOverview?: () => void;
+  private onSelectHotspot?: (hotspot: Hotspot, worldPos: THREE.Vector3) => void;
+  private onCloseHotspot?: () => void;
 
   private _tempVec = new THREE.Vector3();
   private _camPos = new THREE.Vector3();
@@ -26,12 +28,16 @@ export class HotspotManager {
     layerEl: HTMLElement,
     cardEl: HTMLElement | null,
     onReturnToOverview?: () => void,
+    onSelectHotspot?: (hotspot: Hotspot, worldPos: THREE.Vector3) => void,
+    onCloseHotspot?: () => void,
   ) {
     this.viewer = viewer;
     this.landmarkGroups = landmarkGroups;
     this.layerEl = layerEl;
     this.cardEl = cardEl;
     this.onReturnToOverview = onReturnToOverview;
+    this.onSelectHotspot = onSelectHotspot;
+    this.onCloseHotspot = onCloseHotspot;
 
     this.bindCardEvents();
   }
@@ -118,6 +124,11 @@ export class HotspotManager {
     this._tempVec.set(...hotspot.position);
     this._tempVec.applyMatrix4(group.matrix);
 
+    if (this.onSelectHotspot) {
+      this.onSelectHotspot(hotspot, this._tempVec);
+      return;
+    }
+
     this._dummyTarget.position.copy(this._tempVec);
     this._dummyTarget.updateMatrixWorld(true);
 
@@ -176,6 +187,7 @@ export class HotspotManager {
       this.cardEl.classList.remove("visible");
       this.cardEl.classList.add("hidden");
     }
+    this.onCloseHotspot?.();
   }
 
   /**
