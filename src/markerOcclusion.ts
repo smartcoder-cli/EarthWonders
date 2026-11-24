@@ -68,6 +68,7 @@ export interface MarkerOcclusionUpdateOptions {
   selectedId: string | null;
   activeCategory: string;
   setEntityVisibility: (id: string, visible: boolean) => void;
+  rightOcclusionWidth?: number;
 }
 
 export interface PlacedScreenBox {
@@ -90,6 +91,7 @@ export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): vo
     selectedId,
     activeCategory,
     setEntityVisibility,
+    rightOcclusionWidth = 0,
   } = options;
 
   if (canvasWidth <= 0 || canvasHeight <= 0) return;
@@ -159,7 +161,15 @@ export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): vo
       continue;
     }
 
-    // 4. 太空全局视角下的 2D 屏幕碰撞避让
+    // 4. 右侧侧边栏遮挡避让（当景点面板在右侧展开时，防止地表边缘标签被切断）
+    if (isSpaceOrGlobalView && marker.id !== selectedId && rightOcclusionWidth > 0) {
+      if (screenX > canvasWidth - rightOcclusionWidth - 24) {
+        setEntityVisibility(marker.id, false);
+        continue;
+      }
+    }
+
+    // 5. 太空全局视角下的 2D 屏幕碰撞避让
     if (isSpaceOrGlobalView && marker.id !== selectedId) {
       // 评估标签占据的大致屏幕矩形 (约 110px 宽, 32px 高)
       const boxW = 100;

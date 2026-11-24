@@ -31,6 +31,12 @@
     <div id="app">
       <div id="viewer"></div>
 
+      <!-- 地球冷启动载入平滑过渡提示 -->
+      <div id="earth-loader" class="earth-loader" aria-live="polite">
+        <div class="earth-spinner"></div>
+        <div class="earth-loader-text">正在载入三维数字地球卫星瓦片与场景材质…</div>
+      </div>
+
       <header class="hud">
         <h1>地球奇迹与现代巨构</h1>
         <p class="sub">Global Architectural Wonders & Megastructures · Tellux 3D Earth</p>
@@ -43,7 +49,7 @@
           <h2>风貌主题</h2>
           <div class="category-tabs" id="category-tabs" role="tablist" aria-label="建筑风貌分类">
             <button class="cat-tab active" data-cat="all" type="button" title="查看全部地标">🌐 全部</button>
-            <button class="cat-tab" data-cat="ancient" type="button" title="古典与古代奇迹">🏛️ 经典</button>
+            <button class="cat-tab" data-cat="ancient" type="button" title="古典与历史奇迹">🏛️ 古迹</button>
             <button class="cat-tab" data-cat="megastructure" type="button" title="现代工程与科研巨构">🚀 巨构</button>
             <button class="cat-tab" data-cat="skyline" type="button" title="先锋地标与摩天都市">🏙️ 先锋</button>
             <button class="cat-tab" data-cat="infrastructure" type="button" title="世纪跨海桥隧与人工岛工程">🌉 跨海</button>
@@ -62,7 +68,7 @@
       <button id="btn-mobile-list" class="mobile-floating-pill" type="button" title="展开/收起奇迹列表 [L]">📜 奇迹列表</button>
 
       <!-- 独立视口 3D 罗盘仪 (Compass Gizmo) -->
-      <aside id="viewport-controls" class="viewport-controls hidden">
+      <aside id="viewport-controls" class="viewport-controls visible">
         <button id="compass-gizmo" class="compass-gizmo" type="button" title="点击罗盘回正正北朝上 (North) [N]">
           <div class="compass-dial" id="compass-dial">
             <div class="compass-needle-n">N</div>
@@ -197,7 +203,7 @@
         </button>
       </nav>
 
-      <div id="zen-toast" class="zen-toast hidden" role="status" aria-live="polite">已进入沉浸纯享模式 · 按 Z 键或点击任意处退出</div>
+      <div id="zen-toast" class="zen-toast hidden" role="status" aria-live="polite"></div>
 
       <div id="status" class="status">正在初始化地球…</div>
 

@@ -126,4 +126,36 @@ describe("markerOcclusion - Backface Culling & Screen Collision", () => {
     });
     expect(visibilityMap.get("paris2")).toBe(true);
   });
+
+  it("should cull markers under right side panel when rightOcclusionWidth is specified", () => {
+    const camera = new THREE.PerspectiveCamera(50, 1.5, 0.1, 50000000);
+    camera.position.set(0, 0, 20000000);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld(true);
+
+    // Marker on the far right of the screen (projects to screenX > 1100 in 1440px width)
+    const rightMarker: LandmarkMarkerInfo = {
+      id: "right_edge",
+      index: 10,
+      category: "megastructure",
+      nameZh: "右侧边缘地标",
+      position: new THREE.Vector3(7000000, 0, 2100000),
+      normal: new THREE.Vector3(0.94, 0, 0.33),
+    };
+
+    const visibilityMap = new Map<string, boolean>();
+    updateMarkerOcclusion({
+      camera,
+      canvasWidth: 1440,
+      canvasHeight: 900,
+      markers: [rightMarker],
+      selectedId: null,
+      activeCategory: "all",
+      setEntityVisibility: (id, visible) => visibilityMap.set(id, visible),
+      rightOcclusionWidth: 350,
+    });
+
+    // Should be culled because screenX falls within the right panel zone
+    expect(visibilityMap.get("right_edge")).toBe(false);
+  });
 });

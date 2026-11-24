@@ -141,15 +141,18 @@ function toggleZenMode(forceState?: boolean) {
 
   if (zenModeActive) {
     if (zenToast) {
+      zenToast.textContent = "已进入沉浸纯享模式 · 按 Z 键或点击任意处退出";
       zenToast.classList.remove("hidden");
       if (zenToastTimeout) window.clearTimeout(zenToastTimeout);
       zenToastTimeout = window.setTimeout(() => {
         zenToast.classList.add("hidden");
+        zenToast.textContent = "";
       }, 2600);
     }
   } else {
     if (zenToast) {
       zenToast.classList.add("hidden");
+      zenToast.textContent = "";
     }
   }
 }
@@ -299,7 +302,9 @@ async function visit(wonder: Wonder) {
   if (arrivedPivot) {
     activePivotPos = arrivedPivot;
     landmarkOrbitManager?.activate(wonder, arrivedPivot);
-    collapsePanel(); // 智能自适应收起列表抽屉，还用户 100% 满屏 3D 全景
+    if (window.innerWidth <= 1080) {
+      collapsePanel(); // 窄屏及移动端自动收起列表抽屉
+    }
   }
 
   const loadedGroup = landmarkManager ? await landmarkManager.loadLandmark(wonder) : undefined;
@@ -358,7 +363,7 @@ function addMarker(current: InstanceType<typeof tellux.Viewer>, wonder: Wonder) 
         padding: [8, 4],
       },
       anchor: "bottom",
-      pixelOffset: [0, 18],
+      pixelOffset: [0, 8],
     },
     properties: { wonderId: wonder.id },
   });
@@ -662,6 +667,13 @@ async function boot() {
   landmarkManager = new LandmarkManager(current, kit);
   landmarkManager.preloadBackground();
 
+  // 首屏瓦片与材质就绪，平滑淡出冷启动加载器
+  const loaderEl = document.getElementById("earth-loader");
+  if (loaderEl) {
+    loaderEl.classList.add("hidden");
+    setTimeout(() => loaderEl.remove(), 700);
+  }
+
   // 初始化 3D 热点管理器
   if (hotspotLayer) {
     hotspotManager = new HotspotManager(
@@ -858,6 +870,8 @@ async function boot() {
 
     if (landmarkMarkerList.length > 0 && viewer) {
       const domCanvas = viewer.renderer.raw.domElement;
+      const isPanelOpen = panelEl && !panelEl.classList.contains("collapsed") && !panelEl.classList.contains("mobile-hidden");
+      const rightOcclusionWidth = isPanelOpen && window.innerWidth > 768 ? Math.min(340, window.innerWidth * 0.35) : 0;
       updateMarkerOcclusion({
         camera: viewer.camera.raw,
         canvasWidth: domCanvas?.clientWidth ?? window.innerWidth,
@@ -871,6 +885,7 @@ async function boot() {
             ent.show = visible;
           }
         },
+        rightOcclusionWidth,
       });
     }
 

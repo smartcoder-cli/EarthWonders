@@ -30,7 +30,7 @@ export type Wonder = {
 
 export const CATEGORIES = [
   { id: "all", labelZh: "全部", icon: "🌐" },
-  { id: "ancient", labelZh: "古代文明", icon: "🏛️" },
+  { id: "ancient", labelZh: "古迹遗址", icon: "🏛️" },
   { id: "megastructure", labelZh: "现代巨构", icon: "🚀" },
   { id: "skyline", labelZh: "先锋地标", icon: "🏙️" },
   { id: "infrastructure", labelZh: "跨海工程", icon: "🌉" },
@@ -227,7 +227,7 @@ export const WONDERS: Wonder[] = [
   {
     id: "christ",
     index: 8,
-    category: "ancient",
+    category: "skyline",
     nameZh: "基督像",
     nameEn: "Christ the Redeemer",
     place: "巴西 · 里约热内卢",
@@ -498,7 +498,7 @@ export const WONDERS: Wonder[] = [
     flyHeading: 198,
     flyPitch: -16,
     flyDuration: 4.8,
-    labelHeight: 25,
+    labelHeight: 0,
     lookHeight: 8,
     modelHeading: 45,
     blurb:
@@ -515,7 +515,7 @@ export const WONDERS: Wonder[] = [
   {
     id: "liberty",
     index: 18,
-    category: "ancient",
+    category: "skyline",
     nameZh: "自由女神像",
     nameEn: "Statue of Liberty",
     place: "美国 · 纽约自由岛",
@@ -665,7 +665,7 @@ export const WONDERS: Wonder[] = [
   {
     id: "sagrada",
     index: 23,
-    category: "ancient",
+    category: "skyline",
     nameZh: "巴塞罗那圣家堂",
     nameEn: "Basílica de la Sagrada Família",
     place: "西班牙 · 巴塞罗那扩建区",

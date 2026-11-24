@@ -10,27 +10,55 @@ import {
 
 export function createPetra(kit: SurfaceKit) {
   const root = new THREE.Group();
-  const cliff = mapped(kit.petra, { color: 0xc07060, roughness: 0.97, metersPerTile: 7, bumpScale: 0.7 });
+  const cliff = mapped(kit.petra, { color: 0xb86352, roughness: 0.96, metersPerTile: 6, bumpScale: 0.8 });
+  const cliffDark = mapped(kit.petra, { color: 0x7c382e, roughness: 0.98, metersPerTile: 5, bumpScale: 0.9 });
   const sand = mapped(kit.petra, { roughness: 0.86, metersPerTile: 5.5, bumpScale: 0.45 });
   const sandLight = mapped(kit.petra, { color: 0xffc8b0, roughness: 0.82, metersPerTile: 4.5 });
-  const dark = mapped(kit.petra, { color: 0x6a3028, roughness: 0.93, metersPerTile: 4 });
-  const band = mapped(kit.petra, { color: 0xd08058, roughness: 0.95, metersPerTile: 8, bumpScale: 0.8 });
+  const dark = mapped(kit.petra, { color: 0x5a241e, roughness: 0.93, metersPerTile: 4 });
+  const band = mapped(kit.petra, { color: 0xcc7256, roughness: 0.95, metersPerTile: 7, bumpScale: 0.75 });
+  const strata = mapped(kit.petra, { color: 0x984438, roughness: 0.97, metersPerTile: 8, bumpScale: 0.85 });
 
-  box(root, cliff, 92, 96, 30, 0, 0, 22);
-  box(root, cliff, 38, 110, 44, -62, 0, 14);
-  box(root, cliff, 38, 104, 44, 62, 0, 16);
-  for (const [x, h, z] of [
-    [-46, 18, 18],
-    [-22, 28, 20],
-    [8, 16, 18],
-    [32, 24, 20],
-    [50, 14, 16],
+  // 1. 紧随神殿背后的阶梯状砂岩母岩山体（取代原先突兀的 110 米扁平巨盒）
+  box(root, cliff, 44, 54, 16, 0, 0, 4);
+  box(root, cliffDark, 48, 48, 12, 0, 0, 16);
+  box(root, cliff, 36, 16, 12, 0, 52, 10);
+  box(root, band, 28, 10, 10, 0, 64, 14);
+
+  // 2. 峡谷两侧自然交错跌宕的红砂岩悬崖岩壁（自然衬托宝库立面）
+  // 左侧岩壁 (西侧峡谷岩体)
+  box(root, cliff, 24, 52, 28, -26, 0, 2);
+  box(root, cliffDark, 20, 46, 26, -34, 0, -10);
+  box(root, cliff, 18, 38, 22, -28, 0, -26);
+  box(root, band, 14, 30, 18, -22, 0, -40);
+
+  // 右侧岩壁 (东侧峡谷岩体，共同构成狭窄蜿蜒的蛇道 Siq 峡谷出口)
+  box(root, cliff, 24, 50, 28, 26, 0, 2);
+  box(root, cliffDark, 20, 44, 26, 34, 0, -10);
+  box(root, cliff, 18, 38, 22, 28, 0, -26);
+  box(root, band, 14, 28, 18, 22, 0, -40);
+
+  // 3. 山顶自然风化起伏的风蚀岩柱与岩脊
+  for (const [x, h, z, w] of [
+    [-24, 12, 6, 12],
+    [-12, 14, 12, 14],
+    [0, 10, 16, 16],
+    [14, 15, 10, 12],
+    [26, 11, 4, 10],
+    [-32, 9, -12, 10],
+    [30, 8, -14, 10],
   ] as const) {
-    box(root, cliff, 16, h, 12, x, 88, z);
+    box(root, strata, w, h, 10, x, 46 + Math.max(0, 8 - Math.abs(x) * 0.15), z);
   }
-  for (let i = 0; i < 8; i++) {
-    box(root, band, 88, 1.1, 2.2, 0, 8 + i * 9.5, -1.6);
+
+  // 4. 水平砂岩沉积层纹理（红砂岩层理带）
+  for (let i = 0; i < 6; i++) {
+    box(root, band, 42, 0.9, 1.8, 0, 6 + i * 8.5, -2.2);
+    box(root, strata, 22, 0.7, 1.6, -26, 8 + i * 7.5, -6);
+    box(root, strata, 22, 0.7, 1.6, 26, 8 + i * 7.5, -6);
   }
+
+  // 5. 峡谷广场地面砂石铺装 (蛇道入口前平坦开阔地)
+  box(root, sand, 38, 0.6, 48, 0, -0.3, -22);
 
   box(root, sand, 28, 24, 6.4, 0, 2.4, -4);
   for (let i = 0; i < 12; i++) {

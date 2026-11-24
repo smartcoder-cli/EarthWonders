@@ -518,7 +518,7 @@ export class LandmarkOrbitManager {
     if (!controlsDiv) {
       controlsDiv = document.createElement("aside");
       controlsDiv.id = "viewport-controls";
-      controlsDiv.className = "viewport-controls hidden";
+      controlsDiv.className = "viewport-controls visible";
       controlsDiv.innerHTML = `
         <!-- 独立视口 3D 罗盘仪 (Compass Gizmo) -->
         <button id="compass-gizmo" class="compass-gizmo" type="button" title="点击罗盘回正正北朝上 (North) [N]">
@@ -532,9 +532,16 @@ export class LandmarkOrbitManager {
           </div>
         </button>
       `;
-      document.body.appendChild(controlsDiv);
+      const appEl = document.getElementById("app");
+      if (appEl) {
+        appEl.appendChild(controlsDiv);
+      } else {
+        document.body.appendChild(controlsDiv);
+      }
     }
     this.uiRoot = controlsDiv;
+    this.uiRoot.classList.remove("hidden");
+    this.uiRoot.classList.add("visible");
     this.compassDial = document.getElementById("compass-dial");
     this.distLabel = document.getElementById("zoom-dist-label");
 
