@@ -9,6 +9,7 @@ import { LandmarkOrbitManager } from "./landmarkOrbit";
 import { initLandmarkMarkers, updateMarkerOcclusion, type LandmarkMarkerInfo } from "./markerOcclusion";
 import { generatePostcard, showPostcardModal } from "./postcard";
 import { DroneOrbitController, SolarController, type SolarPreset } from "./solarAndOrbit";
+import { ExplorationState } from "./state/explorationState";
 import { loadSurfaceKit } from "./surfaces";
 import { configureTilesetOptimization } from "./tileOptimization";
 import { installTileProvider } from "./tileProvider";
@@ -100,14 +101,7 @@ function formatHour(hour: number): string {
 
 // 核心应用状态
 let viewer: InstanceType<typeof tellux.Viewer> | null = null;
-let selectedId: string | null = null;
-let hasArrivedCurrentWonder = false;
-let currentWonderObj: Wonder | null = null;
-let activePivotPos: THREE.Vector3 | null = null;
-let activeCategory = "all";
-let wireframeOn = false;
-let landmarkNightOn = false;
-let zenModeActive = false;
+const appState = new ExplorationState();
 let zenToastTimeout: number | undefined;
 
 function collapsePanel() {
@@ -131,16 +125,16 @@ function togglePanel() {
 }
 
 function toggleZenMode(forceState?: boolean) {
-  zenModeActive = typeof forceState === "boolean" ? forceState : !zenModeActive;
-  document.body.classList.toggle("zen-mode", zenModeActive);
+  appState.zenModeActive = typeof forceState === "boolean" ? forceState : !appState.zenModeActive;
+  document.body.classList.toggle("zen-mode", appState.zenModeActive);
 
   const zenToast = document.getElementById("zen-toast");
   const btnZen = document.getElementById("btn-zen");
   if (btnZen) {
-    btnZen.classList.toggle("active", zenModeActive);
+    btnZen.classList.toggle("active", appState.zenModeActive);
   }
 
-  if (zenModeActive) {
+  if (appState.zenModeActive) {
     if (zenToast) {
       zenToast.textContent = "已进入沉浸纯享模式 · 按 Z 键或点击任意处退出";
       zenToast.classList.remove("hidden");
@@ -217,12 +211,12 @@ function updatePresetButtons(activePreset?: SolarPreset) {
       }
     }
   }
-  if (currentWonderObj) {
-    updateUrl(currentWonderObj.id, activePreset, wireframeOn, droneOrbitController?.isOrbiting);
+  if (appState.currentWonder) {
+    updateUrl(appState.currentWonder.id, activePreset, appState.wireframeOn, droneOrbitController?.isOrbiting);
     const isNight = activePreset === "night";
-    landmarkNightOn = isNight;
+    appState.landmarkNightOn = isNight;
     atmosphereManager?.setNightMode(isNight);
-    landmarkManager?.setNightMode(currentWonderObj.id, isNight);
+    landmarkManager?.setNightMode(appState.currentWonder.id, isNight);
 
     const btnNightEl = document.getElementById("btn-nightmode");
     if (btnNightEl) {
@@ -245,11 +239,11 @@ function updateDroneBtn() {
 function renderList() {
   if (!listEl) return;
   listEl.replaceChildren();
-  const filtered = activeCategory === "all" ? WONDERS : WONDERS.filter((w) => w.category === activeCategory);
+  const filtered = appState.activeCategory === "all" ? WONDERS : WONDERS.filter((w) => w.category === appState.activeCategory);
   for (const wonder of filtered) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "wonder-btn" + (wonder.id === selectedId ? " active" : "");
+    btn.className = "wonder-btn" + (wonder.id === appState.selectedId ? " active" : "");
     btn.dataset.id = wonder.id;
     const index = document.createElement("span");
     index.className = "idx";
@@ -276,9 +270,9 @@ function renderList() {
 
 async function visit(wonder: Wonder) {
   if (!viewer || !flightController) return;
-  if (selectedId === wonder.id && !tourManager?.isTouring) {
+  if (appState.selectedId === wonder.id && !tourManager?.isTouring) {
     if (flightController.isFlying) return;
-    if (hasArrivedCurrentWonder) {
+    if (appState.hasArrivedCurrentWonder) {
       if (hotspotManager?.isCardOpen) {
         hotspotManager.closeCard();
       }
@@ -287,10 +281,7 @@ async function visit(wonder: Wonder) {
   }
 
   tourManager?.stopTour();
-  selectedId = wonder.id;
-  currentWonderObj = wonder;
-  hasArrivedCurrentWonder = false;
-  activePivotPos = null;
+  appState.beginVisit(wonder);
   landmarkOrbitManager?.deactivate();
   droneOrbitController?.stop();
   updateDroneBtn();
@@ -303,19 +294,18 @@ async function visit(wonder: Wonder) {
     void landmarkManager.loadLandmark(wonder);
   }
   atmosphereManager?.setWonder(wonder, landmarkManager?.getLandmarkGroup(wonder.id));
-  atmosphereManager?.setNightMode(landmarkNightOn);
-  updateUrl(wonder.id, undefined, wireframeOn, false);
+  atmosphereManager?.setNightMode(appState.landmarkNightOn);
+  updateUrl(wonder.id, undefined, appState.wireframeOn, false);
 
   if (btnTour) btnTour.classList.remove("active");
   detailPanel.showDetail(wonder, renderList);
   setStatus(`飞向 ${wonder.nameZh}`);
 
   const arrivedPivot = await flightController.flyToWonder(wonder);
-  if (selectedId !== wonder.id || tourManager?.isTouring) return;
+  if (appState.selectedId !== wonder.id || tourManager?.isTouring) return;
 
-  if (arrivedPivot) {
-    hasArrivedCurrentWonder = true;
-    activePivotPos = arrivedPivot;
+  if (arrivedPivot && appState.markArrived(wonder.id, arrivedPivot)) {
+    landmarkManager?.updateProximityVisibility(arrivedPivot);
     landmarkOrbitManager?.activate(wonder, arrivedPivot);
     if (window.innerWidth <= 1080) {
       collapsePanel(); // 窄屏及移动端自动收起列表抽屉
@@ -326,19 +316,17 @@ async function visit(wonder: Wonder) {
   }
 
   const loadedGroup = landmarkManager ? await landmarkManager.loadLandmark(wonder) : undefined;
-  if (selectedId === wonder.id && !tourManager?.isTouring) {
+  if (appState.selectedId === wonder.id && !tourManager?.isTouring) {
     atmosphereManager?.setWonder(wonder, loadedGroup);
-    atmosphereManager?.setNightMode(landmarkNightOn);
+    atmosphereManager?.setNightMode(appState.landmarkNightOn);
     setStatus(`${wonder.nameZh} · ${wonder.place}`);
   }
 }
 
 async function flyToSpace() {
   if (!flightController) return;
-  selectedId = null;
-  currentWonderObj = null;
-  hasArrivedCurrentWonder = false;
-  activePivotPos = null;
+  appState.resetToSpace();
+  landmarkManager?.updateProximityVisibility(null);
   landmarkOrbitManager?.deactivate();
   tourManager?.stopTour();
   droneOrbitController?.stop();
@@ -516,12 +504,10 @@ async function boot() {
     flightController,
     btnTour,
     onWonderStep: (w) => {
-      selectedId = w.id;
-      currentWonderObj = w;
-      hasArrivedCurrentWonder = false;
-      activePivotPos = null;
+      appState.syncTourStep(w);
       hotspotManager?.setActiveWonder(null);
       landmarkOrbitManager?.deactivate();
+      landmarkManager?.updateProximityVisibility(null);
       detailPanel.showDetail(w, renderList);
     },
     onStatusChange: setStatus,
@@ -537,7 +523,7 @@ async function boot() {
       setStatus("已停止巡礼");
       return;
     }
-    void tourManager?.runTour(activeCategory);
+    void tourManager?.runTour(appState.activeCategory);
   });
 
   btnSpace?.addEventListener("click", () => {
@@ -564,7 +550,7 @@ async function boot() {
   setupKeyboardShortcuts({
     onVisitWonder: (w) => void visit(w),
     onEscape: () => {
-      if (zenModeActive) {
+      if (appState.zenModeActive) {
         toggleZenMode(false);
         return;
       }
@@ -572,7 +558,7 @@ async function boot() {
     },
     onToggleTour: () => {
       if (tourManager?.isTouring) tourManager.stopTour();
-      else void tourManager?.runTour(activeCategory);
+      else void tourManager?.runTour(appState.activeCategory);
     },
     onToggleOrbit: () => btnDroneOrbit?.click(),
     onPostcard: () => btnPostcard?.click(),
@@ -588,7 +574,7 @@ async function boot() {
   btnZen?.addEventListener("click", () => toggleZenMode());
   zenToast?.addEventListener("click", () => toggleZenMode(false));
   container.addEventListener("dblclick", () => {
-    if (zenModeActive) toggleZenMode(false);
+    if (appState.zenModeActive) toggleZenMode(false);
   });
 
   // 绑定主题风貌分类切换
@@ -597,8 +583,8 @@ async function boot() {
     const target = (e.target as HTMLElement).closest<HTMLButtonElement>(".cat-tab");
     if (!target) return;
     const cat = target.dataset.cat ?? "all";
-    if (cat === activeCategory) return;
-    activeCategory = cat;
+    if (cat === appState.activeCategory) return;
+    appState.activeCategory = cat;
     categoryTabs.querySelectorAll(".cat-tab").forEach((tab) => {
       tab.classList.toggle("active", tab === target);
     });
@@ -606,7 +592,7 @@ async function boot() {
     for (const wonder of WONDERS) {
       const ent = current.entities.getById(wonder.id);
       if (ent) {
-        ent.show = activeCategory === "all" || wonder.category === activeCategory;
+        ent.show = appState.activeCategory === "all" || wonder.category === appState.activeCategory;
       }
     }
     setStatus(`已切换至「${target.textContent?.trim()}」分类`);
@@ -617,30 +603,35 @@ async function boot() {
   const btnNightmode = document.getElementById("btn-nightmode");
 
   btnWireframe?.addEventListener("click", () => {
-    wireframeOn = !wireframeOn;
-    btnWireframe.classList.toggle("active", wireframeOn);
-    btnWireframe.textContent = wireframeOn ? "📐 线框开启" : "📐 线框网格";
-    if (currentWonderObj) {
-      updateUrl(currentWonderObj.id, undefined, wireframeOn, droneOrbitController?.isOrbiting);
-      landmarkManager?.setWireframe(currentWonderObj.id, wireframeOn);
+    appState.wireframeOn = !appState.wireframeOn;
+    btnWireframe.classList.toggle("active", appState.wireframeOn);
+    btnWireframe.textContent = appState.wireframeOn ? "📐 线框开启" : "📐 线框网格";
+    if (appState.currentWonder) {
+      updateUrl(appState.currentWonder.id, undefined, appState.wireframeOn, droneOrbitController?.isOrbiting);
+      landmarkManager?.setWireframe(appState.currentWonder.id, appState.wireframeOn);
     }
   });
 
   btnNightmode?.addEventListener("click", () => {
-    landmarkNightOn = !landmarkNightOn;
-    btnNightmode.classList.toggle("active", landmarkNightOn);
-    btnNightmode.textContent = landmarkNightOn ? "🌙 夜间窗光" : "🌓 窗光夜景";
-    if (currentWonderObj) {
-      landmarkManager?.setNightMode(currentWonderObj.id, landmarkNightOn);
-      atmosphereManager?.setNightMode(landmarkNightOn);
-      if (landmarkNightOn) {
+    appState.landmarkNightOn = !appState.landmarkNightOn;
+    btnNightmode.classList.toggle("active", appState.landmarkNightOn);
+    btnNightmode.textContent = appState.landmarkNightOn ? "🌙 夜间窗光" : "🌓 窗光夜景";
+    if (appState.currentWonder) {
+      landmarkManager?.setNightMode(appState.currentWonder.id, appState.landmarkNightOn);
+      atmosphereManager?.setNightMode(appState.landmarkNightOn);
+      if (appState.landmarkNightOn) {
         solarController?.setPreset("night");
         updatePresetButtons("night");
       } else {
         solarController?.setPreset("noon");
         updatePresetButtons("noon");
       }
-      updateUrl(currentWonderObj.id, landmarkNightOn ? "night" : "noon", wireframeOn, droneOrbitController?.isOrbiting);
+      updateUrl(
+        appState.currentWonder.id,
+        appState.landmarkNightOn ? "night" : "noon",
+        appState.wireframeOn,
+        droneOrbitController?.isOrbiting,
+      );
     }
   });
 
@@ -659,15 +650,14 @@ async function boot() {
     viewer: current,
     container,
     onResetRequested: () => {
-      const target = currentWonderObj;
+      const target = appState.currentWonder;
       if (!target || !flightController) return;
       hotspotManager?.closeCard(true);
       detailPanel.expand();
       landmarkOrbitManager?.deactivate();
       void flightController.flyToWonder(target).then((arrivedPivot) => {
-        if (arrivedPivot && selectedId === target.id && !tourManager?.isTouring) {
-          hasArrivedCurrentWonder = true;
-          activePivotPos = arrivedPivot;
+        if (arrivedPivot && appState.selectedId === target.id && !tourManager?.isTouring) {
+          appState.markArrived(target.id, arrivedPivot);
           landmarkOrbitManager?.activate(target, arrivedPivot);
         }
       });
@@ -684,9 +674,14 @@ async function boot() {
     if (isOrbiting) {
       landmarkOrbitManager?.deactivate();
       setStatus("🚁 航拍环绕中 (自适应瓦片防抖与全景渲染) · 点击或拖动任意处停止");
-    } else if (currentWonderObj && activePivotPos && !flightController?.isFlying && !tourManager?.isTouring) {
-      landmarkOrbitManager?.activate(currentWonderObj, activePivotPos);
-      setStatus(`${currentWonderObj.nameZh} · ${currentWonderObj.place}`);
+    } else if (
+      appState.currentWonder &&
+      appState.activePivotPos &&
+      !flightController?.isFlying &&
+      !tourManager?.isTouring
+    ) {
+      landmarkOrbitManager?.activate(appState.currentWonder, appState.activePivotPos);
+      setStatus(`${appState.currentWonder.nameZh} · ${appState.currentWonder.place}`);
     }
   });
 
@@ -785,40 +780,41 @@ async function boot() {
         setStatus("正在飞行中，飞抵后即可开启航拍环绕");
         return;
       }
-      if (!currentWonderObj) {
+      if (!appState.currentWonder) {
         setStatus("请先选择一个奇迹，再开启航拍环绕");
         return;
       }
-      if (!activePivotPos) {
+      if (!appState.activePivotPos) {
         try {
           const targetMat = new THREE.Matrix4();
           current.cartographicToMatrix4(
-            [currentWonderObj.longitude, currentWonderObj.latitude, currentWonderObj.lookHeight ?? 24],
+            [appState.currentWonder.longitude, appState.currentWonder.latitude, appState.currentWonder.lookHeight ?? 24],
             {},
             targetMat,
           );
-          activePivotPos = new THREE.Vector3().setFromMatrixPosition(targetMat);
+          appState.activePivotPos = new THREE.Vector3().setFromMatrixPosition(targetMat);
         } catch {
           // ignore
         }
       }
-      if (!activePivotPos) {
+      if (!appState.activePivotPos) {
         setStatus("正在对齐建筑中心，请稍候重试");
         return;
       }
-      droneOrbitController?.start(currentWonderObj, activePivotPos);
+      droneOrbitController?.start(appState.currentWonder, appState.activePivotPos);
       hotspotManager?.closeCard(true);
-      setStatus(`已开启「${currentWonderObj.nameZh}」360° 航拍环绕 · 拖动鼠标或按 O 键退出`);
+      setStatus(`已开启「${appState.currentWonder.nameZh}」360° 航拍环绕 · 拖动鼠标或按 O 键退出`);
     }
     updateDroneBtn();
   });
 
   btnPostcard?.addEventListener("click", () => {
-    if (!currentWonderObj || !viewer) {
+    if (!appState.currentWonder || !viewer) {
       setStatus("请先选择或飞抵一座奇迹，再生成明信片 📷");
       return;
     }
     const currentViewer = viewer;
+    const targetWonder = appState.currentWonder;
     const markersToRestore: Array<{ ent: any; show: boolean }> = [];
     for (const w of WONDERS) {
       const ent = currentViewer.entities.getById(w.id);
@@ -833,14 +829,14 @@ async function boot() {
       try {
         const glCanvas = currentViewer.renderer.raw.domElement;
         const cardCanvas = generatePostcard({
-          wonder: currentWonderObj!,
+          wonder: targetWonder,
           glCanvas,
           solarTimeText: solarTimeLabel?.textContent ?? "12:00",
-          isWireframe: wireframeOn,
-          isNight: landmarkNightOn || btnSolarNight?.classList.contains("active"),
+          isWireframe: appState.wireframeOn,
+          isNight: appState.landmarkNightOn || btnSolarNight?.classList.contains("active"),
         });
-        showPostcardModal(cardCanvas, currentWonderObj!);
-        setStatus(`已为「${currentWonderObj!.nameZh}」生成专属建筑明信片 📷`);
+        showPostcardModal(cardCanvas, targetWonder);
+        setStatus(`已为「${targetWonder.nameZh}」生成专属建筑明信片 📷`);
       } catch (err) {
         console.error("生成明信片失败:", err);
         setStatus("生成明信片时出错，请重试");
@@ -853,6 +849,7 @@ async function boot() {
   });
 
   window.addEventListener("pagehide", () => {
+    atmosphereManager?.dispose();
     landmarkOrbitManager?.destroy();
     landmarkManager?.destroy();
     current.destroy();
@@ -893,7 +890,6 @@ async function boot() {
     lastFrameTime = now;
 
     if (viewer) {
-      suppressBlackscreenEffects(viewer);
       keepCameraTuned(viewer);
     }
 
@@ -907,8 +903,8 @@ async function boot() {
         canvasWidth: domCanvas?.clientWidth ?? window.innerWidth,
         canvasHeight: domCanvas?.clientHeight ?? window.innerHeight,
         markers: landmarkMarkerList,
-        selectedId,
-        activeCategory,
+        selectedId: appState.selectedId,
+        activeCategory: appState.activeCategory,
         setEntityVisibility: (id, visible) => {
           const ent = viewer?.entities.getById(id);
           if (ent && ent.show !== visible) {
@@ -935,7 +931,7 @@ async function boot() {
   };
   requestAnimationFrame(renderLoop);
 
-  if (!flightController.isFlying && !tourManager.isTouring && selectedId === null) {
+  if (!flightController.isFlying && !tourManager.isTouring && appState.selectedId === null) {
     setStatus("拖动地球 · 点击分类/列表快速飞向奇迹 · O 键航拍环绕 · T 键环球巡礼");
   }
 }

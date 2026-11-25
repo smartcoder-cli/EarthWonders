@@ -79,8 +79,14 @@ export interface PlacedScreenBox {
   height: number;
 }
 
+const _camPos = new THREE.Vector3();
+const _tempDir = new THREE.Vector3();
+const _tempProj = new THREE.Vector3();
+const _placedBoxes: PlacedScreenBox[] = [];
+const _sortedMarkers: LandmarkMarkerInfo[] = [];
+
 /**
- * 计算地表背面地平线剔除与屏幕空间避让
+ * 计算地表背面地平线剔除与屏幕空间避让（复用模块级向量与缓存列表，避免逐帧 GC）
  */
 export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): void {
   const {
@@ -96,21 +102,21 @@ export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): vo
 
   if (canvasWidth <= 0 || canvasHeight <= 0) return;
 
-  const camPos = new THREE.Vector3();
-  camera.getWorldPosition(camPos);
+  camera.getWorldPosition(_camPos);
 
-  const camDistToEarth = camPos.length();
+  const camDistToEarth = _camPos.length();
   // 当相机距离地心大于 9500km 时认定为太空/远距离概览视角
   const isSpaceOrGlobalView = camDistToEarth > 9500000;
 
   // 待放置与已放置屏幕标签框 (用于 2D 碰撞避让)
-  const placedBoxes: PlacedScreenBox[] = [];
-
-  const tempDir = new THREE.Vector3();
-  const tempProj = new THREE.Vector3();
+  _placedBoxes.length = 0;
 
   // 优先级排序：选中的地标排最前，其次为当前分类，最后按索引顺序
-  const sortedMarkers = [...markers].sort((a, b) => {
+  _sortedMarkers.length = 0;
+  for (let i = 0; i < markers.length; i++) {
+    _sortedMarkers.push(markers[i]);
+  }
+  _sortedMarkers.sort((a, b) => {
     if (a.id === selectedId) return -1;
     if (b.id === selectedId) return 1;
     const aMatchCat = activeCategory === "all" || a.category === activeCategory;
@@ -120,7 +126,7 @@ export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): vo
     return a.index - b.index;
   });
 
-  for (const marker of sortedMarkers) {
+  for (const marker of _sortedMarkers) {
     // 1. 分类过滤
     if (activeCategory !== "all" && marker.category !== activeCategory && marker.id !== selectedId) {
       setEntityVisibility(marker.id, false);
@@ -129,31 +135,31 @@ export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): vo
 
     // 2. 地球背面地平线剔除 (Backface Horizon Culling)
     // 视线向量从地标指向相机：V = Cam - Pos
-    tempDir.copy(camPos).sub(marker.position);
-    const distToCam = tempDir.length();
+    _tempDir.copy(_camPos).sub(marker.position);
+    const distToCam = _tempDir.length();
     if (distToCam > 0.001) {
-      tempDir.divideScalar(distToCam); // 归一化视线方向
+      _tempDir.divideScalar(distToCam); // 归一化视线方向
     }
 
     // 地表法线与视线向量的点积
     // 若点积 <= -0.04，说明该地标在地平线背面下方，地球自身阻挡完全不可视
-    const cosAngle = marker.normal.dot(tempDir);
+    const cosAngle = marker.normal.dot(_tempDir);
     if (cosAngle <= -0.04 && marker.id !== selectedId) {
       setEntityVisibility(marker.id, false);
       continue;
     }
 
     // 3. 投影到视口屏幕坐标
-    tempProj.copy(marker.position).project(camera);
+    _tempProj.copy(marker.position).project(camera);
 
     // 在相机视锥背面（NDC z > 1 或 z < -1）
-    if (tempProj.z < -1.0 || tempProj.z > 1.0) {
+    if (_tempProj.z < -1.0 || _tempProj.z > 1.0) {
       setEntityVisibility(marker.id, false);
       continue;
     }
 
-    const screenX = (tempProj.x * 0.5 + 0.5) * canvasWidth;
-    const screenY = (-tempProj.y * 0.5 + 0.5) * canvasHeight;
+    const screenX = (_tempProj.x * 0.5 + 0.5) * canvasWidth;
+    const screenY = (-_tempProj.y * 0.5 + 0.5) * canvasHeight;
 
     // 超出屏幕边界安全边距
     if (screenX < -40 || screenX > canvasWidth + 40 || screenY < -40 || screenY > canvasHeight + 40) {
@@ -176,7 +182,7 @@ export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): vo
       const boxH = 32;
 
       let collides = false;
-      for (const placed of placedBoxes) {
+      for (const placed of _placedBoxes) {
         const dx = Math.abs(screenX - placed.x);
         const dy = Math.abs(screenY - placed.y);
         // 如果两标签在屏幕上距离过近，说明聚成一团
@@ -191,7 +197,7 @@ export function updateMarkerOcclusion(options: MarkerOcclusionUpdateOptions): vo
         continue;
       }
 
-      placedBoxes.push({
+      _placedBoxes.push({
         id: marker.id,
         x: screenX,
         y: screenY,

@@ -14,6 +14,15 @@
   --muted: #93a6c7;
   --accent: #7ec4ff;
   --gold: #e8c36a;
+  --z-hud: 2;
+  --z-loader: 4;
+  --z-hotspot-layer: 5;
+  --z-dock: 10;
+  --z-detail: 15;
+  --z-panel: 20;
+  --z-hotspot-card: 25;
+  --z-panel-mobile-open: 30;
+  --z-modal: 100;
 }
 
 html,
@@ -108,7 +117,7 @@ body {
   position: absolute;
   top: 20px;
   left: 24px;
-  z-index: 2;
+  z-index: var(--z-hud);
   pointer-events: none;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
 }
@@ -143,7 +152,7 @@ body {
   border-radius: 14px;
   backdrop-filter: blur(14px);
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
-  z-index: 20;
+  z-index: var(--z-panel);
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
 }
 
@@ -306,7 +315,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   backdrop-filter: blur(14px);
-  z-index: 15;
+  z-index: var(--z-detail);
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
   transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
 }
@@ -675,7 +684,7 @@ body {
   background: rgba(40, 12, 18, 0.94);
   border: 1px solid rgba(255, 100, 120, 0.45);
   border-radius: 12px;
-  z-index: 20;
+  z-index: var(--z-panel);
 }
 
 .error-box.hidden {
@@ -753,7 +762,7 @@ body {
   border-radius: 40px;
   backdrop-filter: blur(16px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-  z-index: 10;
+  z-index: var(--z-dock);
   pointer-events: auto;
   user-select: none;
   max-width: calc(100vw - 32px);
@@ -953,7 +962,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 5;
+  z-index: var(--z-hotspot-layer);
   overflow: hidden;
 }
 
@@ -1075,7 +1084,7 @@ body {
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-  z-index: 25;
+  z-index: var(--z-hotspot-card);
   pointer-events: auto;
   transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1435,7 +1444,7 @@ body {
   .panel.mobile-open {
     transform: translateY(0);
     pointer-events: auto;
-    z-index: 30;
+    z-index: var(--z-panel-mobile-open);
   }
 
   /* 5. Landmark Detail Bottom Sheet (三段式轻量抽屉) */
@@ -1585,7 +1594,7 @@ body {
 .postcard-modal {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1768,7 +1777,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: var(--z-dock);
   pointer-events: auto;
   user-select: none;
   -webkit-user-select: none;
@@ -1945,7 +1954,7 @@ body.zen-mode .status {
   color: #e2e8f0;
   font-size: 13px;
   font-weight: 500;
-  z-index: 100;
+  z-index: var(--z-modal);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
   cursor: pointer;
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -2016,7 +2025,7 @@ body.zen-mode .status {
   align-items: center;
   gap: 16px;
   pointer-events: none;
-  z-index: 4;
+  z-index: var(--z-loader);
   transition: opacity 0.6s ease, transform 0.6s ease;
 }
 

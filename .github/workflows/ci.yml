@@ -1,11 +1,10 @@
-name: Build check
+name: Build & Test Check
 
 on:
   pull_request:
     branches: [main]
   push:
-    branches:
-      - improve/landmark-modeling-detail
+    branches: [main]
 
 permissions:
   contents: read
@@ -20,4 +19,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test
       - run: npm run build

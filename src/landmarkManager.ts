@@ -10,6 +10,8 @@ export class LandmarkManager {
   public landmarksRoot: THREE.Group;
   public landmarkGroups: Map<string, THREE.Group> = new Map();
   private loadingLandmarks: Map<string, Promise<THREE.Group | undefined>> = new Map();
+  private proximityRefPos: THREE.Vector3 | null = null;
+  private _tempWorldPos = new THREE.Vector3();
 
   constructor(viewer: InstanceType<typeof tellux.Viewer>, surfaceKit: SurfaceKit) {
     this.viewer = viewer;
@@ -48,6 +50,7 @@ export class LandmarkManager {
         });
         this.landmarksRoot.add(group);
         this.landmarkGroups.set(wonder.id, group);
+        this.applyGroupProximity(group);
         return group;
       } catch (err) {
         console.error(`加载地标 ${wonder.nameZh} 失败:`, err);
@@ -63,6 +66,26 @@ export class LandmarkManager {
 
   public getLandmarkGroup(id: string): THREE.Group | undefined {
     return this.landmarkGroups.get(id);
+  }
+
+  /**
+   * 基于当前聚焦地标更新场景中各模型的可见性：
+   * 仅保留当前地标及其周边 50km 内的邻近建筑（例如巴黎埃菲尔与拉德芳斯），削减远端多余绘制调用
+   */
+  public updateProximityVisibility(referencePos: THREE.Vector3 | null, maxDistanceMeters = 50_000): void {
+    this.proximityRefPos = referencePos ? referencePos.clone() : null;
+    for (const [, group] of this.landmarkGroups) {
+      this.applyGroupProximity(group, maxDistanceMeters);
+    }
+  }
+
+  private applyGroupProximity(group: THREE.Group, maxDistanceMeters = 50_000): void {
+    if (!this.proximityRefPos) {
+      group.visible = true;
+      return;
+    }
+    this._tempWorldPos.setFromMatrixPosition(group.matrix);
+    group.visible = this._tempWorldPos.distanceTo(this.proximityRefPos) <= maxDistanceMeters;
   }
 
   public setWireframe(wonderId: string, enabled: boolean): void {

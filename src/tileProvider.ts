@@ -26,9 +26,24 @@ export interface TileCoords {
 
 const TILE_URL_PATTERN = /(https?:\/\/[^\/]+(?:\/[^\/]+)*\/tile\/)(\d+)\/(\d+)\/(\d+)(\?.*)?$/i;
 
-// 缓存已解码的父级卫星图，供同区域多块子瓦片瞬间重采样
+// 缓存已解码的父级卫星图，供同区域多块子瓦片瞬间重采样（带 LRU 容量限制防内存无界增长）
+const MAX_PARENT_BITMAP_CACHE = 64;
 const parentBitmapCache = new Map<string, ImageBitmap>();
 const inFlightParentFetches = new Map<string, Promise<ImageBitmap | null>>();
+
+function setParentBitmapCache(key: string, bitmap: ImageBitmap): void {
+  if (parentBitmapCache.has(key)) {
+    parentBitmapCache.delete(key);
+  } else if (parentBitmapCache.size >= MAX_PARENT_BITMAP_CACHE) {
+    const oldestKey = parentBitmapCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      const oldestBitmap = parentBitmapCache.get(oldestKey);
+      parentBitmapCache.delete(oldestKey);
+      oldestBitmap?.close?.();
+    }
+  }
+  parentBitmapCache.set(key, bitmap);
+}
 
 export function parseTileUrl(url: string): TileCoords | null {
   const match = url.match(TILE_URL_PATTERN);
@@ -96,7 +111,11 @@ async function getAncestorBitmap(
 ): Promise<ImageBitmap | null> {
   const key = coordKey(baseUrl, z, y, x);
   const cached = parentBitmapCache.get(key);
-  if (cached) return cached;
+  if (cached) {
+    parentBitmapCache.delete(key);
+    parentBitmapCache.set(key, cached);
+    return cached;
+  }
 
   const inFlight = inFlightParentFetches.get(key);
   if (inFlight) return inFlight;
@@ -114,7 +133,7 @@ async function getAncestorBitmap(
         premultiplyAlpha: "none",
         colorSpaceConversion: "none",
       });
-      parentBitmapCache.set(key, bitmap);
+      setParentBitmapCache(key, bitmap);
       return bitmap;
     } catch {
       return null;

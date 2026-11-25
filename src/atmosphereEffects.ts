@@ -137,6 +137,8 @@ export class AtmosphereManager {
       const mesh = new THREE.Mesh(geo, auroraMat);
       mesh.position.set(0, cfg.y, cfg.z);
       mesh.rotation.y = cfg.rotY;
+      mesh.userData.baseY = cfg.y;
+      mesh.userData.baseRotY = cfg.rotY;
       mesh.userData.skipLines = true;
       parent.add(mesh);
       this.auroraMeshes.push(mesh);
@@ -228,12 +230,14 @@ export class AtmosphereManager {
   public update(dt: number) {
     this.totalTime += dt;
 
-    // 1. 极光波动呼吸动画
+    // 1. 极光波动呼吸动画（基于基准位姿做绝对值振荡，杜绝长时帧率累计漂移）
     if (this.auroraMeshes.length > 0) {
       for (let i = 0; i < this.auroraMeshes.length; i++) {
         const mesh = this.auroraMeshes[i];
-        mesh.rotation.y += Math.sin(this.totalTime * 0.4 + i) * 0.0006;
-        mesh.position.y += Math.cos(this.totalTime * 0.6 + i) * 0.04;
+        const baseY = typeof mesh.userData.baseY === "number" ? mesh.userData.baseY : mesh.position.y;
+        const baseRotY = typeof mesh.userData.baseRotY === "number" ? mesh.userData.baseRotY : mesh.rotation.y;
+        mesh.rotation.y = baseRotY + Math.sin(this.totalTime * 0.4 + i) * 0.04;
+        mesh.position.y = baseY + Math.sin(this.totalTime * 0.6 + i) * 1.4;
       }
     }
 
@@ -267,21 +271,63 @@ export class AtmosphereManager {
     }
   }
 
-  private cleanup() {
-    if (this.currentGroup) {
-      for (const aurora of this.auroraMeshes) {
-        this.currentGroup.remove(aurora);
-      }
-      if (this.auroraLight) {
-        this.currentGroup.remove(this.auroraLight);
-      }
-      if (this.snowPoints) {
-        this.currentGroup.remove(this.snowPoints);
-      }
-      if (this.fogGroup) {
-        this.currentGroup.remove(this.fogGroup);
-      }
+  public dispose() {
+    this.cleanup();
+    this.currentGroup = null;
+  }
+
+  private disposeObjectResources(roots: Array<THREE.Object3D | null | undefined>) {
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    const textures = new Set<THREE.Texture>();
+
+    for (const root of roots) {
+      if (!root) continue;
+      root.traverse((node) => {
+        const renderable = node as THREE.Object3D & {
+          geometry?: THREE.BufferGeometry;
+          material?: THREE.Material | THREE.Material[];
+        };
+        if (renderable.geometry) {
+          geometries.add(renderable.geometry);
+        }
+        if (renderable.material) {
+          const matList = Array.isArray(renderable.material) ? renderable.material : [renderable.material];
+          for (const mat of matList) {
+            materials.add(mat);
+            const withMap = mat as THREE.Material & { map?: THREE.Texture | null };
+            if (withMap.map) textures.add(withMap.map);
+          }
+        }
+      });
     }
+
+    for (const tex of textures) tex.dispose();
+    for (const mat of materials) mat.dispose();
+    for (const geo of geometries) geo.dispose();
+  }
+
+  private cleanup() {
+    for (const aurora of this.auroraMeshes) {
+      this.currentGroup?.remove(aurora);
+    }
+    if (this.auroraLight) {
+      this.currentGroup?.remove(this.auroraLight);
+      this.auroraLight.dispose();
+    }
+    if (this.snowPoints) {
+      this.currentGroup?.remove(this.snowPoints);
+    }
+    if (this.fogGroup) {
+      this.currentGroup?.remove(this.fogGroup);
+    }
+
+    this.disposeObjectResources([
+      ...this.auroraMeshes,
+      this.snowPoints,
+      this.fogGroup,
+    ]);
+
     this.auroraMeshes = [];
     this.auroraLight = null;
     this.snowPoints = null;

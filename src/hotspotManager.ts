@@ -91,20 +91,36 @@ export class HotspotManager {
     pin.className = "hotspot-pin";
     pin.setAttribute("type", "button");
     pin.setAttribute("title", hotspot.nameZh);
-    pin.innerHTML = `
-      <div class="hotspot-pin-glow"></div>
-      <div class="hotspot-pin-dot">
-        <svg class="hotspot-pin-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-      </div>
-      <div class="hotspot-pin-label">
-        <span class="hotspot-pin-badge">${hotspot.category}</span>
-        <span class="hotspot-pin-title">${hotspot.nameZh}</span>
-      </div>
+
+    const glow = document.createElement("div");
+    glow.className = "hotspot-pin-glow";
+
+    const dot = document.createElement("div");
+    dot.className = "hotspot-pin-dot";
+    dot.innerHTML = `
+      <svg class="hotspot-pin-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
     `;
+
+    const label = document.createElement("div");
+    label.className = "hotspot-pin-label";
+
+    const badge = document.createElement("span");
+    badge.className = "hotspot-pin-badge";
+    badge.textContent = hotspot.category;
+
+    const title = document.createElement("span");
+    title.className = "hotspot-pin-title";
+    title.textContent = hotspot.nameZh;
+
+    label.appendChild(badge);
+    label.appendChild(title);
+    pin.appendChild(glow);
+    pin.appendChild(dot);
+    pin.appendChild(label);
 
     pin.addEventListener("click", (e) => {
       e.stopPropagation();

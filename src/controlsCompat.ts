@@ -78,11 +78,14 @@ export function keepCameraTuned(viewer: InstanceType<typeof tellux.Viewer> | nul
   }
 }
 
+const patchedBlackscreenViewers = new WeakSet<object>();
+
 /**
- * 屏蔽 ANGLE / Windows 平台下导致黑屏的多余后处理 Pass
+ * 屏蔽 ANGLE / Windows 平台下导致黑屏的多余后处理 Pass（幂等保护，避免每帧重复包裹回调）
  */
 export function suppressBlackscreenEffects(viewer: InstanceType<typeof tellux.Viewer> | null | undefined): void {
-  if (!viewer) return;
+  if (!viewer || patchedBlackscreenViewers.has(viewer)) return;
+  patchedBlackscreenViewers.add(viewer);
   try {
     const rawRenderer = viewer.renderer.raw as unknown as { setEffects?: (effects: unknown[]) => void };
     if (typeof rawRenderer.setEffects === "function") {
