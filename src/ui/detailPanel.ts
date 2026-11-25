@@ -114,6 +114,7 @@ export class DetailPanelController {
     } = this.els;
 
     onRenderList?.();
+    this.expand();
 
     if (detailKicker) {
       detailKicker.textContent = `${String(wonder.index).padStart(2, "0")} / ${String(WONDERS.length).padStart(2, "0")} · ${wonder.completed}`;

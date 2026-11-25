@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { DetailPanelController } from "../src/ui/detailPanel";
+import { WONDERS } from "../src/wonders";
 
 function createMockElement() {
   const classes = new Set<string>();
@@ -19,6 +20,7 @@ function createMockElement() {
     },
     textContent: "",
     title: "",
+    append: vi.fn(),
     setAttribute: vi.fn(),
   } as any;
 }
@@ -89,5 +91,31 @@ describe("DetailPanelController - Minimize & Expand", () => {
     expect(controller.isMinimized).toBe(true);
     els.detailEl.click();
     expect(controller.isMinimized).toBe(false);
+  });
+
+  it("should expand automatically when showDetail is called for a new wonder", () => {
+    const els = createMockDetailElements();
+    const prevDoc = globalThis.document;
+    globalThis.document = {
+      body: { classList: { add: vi.fn(), remove: vi.fn() } },
+      createElement: () => createMockElement(),
+    } as any;
+    els.specsEl.replaceChildren = vi.fn();
+    els.specsEl.append = vi.fn();
+    els.comparisonImage.removeAttribute = vi.fn();
+
+    try {
+      const controller = new DetailPanelController(els);
+      controller.minimize();
+      expect(controller.isMinimized).toBe(true);
+      expect(els.detailEl.classList.contains("minimized")).toBe(true);
+
+      controller.showDetail(WONDERS[1]);
+      expect(controller.isMinimized).toBe(false);
+      expect(els.detailEl.classList.contains("minimized")).toBe(false);
+      expect(els.btnMinimize.textContent).toBe("▲");
+    } finally {
+      globalThis.document = prevDoc;
+    }
   });
 });

@@ -101,6 +101,7 @@ function formatHour(hour: number): string {
 // 核心应用状态
 let viewer: InstanceType<typeof tellux.Viewer> | null = null;
 let selectedId: string | null = null;
+let hasArrivedCurrentWonder = false;
 let currentWonderObj: Wonder | null = null;
 let activePivotPos: THREE.Vector3 | null = null;
 let activeCategory = "all";
@@ -275,11 +276,22 @@ function renderList() {
 
 async function visit(wonder: Wonder) {
   if (!viewer || !flightController) return;
-  if (selectedId === wonder.id && !tourManager?.isTouring) return;
+  if (selectedId === wonder.id && !tourManager?.isTouring) {
+    if (flightController.isFlying) return;
+    if (hasArrivedCurrentWonder) {
+      if (hotspotManager?.isCardOpen) {
+        hotspotManager.closeCard();
+      }
+      return;
+    }
+  }
 
   tourManager?.stopTour();
   selectedId = wonder.id;
   currentWonderObj = wonder;
+  hasArrivedCurrentWonder = false;
+  activePivotPos = null;
+  landmarkOrbitManager?.deactivate();
   droneOrbitController?.stop();
   updateDroneBtn();
   solarController?.setWonder(wonder);
@@ -299,12 +311,18 @@ async function visit(wonder: Wonder) {
   setStatus(`飞向 ${wonder.nameZh}`);
 
   const arrivedPivot = await flightController.flyToWonder(wonder);
+  if (selectedId !== wonder.id || tourManager?.isTouring) return;
+
   if (arrivedPivot) {
+    hasArrivedCurrentWonder = true;
     activePivotPos = arrivedPivot;
     landmarkOrbitManager?.activate(wonder, arrivedPivot);
     if (window.innerWidth <= 1080) {
       collapsePanel(); // 窄屏及移动端自动收起列表抽屉
     }
+  } else {
+    setStatus(`已中断飞向 ${wonder.nameZh} · 可再次点击前往`);
+    return;
   }
 
   const loadedGroup = landmarkManager ? await landmarkManager.loadLandmark(wonder) : undefined;
@@ -319,6 +337,7 @@ async function flyToSpace() {
   if (!flightController) return;
   selectedId = null;
   currentWonderObj = null;
+  hasArrivedCurrentWonder = false;
   activePivotPos = null;
   landmarkOrbitManager?.deactivate();
   tourManager?.stopTour();
@@ -499,6 +518,10 @@ async function boot() {
     onWonderStep: (w) => {
       selectedId = w.id;
       currentWonderObj = w;
+      hasArrivedCurrentWonder = false;
+      activePivotPos = null;
+      hotspotManager?.setActiveWonder(null);
+      landmarkOrbitManager?.deactivate();
       detailPanel.showDetail(w, renderList);
     },
     onStatusChange: setStatus,
@@ -521,7 +544,7 @@ async function boot() {
     void flyToSpace();
   });
 
-  // 绑定移动端抽屉与手势交互
+  // 绑定移动端及折叠抽屉与手势交互
   setupMobileInteractions({
     panelEl,
     detailEl,
@@ -533,6 +556,8 @@ async function boot() {
     detailClose,
     sheetExpandHint,
     onFlyToSpace: () => void flyToSpace(),
+    onTogglePanel: () => togglePanel(),
+    onCollapsePanel: () => collapsePanel(),
   });
 
   // 绑定键盘快捷键
@@ -555,13 +580,6 @@ async function boot() {
     onToggleZen: () => toggleZenMode(),
     onToggleMinimize: () => detailPanel.toggleMinimize(),
     onToggleList: () => togglePanel(),
-  });
-
-  // PC 端列表展开与收起事件绑定
-  btnPanelClose?.addEventListener("click", () => collapsePanel());
-  btnMobileList?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    togglePanel();
   });
 
   // 全局沉浸模式事件绑定
@@ -641,7 +659,18 @@ async function boot() {
     viewer: current,
     container,
     onResetRequested: () => {
-      if (currentWonderObj) void flightController?.flyToWonder(currentWonderObj);
+      const target = currentWonderObj;
+      if (!target || !flightController) return;
+      hotspotManager?.closeCard(true);
+      detailPanel.expand();
+      landmarkOrbitManager?.deactivate();
+      void flightController.flyToWonder(target).then((arrivedPivot) => {
+        if (arrivedPivot && selectedId === target.id && !tourManager?.isTouring) {
+          hasArrivedCurrentWonder = true;
+          activePivotPos = arrivedPivot;
+          landmarkOrbitManager?.activate(target, arrivedPivot);
+        }
+      });
     },
     onSpaceAlignNorth: () => {
       void flyToSpace();
@@ -778,7 +807,7 @@ async function boot() {
         return;
       }
       droneOrbitController?.start(currentWonderObj, activePivotPos);
-      hotspotManager?.closeCard();
+      hotspotManager?.closeCard(true);
       setStatus(`已开启「${currentWonderObj.nameZh}」360° 航拍环绕 · 拖动鼠标或按 O 键退出`);
     }
     updateDroneBtn();
@@ -798,7 +827,7 @@ async function boot() {
         ent.show = false;
       }
     }
-    hotspotManager?.closeCard();
+    hotspotManager?.closeCard(true);
 
     requestAnimationFrame(() => {
       try {
@@ -868,10 +897,11 @@ async function boot() {
       keepCameraTuned(viewer);
     }
 
+    let rightOcclusionWidth = 0;
     if (landmarkMarkerList.length > 0 && viewer) {
       const domCanvas = viewer.renderer.raw.domElement;
       const isPanelOpen = panelEl && !panelEl.classList.contains("collapsed") && !panelEl.classList.contains("mobile-hidden");
-      const rightOcclusionWidth = isPanelOpen && window.innerWidth > 768 ? Math.min(340, window.innerWidth * 0.35) : 0;
+      rightOcclusionWidth = isPanelOpen && window.innerWidth > 768 ? Math.min(340, window.innerWidth * 0.35) : 0;
       updateMarkerOcclusion({
         camera: viewer.camera.raw,
         canvasWidth: domCanvas?.clientWidth ?? window.innerWidth,
@@ -898,7 +928,7 @@ async function boot() {
       }
     }
 
-    hotspotManager?.update();
+    hotspotManager?.update(rightOcclusionWidth);
     atmosphereManager?.update(dt);
 
     requestAnimationFrame(renderLoop);

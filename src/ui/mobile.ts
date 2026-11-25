@@ -9,6 +9,8 @@ export interface MobileInteractionsConfig {
   detailClose: HTMLElement | null;
   sheetExpandHint: HTMLElement | null;
   onFlyToSpace: () => void;
+  onTogglePanel?: () => void;
+  onCollapsePanel?: () => void;
 }
 
 export function setupMobileInteractions(config: MobileInteractionsConfig): () => void {
@@ -23,6 +25,8 @@ export function setupMobileInteractions(config: MobileInteractionsConfig): () =>
     detailClose,
     sheetExpandHint,
     onFlyToSpace,
+    onTogglePanel,
+    onCollapsePanel,
   } = config;
 
   const toggleDetailExpansion = () => {
@@ -84,6 +88,10 @@ export function setupMobileInteractions(config: MobileInteractionsConfig): () =>
 
   const handleOpenList = (e: MouseEvent) => {
     e.stopPropagation();
+    if (onTogglePanel) {
+      onTogglePanel();
+      return;
+    }
     panelEl?.classList.toggle("mobile-open");
     panelEl?.classList.remove("mobile-hidden");
   };
@@ -91,12 +99,20 @@ export function setupMobileInteractions(config: MobileInteractionsConfig): () =>
 
   const handleClosePanel = (e: MouseEvent) => {
     e.stopPropagation();
+    if (onCollapsePanel) {
+      onCollapsePanel();
+      return;
+    }
     panelEl?.classList.remove("mobile-open");
     panelEl?.classList.add("mobile-hidden");
   };
   btnPanelClose?.addEventListener("click", handleClosePanel);
 
   const handleTogglePanel = () => {
+    if (onTogglePanel) {
+      onTogglePanel();
+      return;
+    }
     panelEl?.classList.toggle("mobile-open");
   };
   panelGrabber?.addEventListener("click", handleTogglePanel);
@@ -109,8 +125,12 @@ export function setupMobileInteractions(config: MobileInteractionsConfig): () =>
         detailEl.classList.add("mobile-peek");
       }
       if (panelEl?.classList.contains("mobile-open")) {
-        panelEl.classList.remove("mobile-open");
-        panelEl.classList.add("mobile-hidden");
+        if (onCollapsePanel) {
+          onCollapsePanel();
+        } else {
+          panelEl.classList.remove("mobile-open");
+          panelEl.classList.add("mobile-hidden");
+        }
       }
     }
   };

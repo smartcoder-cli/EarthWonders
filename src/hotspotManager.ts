@@ -44,27 +44,30 @@ export class HotspotManager {
 
   private bindCardEvents() {
     if (!this.cardEl) return;
-    const closeBtn = this.cardEl.querySelector<HTMLButtonElement>(".hotspot-card-close");
-    closeBtn?.addEventListener("click", () => {
-      this.closeCard();
-      if (this.onReturnToOverview && this.currentWonder) {
-        this.onReturnToOverview();
+    const handleDismiss = () => {
+      const hadWonder = Boolean(this.currentWonder);
+      this.closeCard(true);
+      if (hadWonder) {
+        if (this.onReturnToOverview) {
+          this.onReturnToOverview();
+        } else {
+          this.onCloseHotspot?.();
+        }
       }
-    });
+    };
+
+    const closeBtn = this.cardEl.querySelector<HTMLButtonElement>(".hotspot-card-close");
+    closeBtn?.addEventListener("click", handleDismiss);
 
     const returnBtn = this.cardEl.querySelector<HTMLButtonElement>("#btn-hotspot-return");
-    returnBtn?.addEventListener("click", () => {
-      this.closeCard();
-      if (this.onReturnToOverview && this.currentWonder) {
-        this.onReturnToOverview();
-      }
-    });
+    returnBtn?.addEventListener("click", handleDismiss);
   }
 
   public setActiveWonder(wonder: Wonder | null) {
     if (this.currentWonder?.id === wonder?.id) return;
     this.currentWonder = wonder;
-    this.closeCard();
+    // 切换地标或清空时静默关闭旧热点卡片，避免反向触发旧地标的 resetToOverview
+    this.closeCard(true);
     this.clearPins();
 
     if (!wonder) return;
@@ -181,13 +184,16 @@ export class HotspotManager {
     this.cardEl.classList.add("visible");
   }
 
-  public closeCard() {
+  public closeCard(silent = false) {
+    const wasOpen = this.activeHotspot !== null || Boolean(this.cardEl?.classList.contains("visible"));
     this.activeHotspot = null;
     if (this.cardEl) {
       this.cardEl.classList.remove("visible");
       this.cardEl.classList.add("hidden");
     }
-    this.onCloseHotspot?.();
+    if (!silent && wasOpen) {
+      this.onCloseHotspot?.();
+    }
   }
 
   /**
@@ -207,7 +213,7 @@ export class HotspotManager {
   /**
    * 逐帧更新热点浮动图标在屏幕上的投影坐标与可视性
    */
-  public update() {
+  public update(rightOcclusionWidth = 0) {
     if (this._isOrbiting) return;
 
     if (!this.currentWonder) {
@@ -222,6 +228,7 @@ export class HotspotManager {
     camera.getWorldPosition(this._camPos);
     const width = this.layerEl.clientWidth;
     const height = this.layerEl.clientHeight;
+    const maxVisibleX = rightOcclusionWidth > 0 ? width - rightOcclusionWidth - 20 : width + 60;
 
     const list = LANDMARK_HOTSPOTS[this.currentWonder.id] ?? [];
     for (const hotspot of list) {
@@ -250,8 +257,8 @@ export class HotspotManager {
       const screenX = (this._projected.x * 0.5 + 0.5) * width;
       const screenY = (-this._projected.y * 0.5 + 0.5) * height;
 
-      // 边缘剔除
-      if (screenX < -60 || screenX > width + 60 || screenY < -60 || screenY > height + 60) {
+      // 边缘与右侧面板遮挡剔除
+      if (screenX < -60 || screenX > maxVisibleX || screenY < -60 || screenY > height + 60) {
         if (pin.style.display !== "none") pin.style.display = "none";
         continue;
       }
