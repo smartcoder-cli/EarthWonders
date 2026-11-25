@@ -215,6 +215,7 @@ export const WONDERS: Wonder[] = [
     flyDuration: 4.4,
     labelHeight: 78,
     lookHeight: 28,
+    modelHeading: 180,
     blurb:
       "莫卧儿皇帝沙贾汗为穆姆塔兹·马哈尔修建的白色大理石陵墓。四座宣礼塔与中央穹顶构成严格对称的河畔园林。",
     specs: {

@@ -196,24 +196,26 @@ export function createTajMahal(kit: SurfaceKit) {
   minaret(root, marble, inlay, -46, 46);
   minaret(root, marble, inlay, 46, 46);
 
+  // 西侧清真寺与东侧答礼殿（Jawab）：长轴沿南北（Z）排布，拱门相对朝向中央白色主陵墓
   const mosque = (x: number) => {
     const g = new THREE.Group();
-    box(g, red, 26, 5.4, 34, 0, 0, 0);
-    box(g, red, 38, 14, 16, 0, 5.4, 0);
-    for (const dx of [-12, 0, 12]) {
-      cyl(g, red, 5.2, 5.6, 4.5, dx, 19.4, 0, 16);
+    box(g, red, 26, 5.4, 44, 0, 0, 0);
+    box(g, red, 16, 14, 38, 0, 5.4, 0);
+    for (const dz of [-12, 0, 12]) {
+      cyl(g, red, 5.2, 5.6, 4.5, 0, 19.4, dz, 16);
       const cap = new THREE.Mesh(onionLathe(5.6, 7.2, 14), marble);
-      cap.position.set(dx, 23.8, 0);
+      cap.position.set(0, 23.8, dz);
       g.add(cap);
     }
     const arch = new THREE.Mesh(archSlab(8, 10, 2.2, 1.2, true), dark);
-    arch.position.set(0, 7.2, x > 0 ? -8.2 : 8.2);
+    arch.rotation.y = Math.PI / 2;
+    arch.position.set(x > 0 ? -8.2 : 8.2, 7.2, 0);
     g.add(arch);
     g.position.x = x;
     root.add(g);
   };
-  mosque(-62);
-  mosque(62);
+  mosque(-82);
+  mosque(82);
   return root;
 }
 

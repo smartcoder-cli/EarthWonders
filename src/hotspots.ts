@@ -240,7 +240,7 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       category: "建筑奇观",
       position: [0, 75, 0],
       focusDistance: 70,
-      focusHeading: 180,
+      focusHeading: 0,
       focusPitch: -14,
       summary: "内外中空的双层大理石穹顶，外层高耸 73 米展现莫卧儿帝国宏大体量，殿内回音长达 28 秒。",
       description:
@@ -255,7 +255,7 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       category: "建筑奇观",
       position: [0, 2, 124],
       focusDistance: 60,
-      focusHeading: 180,
+      focusHeading: 0,
       focusPitch: -12,
       summary: "南中轴查尔巴赫十字水系交汇处的大理石水榭，澄澈倒映白玉陵墓与两侧丝柏树。",
       description:
@@ -270,7 +270,7 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       category: "工程智慧",
       position: [46, 32, 46],
       focusDistance: 65,
-      focusHeading: 225,
+      focusHeading: 315,
       focusPitch: -20,
       summary: "四座 41 米高的大理石宣礼塔在建造时刻意向外微倾 2-3 度，以防地震坍塌损毁主陵墓。",
       description:
