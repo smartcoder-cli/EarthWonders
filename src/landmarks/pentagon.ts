@@ -195,6 +195,7 @@ export function createPentagon(kit: SurfaceKit): THREE.Group {
   // Central pavilion in courtyard
   const centerPavilion = new THREE.Mesh(new THREE.CylinderGeometry(8, 9, 6, 5), concreteMat);
   centerPavilion.position.set(0, BASE_H + 3, 0);
+  centerPavilion.rotation.y = Math.PI;
   group.add(centerPavilion);
 
   function addFacadeWall(
@@ -225,6 +226,7 @@ export function createPentagon(kit: SurfaceKit): THREE.Group {
 
     const mesh = new THREE.Mesh(geo, wallMatDay);
     mesh.userData.isWall = true;
+    mesh.userData.keepUv = true;
     mesh.userData.wallMatDay = wallMatDay;
     mesh.userData.wallMatNight = wallMatNight;
     mesh.position.set(mid.x, y0 + height / 2, mid.z);

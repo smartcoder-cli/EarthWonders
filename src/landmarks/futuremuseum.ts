@@ -1,52 +1,91 @@
 import * as THREE from "three";
 import { type SurfaceKit } from "../surfaces";
-import {
-  stone,
-  box,
-  cyl,
-} from "./_shared";
+import { box, cyl, stone } from "./_shared";
 
-function createMuseumTorusGeometry(
-  radialSegments = 96,
-  tubularSegments = 48,
-  Ax = 34.0,
-  Ay = 23.5,
-  Cy0 = 43.5
+function eggOuterPoint(u: number): [number, number] {
+  const cu = Math.cos(u);
+  const su = Math.sin(u);
+  // 圆润平滑的非对称“未来之蛋”外廓：总高 77.0m，总长 104m（饱满平滑，略微前倾）
+  const eggTaperZ = 1.0 - 0.07 * su;
+  const z = 52.0 * eggTaperZ * cu + 5.5 * su;
+  const y = 40.0 + 37.0 * su + 1.8 * cu;
+  return [z, y];
+}
+
+function eggHolePoint(u: number): [number, number] {
+  const cu = Math.cos(u);
+  const su = Math.sin(u);
+  // 中心椭圆孔洞宽高为主体蛋形的一半（约 52m × 36m），向左侧（+Z）自然偏心，非几何正中
+  const eggTaperZ = 1.0 - 0.05 * su;
+  const z = 6.8 + 26.0 * eggTaperZ * cu + 4.2 * su;
+  const y = 41.2 + 18.0 * su + 1.0 * cu;
+  return [z, y];
+}
+
+function createRoundedMuseumEggGeometry(
+  radialSegments = 128,
+  tubularSegments = 64,
 ): THREE.BufferGeometry {
   const positions: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
 
+  // 先采样整环顶点并按真实三维弧长积分，保证前后立面、外缘与孔洞内缘贴图 100% 均匀无拉伸
+  const ringPts: THREE.Vector3[][] = [];
+  const uArcDist: number[] = [0];
+  let prevMid = new THREE.Vector3();
+
   for (let i = 0; i <= radialSegments; i++) {
     const u = (i / radialSegments) * Math.PI * 2;
-    // 中心脊线在 XY 平面的非对称气动椭圆轨迹
-    const cx = Ax * Math.cos(u);
-    const cy = Cy0 + Ay * Math.sin(u) - 1.8 * Math.sin(2 * u);
+    const su = Math.sin(u);
+    const [zOut, yOut] = eggOuterPoint(u);
+    const [zIn, yIn] = eggHolePoint(u);
 
-    // XY 切线与外法向单位向量
-    const tx = -Ax * Math.sin(u);
-    const ty = Ay * Math.cos(u) - 3.6 * Math.cos(2 * u);
-    const tLen = Math.hypot(tx, ty);
-    const nx = ty / tLen;
-    const ny = -tx / tLen;
+    const mz = (zOut + zIn) * 0.5;
+    const my = (yOut + yIn) * 0.5;
+    const hz = (zOut - zIn) * 0.5;
+    const hy = (yOut - yIn) * 0.5;
 
-    // 管截面半径随 u 的空间渐变（底部加厚平缓扎根覆土绿丘，顶部轻盈收窄呈飞翼气动轮廓）
-    const sinU = Math.sin(u);
-    const rz = 15.0 - 3.0 * sinU;
-    const rn = 12.0 + 1.8 * Math.cos(u) * Math.cos(u);
+    // 饱满圆润的蛋体厚度（沿 X 向约 30m ~ 38m）
+    const halfD = 16.5 - 2.2 * su;
 
+    const mid = new THREE.Vector3(0, my, mz);
+    if (i > 0) {
+      uArcDist.push(uArcDist[i - 1] + mid.distanceTo(prevMid));
+    }
+    prevMid = mid;
+
+    const slice: THREE.Vector3[] = [];
     for (let j = 0; j <= tubularSegments; j++) {
       const v = (j / tubularSegments) * Math.PI * 2;
-      const cosV = Math.cos(v);
-      const sinV = Math.sin(v);
+      // 纯正顺滑椭圆截面，令外沿、表面与中心孔洞内壁浑然一体圆润过渡
+      const py = my + Math.cos(v) * hy;
+      const pz = mz + Math.cos(v) * hz;
+      const px = Math.sin(v) * halfD;
+      slice.push(new THREE.Vector3(px, py, pz));
+    }
+    ringPts.push(slice);
+  }
 
-      const px = cx + rn * cosV * nx;
-      const py = cy + rn * cosV * ny;
-      const pz = rz * sinV;
+  const totalU = Math.max(uArcDist[uArcDist.length - 1], 1);
+  // 贴图平铺比例：整圈绕行 3 次、截面整数倍绕行 2 次，彻底消除接缝并保持全身均匀密度
+  const uTiles = 3.0;
+  const vTiles = 2.0;
 
-      positions.push(px, py, pz);
-      // UV: u 顺环向环绕 [0, 1]，v 沿管周截面环绕 [0, 1]
-      uvs.push(i / radialSegments, j / tubularSegments);
+  for (let i = 0; i <= radialSegments; i++) {
+    const uCoord = (uArcDist[i] / totalU) * uTiles;
+    const slice = ringPts[i];
+
+    const vArc: number[] = [0];
+    for (let j = 1; j <= tubularSegments; j++) {
+      vArc.push(vArc[j - 1] + slice[j].distanceTo(slice[j - 1]));
+    }
+    const totalV = Math.max(vArc[vArc.length - 1], 1);
+
+    for (let j = 0; j <= tubularSegments; j++) {
+      const p = slice[j];
+      positions.push(p.x, p.y, p.z);
+      uvs.push(uCoord, (vArc[j] / totalV) * vTiles);
     }
   }
 
@@ -56,9 +95,8 @@ function createMuseumTorusGeometry(
       const b = (i + 1) * (tubularSegments + 1) + j;
       const c = (i + 1) * (tubularSegments + 1) + (j + 1);
       const d = i * (tubularSegments + 1) + (j + 1);
-
-      indices.push(a, b, d);
-      indices.push(b, c, d);
+      indices.push(a, d, b);
+      indices.push(b, d, c);
     }
   }
 
@@ -70,8 +108,101 @@ function createMuseumTorusGeometry(
   return geo;
 }
 
-// 漫反射基础贴图 (Diffuse Surface Map)
-function makeMuseumArabicDiffuse(isNight: boolean): THREE.CanvasTexture {
+function drawUniformArabicCalligraphy(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  strokeColor: string,
+  dotColor: string,
+  haloColor?: string,
+): void {
+  // 8 条跨行交织、重点覆盖正立面中腹 (y=512) 及内外倒角带的均衡迪瓦尼行草，彻底消除中带留白与平行条纹感
+  const rows = 8;
+  const rowStep = h / rows;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  for (let r = 0; r < rows; r++) {
+    const cy = (r + 0.5) * rowStep;
+    const drawPass = (lwScale: number, col: string) => {
+      ctx.strokeStyle = col;
+      ctx.fillStyle = col;
+
+      const segs = 9;
+      const segW = w / segs;
+      for (let s = 0; s < segs; s++) {
+        const x0 = s * segW;
+        const x1 = (s + 1) * segW;
+        const offsetY = ((s * 3 + r * 5) % 5 - 2) * 16;
+        const wave = ((s * 7 + r * 2) % 4 - 1.5) * 28;
+        const lw = (16 + ((s + r) % 3) * 5) * lwScale;
+
+        // 跨行顺滑连接的主行草波浪弧线
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        ctx.moveTo(x0, cy + offsetY * 0.4);
+        ctx.bezierCurveTo(
+          x0 + segW * 0.3,
+          cy + wave * 1.15,
+          x0 + segW * 0.7,
+          cy - wave * 1.05,
+          x1,
+          cy + (((s + 1) * 3 + r * 5) % 5 - 2) * 6.4,
+        );
+        ctx.stroke();
+
+        // 跨带斜升舒展笔锋与交叉连笔（打破等距环形视觉）
+        ctx.lineWidth = lw * 0.74;
+        ctx.beginPath();
+        ctx.moveTo(x0 + segW * 0.18, cy + 28);
+        ctx.quadraticCurveTo(
+          x0 + segW * 0.52,
+          cy - 18,
+          x0 + segW * 0.86,
+          cy - 54,
+        );
+        ctx.stroke();
+
+        // 圆润古体字弧环 (Waw / Ain / Mim 圈势)
+        if ((s + r) % 2 === 0) {
+          ctx.lineWidth = lw * 0.68;
+          ctx.beginPath();
+          ctx.arc(
+            x0 + segW * 0.58,
+            cy + ((s * r) % 2 === 0 ? 18 : -18),
+            18 + ((s + r) % 3) * 5,
+            0.1 * Math.PI,
+            1.55 * Math.PI,
+          );
+          ctx.stroke();
+        }
+      }
+
+      // 饱满菱形音符点
+      ctx.fillStyle = dotColor;
+      for (let s = 0; s < segs; s++) {
+        if ((s + r) % 2 !== 0) continue;
+        const dx = (s + 0.42) * segW;
+        const dy = cy + ((s + r) % 4 === 0 ? -24 : 26);
+        const dr = 8.5 * lwScale;
+        ctx.beginPath();
+        ctx.moveTo(dx, dy - dr);
+        ctx.lineTo(dx + dr * 1.2, dy);
+        ctx.lineTo(dx, dy + dr);
+        ctx.lineTo(dx - dr * 1.2, dy);
+        ctx.closePath();
+        ctx.fill();
+      }
+    };
+
+    if (haloColor) {
+      drawPass(1.18, haloColor);
+    }
+    drawPass(1.0, strokeColor);
+  }
+}
+
+function makeMuseumDiffuseTexture(isNight: boolean): THREE.CanvasTexture {
   const w = 2048;
   const h = 1024;
   const canvas = document.createElement("canvas");
@@ -79,151 +210,49 @@ function makeMuseumArabicDiffuse(isNight: boolean): THREE.CanvasTexture {
   canvas.height = h;
   const ctx = canvas.getContext("2d")!;
 
-  // 1. 特种不锈钢拉丝金属底色渐变
-  const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+  const bg = ctx.createLinearGradient(0, 0, w, h);
   if (isNight) {
-    bgGrad.addColorStop(0, "#030712");
-    bgGrad.addColorStop(0.5, "#080e1a");
-    bgGrad.addColorStop(1, "#02050d");
+    bg.addColorStop(0, "#0b1322");
+    bg.addColorStop(0.5, "#121d30");
+    bg.addColorStop(1, "#0b1322");
   } else {
-    bgGrad.addColorStop(0, "#f8fafc");
-    bgGrad.addColorStop(0.35, "#e2e8f0");
-    bgGrad.addColorStop(0.7, "#cbd5e1");
-    bgGrad.addColorStop(1, "#f1f5f9");
+    bg.addColorStop(0, "#e2e8f0");
+    bg.addColorStop(0.5, "#d3dce6");
+    bg.addColorStop(1, "#e2e8f0");
   }
-  ctx.fillStyle = bgGrad;
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
-  // 金属表面微细水平拉丝纹理
-  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.45)";
-  ctx.lineWidth = 1;
-  for (let y = 0; y < h; y += 4) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-
-  // 2. 1,024 块复杂曲面三角形拓扑分格线 (Parametric Diagrid)
-  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.06)" : "rgba(100,116,139,0.32)";
+  // 均匀细腻的菱形特种不锈钢分格线
+  ctx.strokeStyle = isNight ? "rgba(148,163,184,0.14)" : "rgba(71,85,105,0.22)";
   ctx.lineWidth = 1.2;
-  for (let x = 0; x < w; x += 48) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x + 24, h);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + 24, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-  }
-
-  // 3. 迪拜未来博物馆阿拉伯书法窗带 (Luminous Glass Ribbon Windows, NOT dark cracks)
-  const tracks = [140, 300, 480, 680, 860];
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  for (let t = 0; t < tracks.length; t++) {
-    const cy = tracks[t];
-
-    const drawScriptPath = () => {
-      let curX = 24;
+  const stepX = 64;
+  const stepY = 128;
+  for (let y = 0; y < h; y += stepY) {
+    for (let x = 0; x < w; x += stepX) {
       ctx.beginPath();
-      ctx.moveTo(curX, cy);
-      while (curX < w - 30) {
-        const segW = 85 + ((curX * 17) % 75);
-        const waveY = Math.sin((curX / w) * Math.PI * 10 + t) * 36;
-        ctx.quadraticCurveTo(curX + segW * 0.45, cy + waveY + 24, curX + segW, cy + waveY * 0.4);
-
-        if (curX % 120 < 60) {
-          const ascH = 55 + (curX % 30);
-          ctx.moveTo(curX + segW * 0.7, cy + waveY);
-          ctx.quadraticCurveTo(curX + segW * 0.72, cy + waveY - ascH, curX + segW * 0.85, cy + waveY - ascH);
-          ctx.moveTo(curX + segW, cy + waveY * 0.4);
-        }
-        if (curX % 140 < 70) {
-          const descH = 42 + (curX % 25);
-          ctx.moveTo(curX + segW * 0.3, cy + waveY);
-          ctx.bezierCurveTo(
-            curX + segW * 0.35, cy + waveY + descH,
-            curX + segW * 0.6, cy + waveY + descH,
-            curX + segW * 0.65, cy + waveY + 8
-          );
-          ctx.moveTo(curX + segW, cy + waveY * 0.4);
-        }
-        curX += segW + 15;
-      }
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + stepX * 0.5, y + stepY);
+      ctx.lineTo(x + stepX, y);
       ctx.stroke();
-    };
-
-    const drawScriptDots = () => {
-      for (let dx = 40; dx < w - 40; dx += 90 + (dx % 45)) {
-        const dy = cy + Math.sin(dx * 0.08 + t) * 22;
-        const isAbove = (dx % 2 === 0);
-        const dotY = isAbove ? (dy - 36) : (dy + 34);
-
-        ctx.beginPath();
-        ctx.arc(dx, dotY, 7.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (dx % 90 === 0) {
-          ctx.lineWidth = 5.0;
-          ctx.beginPath();
-          ctx.moveTo(dx - 10, dotY - 12);
-          ctx.lineTo(dx + 8, dotY - 3);
-          ctx.stroke();
-        }
-      }
-    };
-
-    if (isNight) {
-      // 夜间：深色背景上的发光青蓝书法带
-      ctx.strokeStyle = "rgba(14, 165, 233, 0.45)";
-      ctx.lineWidth = 18;
-      drawScriptPath();
-
-      ctx.strokeStyle = "#38bdf8";
-      ctx.lineWidth = 12;
-      drawScriptPath();
-
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 5;
-      drawScriptPath();
-
-      ctx.fillStyle = "#ffffff";
-      drawScriptDots();
-    } else {
-      // 日间：绝非黑纹暗痕！乃是精密嵌合在不锈钢曲面中的采光透光玻璃带
-      // 1) 边缘微细金属嵌槽
-      ctx.strokeStyle = "rgba(51, 65, 85, 0.4)";
-      ctx.lineWidth = 18;
-      drawScriptPath();
-
-      // 2) 莹润明亮的冰青白色透光玻璃长卷
-      ctx.strokeStyle = "#cffafe";
-      ctx.lineWidth = 13;
-      drawScriptPath();
-
-      // 3) 中心阳光高光耀斑
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 6;
-      drawScriptPath();
-
-      // 4) 闪亮透光音符点
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "#38bdf8";
-      drawScriptDots();
     }
   }
 
+  // 全身均匀阿拉伯书法玻璃窗带（日间为深灰青铜反光玻璃，柔和不刺眼；夜间亮银青光）
+  if (isNight) {
+    drawUniformArabicCalligraphy(ctx, w, h, "#bae6fd", "#e0f2fe", "#0284c7");
+  } else {
+    drawUniformArabicCalligraphy(ctx, w, h, "#202b38", "#202b38", "#f1f5f9");
+  }
+
   const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   return tex;
 }
 
-// 纯自发光贴图 (Pure Emissive Map with Absolute Pitch-Black Background)
-function makeMuseumArabicEmissive(isNight: boolean): THREE.CanvasTexture {
+function makeMuseumNightEmissive(): THREE.CanvasTexture {
   const w = 2048;
   const h = 1024;
   const canvas = document.createElement("canvas");
@@ -231,265 +260,232 @@ function makeMuseumArabicEmissive(isNight: boolean): THREE.CanvasTexture {
   canvas.height = h;
   const ctx = canvas.getContext("2d")!;
 
-  // 严格纯黑底色，确保不发光的金属主体在夜间保持深邃质感，不发生泛灰泛光
   ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, w, h);
-
-  const tracks = [140, 300, 480, 680, 860];
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  for (let t = 0; t < tracks.length; t++) {
-    const cy = tracks[t];
-
-    const drawScriptPath = () => {
-      let curX = 24;
-      ctx.beginPath();
-      ctx.moveTo(curX, cy);
-      while (curX < w - 30) {
-        const segW = 85 + ((curX * 17) % 75);
-        const waveY = Math.sin((curX / w) * Math.PI * 10 + t) * 36;
-        ctx.quadraticCurveTo(curX + segW * 0.45, cy + waveY + 24, curX + segW, cy + waveY * 0.4);
-
-        if (curX % 120 < 60) {
-          const ascH = 55 + (curX % 30);
-          ctx.moveTo(curX + segW * 0.7, cy + waveY);
-          ctx.quadraticCurveTo(curX + segW * 0.72, cy + waveY - ascH, curX + segW * 0.85, cy + waveY - ascH);
-          ctx.moveTo(curX + segW, cy + waveY * 0.4);
-        }
-        if (curX % 140 < 70) {
-          const descH = 42 + (curX % 25);
-          ctx.moveTo(curX + segW * 0.3, cy + waveY);
-          ctx.bezierCurveTo(
-            curX + segW * 0.35, cy + waveY + descH,
-            curX + segW * 0.6, cy + waveY + descH,
-            curX + segW * 0.65, cy + waveY + 8
-          );
-          ctx.moveTo(curX + segW, cy + waveY * 0.4);
-        }
-        curX += segW + 15;
-      }
-      ctx.stroke();
-    };
-
-    const drawScriptDots = () => {
-      for (let dx = 40; dx < w - 40; dx += 90 + (dx % 45)) {
-        const dy = cy + Math.sin(dx * 0.08 + t) * 22;
-        const isAbove = (dx % 2 === 0);
-        const dotY = isAbove ? (dy - 36) : (dy + 34);
-
-        ctx.beginPath();
-        ctx.arc(dx, dotY, 7.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (dx % 90 === 0) {
-          ctx.lineWidth = 5.0;
-          ctx.beginPath();
-          ctx.moveTo(dx - 10, dotY - 12);
-          ctx.lineTo(dx + 8, dotY - 3);
-          ctx.stroke();
-        }
-      }
-    };
-
-    if (isNight) {
-      // 夜间极光级璀璨霓虹自发光 (Crisp, High-Contrast Multi-Pass Radiant Bloom)
-      ctx.save();
-      // Pass 1: 紧致的青蓝环境光晕 (Tight Cyan Halo Bloom)
-      ctx.strokeStyle = "#0284c7";
-      ctx.shadowColor = "#00b4d8";
-      ctx.shadowBlur = 18;
-      ctx.lineWidth = 20;
-      drawScriptPath();
-
-      // Pass 2: 鲜明电光青蓝中层 (Vibrant Electric Cyan Ribbon)
-      ctx.strokeStyle = "#38bdf8";
-      ctx.shadowColor = "#00f0ff";
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = 12;
-      drawScriptPath();
-
-      // Pass 3: 纯白激光核心 (Pure White Core LED Line)
-      ctx.strokeStyle = "#ffffff";
-      ctx.shadowColor = "#ffffff";
-      ctx.shadowBlur = 4;
-      ctx.lineWidth = 6;
-      drawScriptPath();
-
-      // 闪烁书法重音点
-      ctx.fillStyle = "#ffffff";
-      ctx.shadowColor = "#00f0ff";
-      ctx.shadowBlur = 12;
-      drawScriptDots();
-      ctx.restore();
-    } else {
-      // 日间莹亮透光玻璃自发光：彻底消除日间“暗纹”，让书法玻璃带在明亮日光下如宝石般晶莹发亮
-      ctx.save();
-      ctx.strokeStyle = "#e0f2fe";
-      ctx.shadowColor = "#38bdf8";
-      ctx.shadowBlur = 8;
-      ctx.lineWidth = 12;
-      drawScriptPath();
-
-      ctx.strokeStyle = "#ffffff";
-      ctx.shadowColor = "#ffffff";
-      ctx.shadowBlur = 4;
-      ctx.lineWidth = 6;
-      drawScriptPath();
-
-      ctx.fillStyle = "#ffffff";
-      ctx.shadowColor = "#38bdf8";
-      ctx.shadowBlur = 6;
-      drawScriptDots();
-      ctx.restore();
-    }
-  }
+  ctx.shadowColor = "#38bdf8";
+  ctx.shadowBlur = 10;
+  drawUniformArabicCalligraphy(ctx, w, h, "#38bdf8", "#e0f2fe", "#0369a1");
+  ctx.shadowBlur = 0;
+  drawUniformArabicCalligraphy(ctx, w, h, "#e0f7ff", "#ffffff");
 
   const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   return tex;
 }
 
-export function createMuseumOfTheFuture(_kit: SurfaceKit): THREE.Group {
+function createSculptedGreenMoundGeometry(): THREE.BufferGeometry {
+  const radialSegs = 64;
+  const ringSegs = 22;
+  const radiusZ = 84.0;
+  const radiusX = 56.0;
+  const peakH = 18.0;
+
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+
+  for (let r = 0; r <= ringSegs; r++) {
+    const t = r / ringSegs;
+    const y = Math.max(0, peakH * Math.pow(Math.cos(t * Math.PI * 0.5), 1.35));
+    const rx = t * radiusX;
+    const rz = t * radiusZ;
+
+    for (let s = 0; s <= radialSegs; s++) {
+      const a = (s / radialSegs) * Math.PI * 2;
+      positions.push(Math.cos(a) * rx, y, Math.sin(a) * rz);
+      uvs.push(s / radialSegs, t);
+    }
+  }
+
+  for (let r = 0; r < ringSegs; r++) {
+    for (let s = 0; s < radialSegs; s++) {
+      const a = r * (radialSegs + 1) + s;
+      const b = (r + 1) * (radialSegs + 1) + s;
+      const c = (r + 1) * (radialSegs + 1) + (s + 1);
+      const d = r * (radialSegs + 1) + (s + 1);
+      indices.push(a, d, b);
+      indices.push(b, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function createEmbeddedHillsideArch(
+  width: number,
+  height: number,
+  rimDepth: number,
+  frameMat: THREE.Material,
+  glassMat: THREE.Material,
+): THREE.Group {
+  const g = new THREE.Group();
+  const outerR = width * 0.5;
+  const shape = new THREE.Shape();
+  shape.moveTo(-outerR, 0);
+  shape.absarc(0, 0, outerR, Math.PI, 0, true);
+  shape.lineTo(outerR - 0.7, 0);
+  shape.absarc(0, 0, outerR - 0.7, 0, Math.PI, false);
+  shape.closePath();
+
+  const rimGeo = new THREE.ExtrudeGeometry(shape, { depth: rimDepth, bevelEnabled: false });
+  rimGeo.translate(0, 0, -rimDepth * 0.5);
+  rimGeo.scale(1.0, height / outerR, 1.0);
+  const rim = new THREE.Mesh(rimGeo, frameMat);
+  rim.rotation.y = Math.PI / 2;
+  g.add(rim);
+
+  const paneShape = new THREE.Shape();
+  paneShape.moveTo(-(outerR - 0.6), 0);
+  paneShape.absarc(0, 0, outerR - 0.6, Math.PI, 0, true);
+  paneShape.closePath();
+  const paneGeo = new THREE.ShapeGeometry(paneShape, 24);
+  paneGeo.scale(1.0, height / outerR, 1.0);
+  const pane = new THREE.Mesh(paneGeo, glassMat);
+  pane.rotation.y = Math.PI / 2;
+  pane.position.x = rimDepth * 0.2;
+  pane.userData.isLobbyGlass = true;
+  g.add(pane);
+  return g;
+}
+
+export function createMuseumOfTheFuture(kit: SurfaceKit): THREE.Group {
   const root = new THREE.Group();
   root.name = "futuremuseum";
 
-  // 材质体系
-  const grassMat = stone(0x367c2b, 0.92, 0.0);
-  const curbMat = stone(0xcfd4dc, 0.65, 0.08);
-  const concreteMat = stone(0x94a3b8, 0.75, 0.1);
-  const poolWater = stone(0x090d16, 0.08, 0.95);
+  const grassMat = stone(0x3a7a2c, 0.92, 0.0);
+  const plazaStone = stone(0xd6d1c7, 0.85, 0.04);
+  const concreteTrim = stone(0xe2e8f0, 0.55, 0.12);
+  const darkStoneWall = stone(0x645d54, 0.88, 0.05);
+  const poolWater = stone(0x0b1624, 0.08, 0.9);
 
-  const diffDay = makeMuseumArabicDiffuse(false);
-  const diffNight = makeMuseumArabicDiffuse(true);
-  const emissiveDay = makeMuseumArabicEmissive(false);
-  const emissiveNight = makeMuseumArabicEmissive(true);
+  const diffDay = makeMuseumDiffuseTexture(false);
+  const diffNight = makeMuseumDiffuseTexture(true);
+  const emissiveNight = makeMuseumNightEmissive();
 
-  const torusMatDay = new THREE.MeshStandardMaterial({
+  // 单一无缝拉丝不锈钢+均匀书法材质（日间亮银质感，孔内无黑块）
+  const eggMatDay = new THREE.MeshStandardMaterial({
     map: diffDay,
     color: 0xffffff,
-    roughness: 0.32,
-    metalness: 0.32,
-    emissiveMap: emissiveDay,
-    emissive: 0x38bdf8,
-    emissiveIntensity: 0.55,
+    roughness: 0.3,
+    metalness: 0.48,
   });
-  const torusMatNight = new THREE.MeshStandardMaterial({
+  const eggMatNight = new THREE.MeshStandardMaterial({
     map: diffNight,
-    color: 0x0a0f1d,
-    roughness: 0.65,
-    metalness: 0.15,
+    color: 0x0f172a,
+    roughness: 0.45,
+    metalness: 0.35,
     emissiveMap: emissiveNight,
     emissive: 0xffffff,
-    emissiveIntensity: 3.2,
+    emissiveIntensity: 1.9,
   });
 
-  const steelMat = new THREE.MeshStandardMaterial({
-    color: 0x475569,
-    roughness: 0.35,
-    metalness: 0.85,
+  const lobbyGlassDay = new THREE.MeshStandardMaterial({
+    color: 0x1e2c3e,
+    roughness: 0.14,
+    metalness: 0.82,
+    side: THREE.DoubleSide,
   });
-  const glassDay = new THREE.MeshStandardMaterial({
-    color: 0x38bdf8,
-    roughness: 0.1,
-    metalness: 0.9,
-    transparent: true,
-    opacity: 0.65,
-  });
-  const glassNight = new THREE.MeshStandardMaterial({
-    color: 0xfef08a,
+  const lobbyGlassNight = new THREE.MeshStandardMaterial({
+    color: 0xfef3c7,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 0.95,
     roughness: 0.2,
-    metalness: 0.2,
-    emissive: 0xfbbf24,
-    emissiveIntensity: 0.9,
+    side: THREE.DoubleSide,
   });
 
-  // 1. 三层有机起伏覆土绿丘生态基座 (Landscaped Multi-Tiered Green Podium Hill, y = 0 ~ 11m)
-  // 底层主覆土台地 (Tier 1: 118m x 76m x 3.8m)
-  const mound1 = new THREE.Mesh(new THREE.CylinderGeometry(58.0, 64.0, 3.8, 32), grassMat);
-  mound1.position.set(0, 1.9, 0);
-  mound1.scale.set(1.08, 1.0, 0.72);
-  mound1.userData.skipLines = true;
-  root.add(mound1);
+  // 1. 迎宾石材广场与左侧挡土翼台
+  const plaza = box(root, plazaStone, 152, 0.45, 204, 12, -0.45, 0);
+  plaza.userData.skipLines = true;
 
-  // 中层景观台地 (Tier 2: 96m x 62m x 3.5m)
-  const mound2 = new THREE.Mesh(new THREE.CylinderGeometry(48.0, 53.0, 3.5, 32), grassMat);
-  mound2.position.set(0, 5.2, 0);
-  mound2.scale.set(1.05, 1.0, 0.7);
-  mound2.userData.skipLines = true;
-  root.add(mound2);
+  const terraceWall = box(root, darkStoneWall, 26, 11.5, 22, 40, 0, 78);
+  terraceWall.userData.skipLines = true;
 
-  // 顶层环抱台地 (Tier 3: 78m x 48m x 3.2m)
-  const mound3 = new THREE.Mesh(new THREE.CylinderGeometry(38.0, 43.0, 3.2, 32), grassMat);
-  mound3.position.set(0, 8.4, 0);
-  mound3.scale.set(1.03, 1.0, 0.68);
-  mound3.userData.skipLines = true;
-  root.add(mound3);
+  box(root, poolWater, 16, 0.25, 42, 52, 0.05, 16);
 
-  // 弧形层叠挡土矮墙收边石 (Curved Retaining Curbs)
-  const curb1 = new THREE.Mesh(new THREE.TorusGeometry(59.0, 0.35, 8, 32), curbMat);
-  curb1.rotation.x = Math.PI / 2;
-  curb1.position.set(0, 3.8, 0);
-  curb1.scale.set(1.08, 0.72, 1.0);
-  root.add(curb1);
+  // 2. 连续曲面覆土生态绿丘
+  const moundGeo = createSculptedGreenMoundGeometry();
+  const mound = new THREE.Mesh(moundGeo, grassMat);
+  mound.userData.skipLines = true;
+  mound.userData.keepUv = true;
+  root.add(mound);
 
-  // 广场静谧镜面反光水池 (Reflecting Pool)
-  box(root, poolWater, 52.0, 0.3, 26.0, 0, 9.8, 26.0);
+  // 绿丘坡面嵌入的拱形玻璃入口（精准置于坡体外缘，让拱顶白沿与深色玻璃自然呈现）
+  for (const side of [1, -1]) {
+    const mainArch = createEmbeddedHillsideArch(24.0, 8.6, 3.8, concreteTrim, lobbyGlassDay);
+    mainArch.position.set(side * 37.5, 0, 12.0);
+    mainArch.rotation.z = side * 0.14;
+    if (side < 0) mainArch.rotation.y = Math.PI;
+    root.add(mainArch);
 
-  // 玻璃入口大堂 (Curved Entrance Pavilion)
-  const lobbyGlass = box(root, glassDay, 36.0, 4.2, 12.0, 0, 9.9, 21.0);
-  lobbyGlass.userData.keepUv = true;
-
-  // 2. 标志性三维连续光滑双曲圆环体 (Iconic 3D Smooth Parametric Torus Ring, y = 7.7m ~ 79.3m)
-  // 长度 95.6 米，总高 71.6 米，横截面厚度 36 米渐变收窄至 24 米，无任何生硬平面
-  const torusGeo = createMuseumTorusGeometry(96, 48, 34.0, 23.5, 43.5);
-  const torusMesh = new THREE.Mesh(torusGeo, torusMatDay);
-  torusMesh.userData.keepUv = true;
-  root.add(torusMesh);
-
-  // 3. 内部无柱通透中空椭圆空洞与悬挑观景天台 (Column-Free Void & Cantilevered Observation Deck)
-  // 真实未来博物馆中空内部绝无任何钢柱遮挡！仅在底部内凹弧段设有一处悬挑观景平台 (y = 29.5m)
-  const deck = box(root, concreteMat, 18.0, 0.8, 16.0, 0, 29.2, 0);
-  deck.userData.skipLines = true;
-  box(root, steelMat, 18.2, 1.1, 0.3, 0, 29.8, 7.8);
-  box(root, steelMat, 18.2, 1.1, 0.3, 0, 29.8, -7.8);
-  box(root, glassDay, 18.0, 1.0, 0.2, 0, 29.8, 7.8);
-  box(root, glassDay, 18.0, 1.0, 0.2, 0, 29.8, -7.8);
-
-  // 4. 周边迪拜轻轨连接天桥与未来主义圆环立柱 (Metro Link Bridge)
-  const bridge = box(root, concreteMat, 12.0, 2.8, 88.0, 42.0, 7.5, 0);
-  bridge.userData.skipLines = true;
-  for (let bz = -35; bz <= 35; bz += 17.5) {
-    cyl(root, curbMat, 0.6, 0.6, 7.5, 42.0, 0, bz, 12);
-    // 现代圆环遮阳构架
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.22, 8, 24), steelMat);
-    ring.position.set(42.0, 9.8, bz);
-    ring.rotation.y = Math.PI / 2;
-    root.add(ring);
+    const sideArch = createEmbeddedHillsideArch(22.0, 6.2, 3.2, concreteTrim, lobbyGlassDay);
+    sideArch.position.set(side * 36.5, 1.6, -24.0);
+    sideArch.rotation.z = side * 0.14;
+    if (side < 0) sideArch.rotation.y = Math.PI;
+    root.add(sideArch);
   }
 
-  // 5. 夜间未来科技泛光与激光光束
-  const voidLight = new THREE.PointLight(0x38bdf8, 0.3, 80, 1.6);
-  voidLight.position.set(0, 43.5, 0);
+  // 3. 主体圆润蛋形曲面（单材质全身均匀书法覆盖，中心孔洞约主体蛋形的一半且向侧偏）
+  const eggGeo = createRoundedMuseumEggGeometry(128, 64);
+  const eggMesh = new THREE.Mesh(eggGeo, eggMatDay);
+  eggMesh.userData.keepUv = true;
+  eggMesh.castShadow = true;
+  eggMesh.receiveShadow = true;
+  root.add(eggMesh);
+
+  // 4. 广场棕榈绿化列阵
+  const palmPositions: [number, number][] = [
+    [52, 46], [50, 34], [54, -6], [52, -34],
+    [-46, 44], [-48, -32], [46, 58],
+  ];
+  const trunkMat = stone(0x7c5c3e, 0.9, 0.02);
+  for (const [px, pz] of palmPositions) {
+    cyl(root, trunkMat, 0.35, 0.5, 7.5, px, 0, pz, 7);
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(3.2, 2.8, 7), grassMat);
+    crown.position.set(px, 8.2, pz);
+    root.add(crown);
+  }
+
+  // 5. 迪拜地铁高架桥（外移至 +X = 92m 谢赫扎耶德路外侧边缘，避免横挡迎宾前广场与绿丘视线）
+  const bridge = box(root, plazaStone, 11.5, 2.6, 188.0, 92.0, 8.5, 0);
+  bridge.userData.skipLines = true;
+  for (let bz = -72; bz <= 72; bz += 24.0) {
+    cyl(root, concreteTrim, 0.75, 0.9, 8.5, 92.0, 0, bz, 12);
+  }
+  const bridgeDeckTrim = box(root, concreteTrim, 12.2, 0.65, 188.0, 92.0, 11.1, 0);
+  bridgeDeckTrim.userData.skipLines = true;
+
+  const pedTube = box(root, concreteTrim, 28.0, 3.8, 5.2, 68.0, 9.0, 72.0);
+  pedTube.userData.skipLines = true;
+
+  // 6. 昼夜灯光联动
+  const voidLight = new THREE.PointLight(0x38bdf8, 0.2, 95, 1.5);
+  voidLight.position.set(0, 41.5, 7.5);
   root.add(voidLight);
 
-  const hillSpot = new THREE.PointLight(0x00f0ff, 0, 60, 1.8);
-  hillSpot.position.set(0, 12.0, 28.0);
+  const hillSpot = new THREE.PointLight(0x22d3ee, 0, 70, 1.7);
+  hillSpot.position.set(34.0, 12.0, 12.0);
   root.add(hillSpot);
 
+  void kit;
   root.userData.hasInspection = true;
   root.userData.setNightMode = (night: boolean) => {
-    torusMesh.material = night ? torusMatNight : torusMatDay;
-    lobbyGlass.material = night ? glassNight : glassDay;
-    voidLight.intensity = night ? 1.6 : 0.3;
-    hillSpot.intensity = night ? 1.0 : 0;
+    eggMesh.material = night ? eggMatNight : eggMatDay;
+    root.traverse((c) => {
+      const m = c as THREE.Mesh;
+      if (m.userData?.isLobbyGlass) {
+        m.material = night ? lobbyGlassNight : lobbyGlassDay;
+      }
+    });
+    voidLight.intensity = night ? 1.5 : 0.2;
+    hillSpot.intensity = night ? 1.1 : 0;
   };
 
   return root;
 }
-
-// ─────────────────────────────────────────────────────────
-// 巴塞罗那圣家堂 (Basílica de la Sagrada Família)
-// ─────────────────────────────────────────────────────────
-

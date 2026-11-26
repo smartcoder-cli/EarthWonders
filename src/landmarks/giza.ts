@@ -27,11 +27,13 @@ export function createGiza(kit: SurfaceKit) {
     layer.position.y = i * 1.38;
     root.add(layer);
   }
-  box(root, stone(0x3a2a18, 0.95), 3.6, 5.4, 8.5, 0, 16, -112);
-  templeCourt(root, aged, sand, 52, 40, 148, 0);
-  box(root, aged, 8, 2.2, 118, 78, 0, 0);
+  // 胡夫北侧原入口与马蒙暗道（Tellux heading=0 下 +Z 为正北，-X 为正东）
+  box(root, stone(0x3a2a18, 0.95), 3.6, 5.4, 8.5, 0, 16, 112);
+  templeCourt(root, aged, sand, 52, 40, -148, 0);
+  box(root, aged, 118, 2.2, 8, -233, 0, 0);
 
-  const khafreX = -325;
+  // 卡夫拉位于胡夫西南方（+X = 西，-Z = 南），堤道向东南东直通狮身人面像旁河谷神庙
+  const khafreX = 325;
   const khafreZ = -344;
   const khafreBase = new THREE.Mesh(new THREE.BoxGeometry(215.3, 10, 215.3), aged);
   khafreBase.position.set(khafreX, 5, khafreZ);
@@ -40,9 +42,11 @@ export function createGiza(kit: SurfaceKit) {
   const khafreCap = new THREE.Mesh(pyramidGeo(48, 28), pale);
   khafreCap.position.set(khafreX, 10 + 136.4 - 16, khafreZ);
   root.add(khafreCap);
-  box(root, aged, 9, 3.2, 210, khafreX + 118, 10, khafreZ + 40);
+  const causeway = box(root, aged, 565, 2.4, 8, -64, 0, -390);
+  causeway.rotation.y = -Math.atan2(92, 562);
 
-  const menkaureX = -566;
+  // 门卡乌拉位于更西南方，南侧附建三座王后子金字塔
+  const menkaureX = 566;
   const menkaureZ = -746;
   coursedPyramid(root, menkaureMat, 102.2, 65, 16, menkaureX, menkaureZ);
   for (const [dx, s] of [
@@ -53,19 +57,21 @@ export function createGiza(kit: SurfaceKit) {
     coursedPyramid(root, aged, s, s * 0.62, 8, menkaureX + dx, menkaureZ - 78);
   }
 
-  for (const [x, s] of [
-    [-18, 45.5],
-    [29, 47.4],
-    [76, 43.7],
+  // 胡夫东侧三座王后金字塔沿南北排列（-X = 东侧）
+  for (const [z, s] of [
+    [-46, 45.5],
+    [-96, 47.4],
+    [-146, 43.7],
   ] as const) {
-    coursedPyramid(root, aged, s, s * 0.62, 8, x, -148);
+    coursedPyramid(root, aged, s, s * 0.62, 8, -148, z);
   }
 
+  // 胡夫南侧太阳船坑遗址
   for (const [dx, dz] of [
-    [-40, 128],
-    [40, 128],
-    [-40, 148],
-    [40, 148],
+    [-40, -128],
+    [40, -128],
+    [-40, -148],
+    [40, -148],
   ] as const) {
     box(root, stone(0x6a5438, 0.96), 48, 0.7, 6.4, dx, -0.15, dz);
   }
@@ -191,10 +197,11 @@ export function createGiza(kit: SurfaceKit) {
     }
   }
 
-  sphinx.position.set(345, 0, -436);
-  sphinx.rotation.y = Math.PI / 2;
+  // 狮身人面像位于胡夫东南方并面向正东（-X）
+  sphinx.position.set(-345, 0, -436);
+  sphinx.rotation.y = -Math.PI / 2;
   root.add(sphinx);
-  templeCourt(root, aged, sand, 36, 28, 410, -436);
+  templeCourt(root, aged, sand, 36, 28, -410, -436);
   return root;
 }
 

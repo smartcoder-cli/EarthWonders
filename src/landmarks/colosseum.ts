@@ -31,13 +31,13 @@ export function createColosseum(kit: SurfaceKit) {
   const voidMat = stone(0x2b1c14, 0.98);
   const sand = mapped(kit.arena, { color: 0xe5c898, roughness: 0.94, metersPerTile: 8, bumpScale: 0.2 });
 
-  // 1. 北侧完整的 48.5 米高四层外圈立面 (a 从 -0.04PI 到 1.04PI，z <= 0 朝向北侧帝国大道)
+  // 1. 北侧完整三层拱廊 + 第四层阁楼总高严格校准为 48.5 米 (a 从 -0.04PI 到 1.04PI，z <= 0)
   const a0 = -0.04 * Math.PI;
   const a1 = 1.04 * Math.PI;
-  root.add(new THREE.Mesh(extrudeY(partialRing(96, 80, 88, 73, a0, a1, 56), 48.5), travertine));
+  root.add(new THREE.Mesh(extrudeY(partialRing(96, 80, 88, 73, a0, a1, 56), 38.0), travertine));
 
-  // 2. 南侧残缺外墙只升至两层高度 (~31米)，展露内圈看台
-  root.add(new THREE.Mesh(extrudeY(ring(88, 73, 62, 50, 56), 31.5), travertine));
+  // 2. 南侧残缺外墙只升至两层高度 (~26米)，展露内圈看台
+  root.add(new THREE.Mesh(extrudeY(ring(88, 73, 62, 50, 56), 26.5), travertine));
 
   // 3. 东西两侧著名的斯泰恩 (Stern) 与瓦拉迪尔 (Valadier) 19世纪砖砌大三角斜撑扶壁
   // 东侧断口扶壁 (x ~ +94m)
@@ -70,11 +70,11 @@ export function createColosseum(kit: SurfaceKit) {
 
   // 4. 内圈三层走廊拱券网格
   const dummy = new THREE.Object3D();
-  const midArchGeo = archSlab(3.8, 7.6, 2.5, 0.95);
+  const midArchGeo = archSlab(3.8, 7.0, 2.5, 0.95);
   const innerLevels = [
-    { y: 2.2, count: 64, rx: 87.2, rz: 72.2 },
-    { y: 15.6, count: 64, rx: 87.2, rz: 72.2 },
-    { y: 28.6, count: 60, rx: 87.0, rz: 72.0 },
+    { y: 1.8, count: 64, rx: 87.2, rz: 72.2 },
+    { y: 13.2, count: 64, rx: 87.2, rz: 72.2 },
+    { y: 24.4, count: 60, rx: 87.0, rz: 72.0 },
   ];
   let innerTotal = 0;
   for (const level of innerLevels) innerTotal += level.count;
@@ -93,12 +93,12 @@ export function createColosseum(kit: SurfaceKit) {
   }
   root.add(innerFacade);
 
-  // 5. 北侧第四层阁楼实墙与檐口 (Attic story & cornices)
-  const attic = new THREE.Mesh(extrudeY(partialRing(96.8, 80.8, 90, 74.5, a0, a1, 44), 8.2), trim);
-  attic.position.y = 48.5;
+  // 5. 北侧第四层阁楼实墙与檐口 (38.0m ~ 48.5m，含阁楼总高精准 48.5 米)
+  const attic = new THREE.Mesh(extrudeY(partialRing(96.8, 80.8, 90, 74.5, a0, a1, 44), 10.5), trim);
+  attic.position.y = 38.0;
   root.add(attic);
 
-  for (const y of [13.2, 25.2, 37.2]) {
+  for (const y of [11.2, 22.8, 34.8]) {
     const cornice = new THREE.Mesh(extrudeY(partialRing(97.2, 81.2, 95, 79, a0, a1, 44), 0.7), trim);
     cornice.position.y = y;
     root.add(cornice);
@@ -155,11 +155,11 @@ export function createColosseum(kit: SurfaceKit) {
   }
 
   // 9. 北侧完整的 1~3 层叠柱式拱门与立柱 (Doric, Ionic, Corinthian tiers on North facade)
-  const archGeo = archSlab(4.2, 8.6, 3.2, 1.0);
+  const archGeo = archSlab(4.2, 7.6, 3.2, 1.0);
   const levels = [
-    { y: 2.1, count: 80, rx: 95.5, rz: 79.5, rCol: 0.55 },
-    { y: 15.6, count: 80, rx: 95.5, rz: 79.5, rCol: 0.5 },
-    { y: 28.4, count: 76, rx: 95.3, rz: 79.3, rCol: 0.48 },
+    { y: 1.8, count: 80, rx: 95.5, rz: 79.5, rCol: 0.55 },
+    { y: 13.0, count: 80, rx: 95.5, rz: 79.5, rCol: 0.5 },
+    { y: 24.4, count: 76, rx: 95.3, rz: 79.3, rCol: 0.48 },
   ];
   let total = 0;
   for (const level of levels) {
@@ -178,7 +178,7 @@ export function createColosseum(kit: SurfaceKit) {
       dummy.lookAt(0, level.y, 0);
       dummy.updateMatrix();
       arches.setMatrixAt(n, dummy.matrix);
-      dummy.position.set(x * 0.993, level.y + 5.6, z * 0.993);
+      dummy.position.set(x * 0.993, level.y + 4.8, z * 0.993);
       dummy.rotation.set(0, 0, 0);
       dummy.updateMatrix();
       frames.setMatrixAt(n, dummy.matrix);
@@ -195,12 +195,12 @@ export function createColosseum(kit: SurfaceKit) {
     const x = Math.cos(a) * 93.6;
     const z = -Math.sin(a) * 77.6;
     if (i % 2 === 0) {
-      box(root, voidMat, 2.4, 3.4, 1.2, x, 50.2, z);
+      box(root, voidMat, 2.4, 3.2, 1.2, x, 40.5, z);
     } else {
       const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.35, 0.35, 16), trim);
       disc.rotation.z = Math.PI / 2;
-      disc.position.set(Math.cos(a) * 96.2, 52.6, -Math.sin(a) * 80.2);
-      disc.lookAt(0, 52.6, 0);
+      disc.position.set(Math.cos(a) * 96.2, 43.2, -Math.sin(a) * 80.2);
+      disc.lookAt(0, 43.2, 0);
       root.add(disc);
     }
   }
@@ -216,7 +216,7 @@ export function createColosseum(kit: SurfaceKit) {
   for (let i = 0; i < 24; i++) {
     if (!intactOuter(i, 24)) continue;
     const a = (i / 24) * Math.PI * 2;
-    cyl(root, trim, 0.32, 0.38, 8.5, Math.cos(a) * 94, 56.6, -Math.sin(a) * 78, 8);
+    cyl(root, trim, 0.32, 0.38, 6.0, Math.cos(a) * 94, 48.0, -Math.sin(a) * 78, 8);
   }
   return root;
 }

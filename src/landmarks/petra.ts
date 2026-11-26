@@ -60,73 +60,71 @@ export function createPetra(kit: SurfaceKit) {
   // 5. 峡谷广场地面砂石铺装 (蛇道入口前平坦开阔地)
   box(root, sand, 38, 0.6, 48, 0, -0.3, -22);
 
-  box(root, sand, 28, 24, 6.4, 0, 2.4, -4);
-  for (let i = 0; i < 12; i++) {
-    box(root, sandLight, 26 - i * 0.15, 0.22, 4.8, 0, i * 0.2, -7.4);
+  // 宝库立面比例校准至约 40m（实景 39.5m），上层翼楼内收不超出下层 28m 基台
+  box(root, sand, 28, 18.2, 6.4, 0, 2.0, -4);
+  for (let i = 0; i < 10; i++) {
+    box(root, sandLight, 26 - i * 0.15, 0.2, 4.8, 0, i * 0.2, -7.4);
   }
   for (let i = 0; i < 6; i++) {
-    const x = -12.5 + i * 5;
-    column(root, sandLight, 18.5, 0.95, x, 4.6, -7.2);
-    // Fine, shallow vertical grooves on the visible face suggest hand-carved fluting.
+    const x = -11.5 + i * 4.6;
+    column(root, sandLight, 14.6, 0.85, x, 3.6, -7.2);
     for (let flute = -2; flute <= 2; flute++) {
-      box(root, band, 0.055, 12.8, 0.045, x + flute * 0.24, 7.0, -8.13);
+      box(root, band, 0.05, 10.2, 0.045, x + flute * 0.22, 5.4, -8.02);
     }
   }
-  // Repeated shallow relief blocks along the entablature add the rhythmic carved
-  // ornament visible on Nabataean rock-cut façades without overwhelming the silhouette.
   for (let i = 0; i < 13; i++) {
-    const x = -12.0 + i * 2.0;
-    box(root, band, 0.72, 1.05, 0.38, x, 23.35, -7.72);
-    box(root, sandLight, 0.9, 0.16, 0.48, x, 24.0, -7.76);
+    const x = -11.0 + i * 1.83;
+    box(root, band, 0.65, 0.85, 0.35, x, 18.25, -7.68);
+    box(root, sandLight, 0.82, 0.14, 0.45, x, 18.8, -7.72);
   }
-  box(root, sand, 27.5, 1.8, 6, 0, 23.2, -4.6);
-  box(root, sand, 27.5, 0.9, 5.8, 0, 25, -4.6);
-  box(root, dark, 6.4, 11.5, 2.2, 0, 4.8, -7.6);
-  const doorPed = new THREE.Mesh(pyramidGeo(8.4, 2.8), sand);
-  doorPed.position.set(0, 16.6, -7.2);
+  box(root, sand, 27.5, 1.5, 6, 0, 18.1, -4.6);
+  box(root, sand, 27.5, 0.8, 5.8, 0, 19.6, -4.6);
+  box(root, dark, 5.6, 9.2, 2.2, 0, 3.8, -7.5);
+  const doorPed = new THREE.Mesh(pyramidGeo(7.6, 2.4), sand);
+  doorPed.position.set(0, 13.0, -7.1);
   doorPed.scale.set(1, 1, 0.16);
   root.add(doorPed);
-  box(root, dark, 3.8, 7.2, 1.5, -9.2, 5.2, -7.4);
-  box(root, dark, 3.8, 7.2, 1.5, 9.2, 5.2, -7.4);
+  box(root, dark, 3.2, 5.8, 1.5, -8.4, 4.0, -7.3);
+  box(root, dark, 3.2, 5.8, 1.5, 8.4, 4.0, -7.3);
 
-  const ped = new THREE.Mesh(pyramidGeo(16, 5.2), sand);
-  ped.position.set(0, 26.2, -4.2);
+  const ped = new THREE.Mesh(pyramidGeo(14.5, 4.0), sand);
+  ped.position.set(0, 20.6, -4.2);
   ped.scale.set(1, 1, 0.18);
   root.add(ped);
 
-  box(root, sand, 11.5, 12, 5.4, -11.2, 27.2, -3.8);
-  box(root, sand, 11.5, 12, 5.4, 11.2, 27.2, -3.8);
-  const leftPed = new THREE.Mesh(pyramidGeo(12, 4.6), sand);
-  leftPed.position.set(-11.2, 39.2, -3.8);
+  box(root, sand, 8.6, 9.2, 5.2, -9.2, 21.0, -3.8);
+  box(root, sand, 8.6, 9.2, 5.2, 9.2, 21.0, -3.8);
+  const leftPed = new THREE.Mesh(pyramidGeo(9.2, 3.5), sand);
+  leftPed.position.set(-9.2, 30.2, -3.8);
   leftPed.scale.set(1, 1, 0.18);
   root.add(leftPed);
-  const rightPed = new THREE.Mesh(pyramidGeo(12, 4.6), sand);
-  rightPed.position.set(11.2, 39.2, -3.8);
+  const rightPed = new THREE.Mesh(pyramidGeo(9.2, 3.5), sand);
+  rightPed.position.set(9.2, 30.2, -3.8);
   rightPed.scale.set(1, 1, 0.18);
   root.add(rightPed);
-  box(root, dark, 3.2, 6.4, 1.3, -11.2, 28.4, -6.4);
-  box(root, dark, 3.2, 6.4, 1.3, 11.2, 28.4, -6.4);
-  const aedL = new THREE.Mesh(pyramidGeo(4.4, 1.6), sand);
-  aedL.position.set(-11.2, 35, -6.2);
+  box(root, dark, 2.8, 5.2, 1.3, -9.2, 22.0, -6.2);
+  box(root, dark, 2.8, 5.2, 1.3, 9.2, 22.0, -6.2);
+  const aedL = new THREE.Mesh(pyramidGeo(3.8, 1.3), sand);
+  aedL.position.set(-9.2, 27.3, -6.0);
   aedL.scale.set(1, 1, 0.2);
   root.add(aedL);
   const aedR = aedL.clone();
-  aedR.position.x = 11.2;
+  aedR.position.x = 9.2;
   root.add(aedR);
 
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
-    column(root, sandLight, 10.5, 0.55, Math.cos(a) * 4.4, 27.2, -5.6 + Math.sin(a) * 1.4);
+    column(root, sandLight, 8.2, 0.45, Math.cos(a) * 3.8, 21.0, -5.6 + Math.sin(a) * 1.3);
   }
-  cyl(root, sand, 4.4, 4.4, 10.5, 0, 27.2, -5.6, 18);
-  const tholos = new THREE.Mesh(onionLathe(5.2, 8.2, 20), sandLight);
-  tholos.position.set(0, 37.8, -5.6);
+  cyl(root, sand, 3.8, 3.8, 8.2, 0, 21.0, -5.6, 18);
+  const tholos = new THREE.Mesh(onionLathe(4.4, 6.4, 20), sandLight);
+  tholos.position.set(0, 29.2, -5.6);
   root.add(tholos);
-  cyl(root, sandLight, 0.55, 0.9, 2.8, 0, 45.8, -5.6, 8);
-  const urn = new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 10), sandLight);
-  urn.position.set(0, 49.4, -5.6);
+  cyl(root, sandLight, 0.48, 0.78, 2.2, 0, 35.6, -5.6, 8);
+  const urn = new THREE.Mesh(new THREE.SphereGeometry(1.05, 12, 10), sandLight);
+  urn.position.set(0, 38.6, -5.6);
   root.add(urn);
-  cyl(root, sandLight, 0.35, 0.55, 1.4, 0, 50.4, -5.6, 8);
+  cyl(root, sandLight, 0.3, 0.48, 1.2, 0, 39.4, -5.6, 8);
 
   box(root, sand, 18, 1.2, 22, 0, 0, -18);
   return root;

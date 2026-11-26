@@ -503,10 +503,10 @@ export function createSagradaFamilia(_kit: SurfaceKit): THREE.Group {
 
   for (const fp of facadePositions) {
     const towersData = [
-      { z: -17.5, hShaft: 50, topY: 104, hasMitreRed: true },
-      { z: -5.8,  hShaft: 56, topY: 110, hasMitreRed: false },
-      { z: 5.8,   hShaft: 56, topY: 110, hasMitreRed: false },
-      { z: 17.5,  hShaft: 50, topY: 104, hasMitreRed: true },
+      { z: -17.5, hShaft: 28, topY: 101, hasMitreRed: true },
+      { z: -5.8,  hShaft: 34, topY: 107, hasMitreRed: false },
+      { z: 5.8,   hShaft: 34, topY: 107, hasMitreRed: false },
+      { z: 17.5,  hShaft: 28, topY: 101, hasMitreRed: true },
     ];
 
     for (let i = 0; i < towersData.length; i++) {
@@ -621,8 +621,8 @@ export function createSagradaFamilia(_kit: SurfaceKit): THREE.Group {
       root.add(towerGroup);
     }
 
-    // 双塔之间悬空人行天桥 (Transverse Skybridges connecting twin spires, y = 68m & y = 85m)
-    for (const by of [68, 85]) {
+    // 双塔之间悬空人行天桥 (Transverse Skybridges, y = 58m & y = 72m)
+    for (const by of [58, 72]) {
       const bridgeInner = box(root, stoneTraceries, 2.0, 2.4, 11.6, fp.x, by, 0);
       box(root, mosaicGold, 1.4, 0.8, 11.6, fp.x, by + 1.6, 0);
       stoneMeshes.push(bridgeInner);
@@ -636,38 +636,37 @@ export function createSagradaFamilia(_kit: SurfaceKit): THREE.Group {
   // ==========================================
   // 7. 中央六座核心天际圣塔 (Central Spires: Christ, Mary & 4 Evangelists)
   // ==========================================
-  // A. 中央耶稣基督之塔 (Tower of Jesus Christ, 全殿最高核心, 规划总高 172.5m)
+  // A. 中央耶稣基督之塔 (塔顶纯白大十字架顶严密锁定 172.5m)
   const christBaseY = 44;
-  const christTopY = 154;
-  const christH = christTopY - christBaseY; // 110m
+  const christTopY = 146;
+  const christH = christTopY - christBaseY; // 102m
 
   // 12 边形双曲双扭线收分主塔柱 (12-Sided Hyperbolic Main Shaft)
   const christTower = new THREE.Mesh(new THREE.CylinderGeometry(5.6, 11.5, christH, 12), stoneDay);
   christTower.position.set(0, christBaseY + christH / 2, 0);
   addStone(christTower);
 
-  // 基督塔 8 层环向细长采光石窗与加劲飞肋 (8 Tiers of Lancet Slits & Hyperbolic Ribs)
+  // 基督塔 8 层环向细长采光石窗与加劲飞肋
   for (let lvl = 0; lvl < 8; lvl++) {
-    const ly = christBaseY + 8 + lvl * 12.5;
+    const ly = christBaseY + 8 + lvl * 11.5;
     const w = 11.5 - (lvl / 8) * 5.9;
     for (let r = 0; r < 4; r++) {
       const rang = (r / 4) * Math.PI * 2;
-      const winSlot = box(root, stoneDark, 1.3, 7.5, 0.5, Math.sin(rang) * (w + 0.2), ly, Math.cos(rang) * (w + 0.2));
+      const winSlot = box(root, stoneDark, 1.3, 7.0, 0.5, Math.sin(rang) * (w + 0.2), ly, Math.cos(rang) * (w + 0.2));
       winSlot.rotation.y = rang;
       stoneMeshes.push(winSlot);
     }
-    box(root, mosaicGold, w * 2 + 1.2, 0.8, w * 2 + 1.2, 0, ly + 4.5, 0);
+    box(root, mosaicGold, w * 2 + 1.2, 0.8, w * 2 + 1.2, 0, ly + 4.2, 0);
   }
 
-  // 基督塔观景石廊阁楼 (Upper Lantern Gallery, y = 154m ~ 163m)
+  // 基督塔观景石廊阁楼 (y = 146m ~ 155m)
   const christLantern = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.6, 9.0, 12), stoneTraceries);
-  christLantern.position.set(0, 158.5, 0);
+  christLantern.position.set(0, 150.5, 0);
   addStone(christLantern);
 
-  // 基督塔顶 17.5 米纯白卡拉拉大理石立体四臂十字架 (Monumental 17.5m Cross of Four Arms)
-  // 底部严丝合缝扎在 y = 163m 的观景阁楼顶面上！
+  // 基督塔顶 17.5 米纯白立体四臂十字架 (y = 155m ~ 172.5m)
   const crossGroup = new THREE.Group();
-  crossGroup.position.set(0, 163, 0);
+  crossGroup.position.set(0, 155, 0);
 
   // 垂直立柱十字臂 (底面 y=0, 顶面 y=17.5, 中心 y=8.75)
   box(crossGroup, crossWhiteMat, 2.6, 17.5, 2.6, 0, 0, 0);
@@ -786,7 +785,7 @@ export function createSagradaFamilia(_kit: SurfaceKit): THREE.Group {
   root.add(spotPassion);
 
   const spotChristCross = new THREE.PointLight(0xffffff, 0, 70, 1.5);
-  spotChristCross.position.set(0, 172, 0);
+  spotChristCross.position.set(0, 164, 0);
   root.add(spotChristCross);
 
   const spotMaryStar = new THREE.PointLight(0x38bdf8, 0, 60, 2.0);

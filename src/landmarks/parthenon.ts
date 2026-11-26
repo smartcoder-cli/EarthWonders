@@ -55,8 +55,8 @@ export function createParthenon(_kit: SurfaceKit): THREE.Group {
   const colHeight = 10.43;
   const colBaseY = 6.65;
   const colGeo = new THREE.CylinderGeometry(0.74, 0.95, colHeight, 20);
-  const abacusGeo = new THREE.BoxGeometry(2.1, 0.45, 2.1);
-  const echinusGeo = new THREE.CylinderGeometry(1.08, 0.74, 0.45, 20);
+  const abacusGeo = new THREE.BoxGeometry(2.1, 0.3, 2.1);
+  const echinusGeo = new THREE.CylinderGeometry(1.08, 0.74, 0.3, 20);
 
   const colPositions: [number, number][] = [];
   const spanX = 64.0;
@@ -75,86 +75,90 @@ export function createParthenon(_kit: SurfaceKit): THREE.Group {
     colPositions.push([spanX / 2, z]);
   }
 
+  // 右手系下向中心微倾收敛：+x 倾 -x 需绕 Z 正旋，+z 倾 -z 需绕 X 负旋
   for (const [cx, cz] of colPositions) {
     const col = new THREE.Mesh(colGeo, marbleDay);
     col.position.set(cx, colBaseY + colHeight / 2, cz);
-    col.rotation.z = -cx * 0.0006;
-    col.rotation.x = cz * 0.0006;
+    col.rotation.z = cx * 0.0006;
+    col.rotation.x = -cz * 0.0006;
     root.add(col);
     marbleMeshes.push(col);
 
     const echinus = new THREE.Mesh(echinusGeo, marbleDay);
-    echinus.position.set(cx, colBaseY + colHeight + 0.22, cz);
+    echinus.position.set(cx, colBaseY + colHeight + 0.15, cz);
     root.add(echinus);
     marbleMeshes.push(echinus);
 
     const abacus = new THREE.Mesh(abacusGeo, marbleDay);
-    abacus.position.set(cx, colBaseY + colHeight + 0.65, cz);
+    abacus.position.set(cx, colBaseY + colHeight + 0.45, cz);
     root.add(abacus);
     marbleMeshes.push(abacus);
   }
 
-  // 4. 楣梁与多立克排档三进饰中楣 (Architrave & Doric Frieze, y = 18.0 ~ 21.0m)
-  box(root, marbleDay, 67.5, 1.4, 2.0, 0, 17.8, -spanZ / 2);
-  box(root, marbleDay, 67.5, 1.4, 2.0, 0, 17.8, spanZ / 2);
-  box(root, marbleDay, 2.0, 1.4, 28.5, -spanX / 2, 17.8, 0);
-  box(root, marbleDay, 2.0, 1.4, 28.5, spanX / 2, 17.8, 0);
+  // 4. 楣梁与多立克排档三进饰中楣 (总高控制贴近实景 ~15.5m 以上柱廊台面)
+  box(root, marbleDay, 67.5, 1.05, 2.0, 0, 17.65, -spanZ / 2);
+  box(root, marbleDay, 67.5, 1.05, 2.0, 0, 17.65, spanZ / 2);
+  box(root, marbleDay, 2.0, 1.05, 28.5, -spanX / 2, 17.65, 0);
+  box(root, marbleDay, 2.0, 1.05, 28.5, spanX / 2, 17.65, 0);
 
-  const friezeY = 19.2;
-  const friezeLong = box(root, marbleDay, 67.5, 1.4, 1.8, 0, friezeY, -spanZ / 2);
-  const friezeLong2 = box(root, marbleDay, 67.5, 1.4, 1.8, 0, friezeY, spanZ / 2);
-  const friezeShort1 = box(root, marbleDay, 1.8, 1.4, 28.5, -spanX / 2, friezeY, 0);
-  const friezeShort2 = box(root, marbleDay, 1.8, 1.4, 28.5, spanX / 2, friezeY, 0);
+  const friezeY = 18.7;
+  const friezeLong = box(root, marbleDay, 67.5, 1.05, 1.8, 0, friezeY, -spanZ / 2);
+  const friezeLong2 = box(root, marbleDay, 67.5, 1.05, 1.8, 0, friezeY, spanZ / 2);
+  const friezeShort1 = box(root, marbleDay, 1.8, 1.05, 28.5, -spanX / 2, friezeY, 0);
+  const friezeShort2 = box(root, marbleDay, 1.8, 1.05, 28.5, spanX / 2, friezeY, 0);
   marbleMeshes.push(friezeLong, friezeLong2, friezeShort1, friezeShort2);
 
-  // 92 块三进线条排档块 (Triglyphs)
-  for (let ix = 0; ix < numX * 2; ix++) {
-    const tx = -spanX / 2 + (ix / (numX * 2 - 1)) * spanX;
-    box(root, stone(0x78350f, 0.9, 0.1), 0.55, 1.35, 0.2, tx, friezeY, -spanZ / 2 - 0.95);
-    box(root, stone(0x78350f, 0.9, 0.1), 0.55, 1.35, 0.2, tx, friezeY, spanZ / 2 + 0.95);
+  // 东西长边 + 南北短边四面完整三进饰排档块 (92 块 Metopes 对应分布)
+  for (let ix = 0; ix < 31; ix++) {
+    const tx = -spanX / 2 + (ix / 30) * spanX;
+    box(root, stone(0x78350f, 0.9, 0.1), 0.52, 1.0, 0.2, tx, friezeY, -spanZ / 2 - 0.95);
+    box(root, stone(0x78350f, 0.9, 0.1), 0.52, 1.0, 0.2, tx, friezeY, spanZ / 2 + 0.95);
+  }
+  for (let iz = 0; iz < 15; iz++) {
+    const tz = -spanZ / 2 + (iz / 14) * spanZ;
+    box(root, stone(0x78350f, 0.9, 0.1), 0.2, 1.0, 0.52, -spanX / 2 - 0.95, friezeY, tz);
+    box(root, stone(0x78350f, 0.9, 0.1), 0.2, 1.0, 0.52, spanX / 2 + 0.95, friezeY, tz);
   }
 
-  // 5. 东西三角楣山花 (East & West Pediments with Sculptures, y = 20.6 ~ 25.2m)
+  // 5. 东西三角楣山花 (y = 19.75 ~ 23.1m)
   for (const sx of [-spanX / 2, spanX / 2]) {
     const pedShape = new THREE.Shape();
     pedShape.moveTo(-15.4, 0);
     pedShape.lineTo(15.4, 0);
-    pedShape.lineTo(0, 4.4);
+    pedShape.lineTo(0, 3.2);
     pedShape.closePath();
 
     const pedGeo = new THREE.ExtrudeGeometry(pedShape, {
-      depth: 2.2,
+      depth: 2.0,
       bevelEnabled: true,
-      bevelThickness: 0.4,
-      bevelSize: 0.35,
+      bevelThickness: 0.35,
+      bevelSize: 0.3,
     });
     pedGeo.center();
     const pedMesh = new THREE.Mesh(pedGeo, marbleDay);
     pedMesh.rotation.y = Math.PI / 2;
-    pedMesh.position.set(sx, 22.8, 0);
+    pedMesh.position.set(sx, 21.35, 0);
     root.add(pedMesh);
     marbleMeshes.push(pedMesh);
 
-    // 三角楣内众神浮雕群剪影
     for (const oz of [-9, -4.5, 0, 4.5, 9]) {
-      const statueH = 3.6 - Math.abs(oz) * 0.25;
+      const statueH = 2.7 - Math.abs(oz) * 0.18;
       const statue = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.35, 0.45, statueH, 8),
+        new THREE.CylinderGeometry(0.32, 0.42, statueH, 8),
         marbleDay
       );
-      statue.position.set(sx + (sx > 0 ? 1.0 : -1.0), 20.6 + statueH / 2, oz);
+      statue.position.set(sx + (sx > 0 ? 0.9 : -0.9), 19.8 + statueH / 2, oz);
       root.add(statue);
       marbleMeshes.push(statue);
     }
   }
 
-  // 6. 大理石双坡屋顶 (Marble Tiled Gable Roof - 彻底修正屋顶朝向与正脊高度)
-  // 正脊在中央 Z = 0 处高达 25.2m，两侧屋檐向南北自然倾斜向下至 Z = ±16.0m (高度 20.8m)
+  // 6. 大理石双坡屋顶
   const roofShape = new THREE.Shape();
   const eaveZ = 16.0;
-  const ridgeY = 25.2;
-  const eaveY = 20.8;
-  const slabThick = 0.55;
+  const ridgeY = 23.2;
+  const eaveY = 19.9;
+  const slabThick = 0.5;
 
   roofShape.moveTo(-eaveZ, eaveY);
   roofShape.lineTo(0, ridgeY);
@@ -171,13 +175,17 @@ export function createParthenon(_kit: SurfaceKit): THREE.Group {
   roofGeo.center();
   const roofMesh = new THREE.Mesh(roofGeo, marbleDay);
   roofMesh.rotation.y = Math.PI / 2;
-  roofMesh.position.set(0, 22.8, 0);
+  roofMesh.position.set(0, 21.45, 0);
   root.add(roofMesh);
   marbleMeshes.push(roofMesh);
 
-  // 东西正脊饰与檐口角饰 (Acroteria & Ridge Crest)
-  const ridgeBeam = cyl(root, marbleDay, 0.35, 0.35, 68.5, 0, 25.2, 0, 8);
+  const ridgeBeam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.32, 0.32, 68.5, 8),
+    marbleDay,
+  );
+  ridgeBeam.position.set(0, 23.35, 0);
   ridgeBeam.rotation.z = Math.PI / 2;
+  root.add(ridgeBeam);
   marbleMeshes.push(ridgeBeam);
 
   // 7. 内殿主室与黄金雅典娜神像 (Inner Cella / Naos, y = 6.65 ~ 18.0m)

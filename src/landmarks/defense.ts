@@ -324,11 +324,11 @@ export function createGrandeArche(kit: SurfaceKit) {
   archCore.name = "ArcheCubeSuperstructure";
   root.add(archCore);
 
-  // A. 12 根独立减震承重巨柱群 (12 Megacolumns under the Arch, y = 2m ~ 14m)
-  for (const cx of [-44.5, +44.5]) {
-    for (const cz of [-42, -14, 14, 42]) {
-      cyl(archCore, steelMat, 2.4, 2.6, 12.0, cx, 2.0, cz, 16);
-      cyl(archCore, marbleDark, 2.9, 2.9, 0.8, cx, 13.6, cz, 16);
+  // A. 12 根独立减震承重巨柱群 (每侧 2x3 = 6 根，两侧共 12 根)
+  for (const cx of [-48.0, -39.0, +39.0, +48.0]) {
+    for (const cz of [-42, 0, 42]) {
+      cyl(archCore, steelMat, 2.2, 2.4, 12.0, cx, 2.0, cz, 16);
+      cyl(archCore, marbleDark, 2.7, 2.7, 0.8, cx, 13.6, cz, 16);
     }
   }
 
@@ -457,41 +457,40 @@ export function createGrandeArche(kit: SurfaceKit) {
   const cloudGroup = new THREE.Group();
   cloudGroup.name = "LesNuagesCanopy";
 
-  // A) 主云朵 (Central Billowing Sail, y = 36m, 44m x 34m)
-  const cloudGeo1 = createSaddleCloudGeometry(44.0, 34.0, 3.8);
+  // A) 主云朵（Z = -22..+4，在前方为独立电梯井留出净空穿行通道）
+  const cloudGeo1 = createSaddleCloudGeometry(42.0, 26.0, 3.4);
   const cloud1 = new THREE.Mesh(cloudGeo1, cloudMatDay);
-  cloud1.position.set(0, 36.0, 0);
+  cloud1.position.set(0, 36.0, -9.0);
   cloud1.userData.isCloud = true;
   cloud1.userData.keepUv = true;
   cloudGroup.add(cloud1);
 
-  // 主云朵外缘不锈钢抗风加劲边框 (Structural Edge Truss Ring)
-  box(cloudGroup, steelMat, 44.0, 0.3, 0.3, 0, 37.2, 17.0);
-  box(cloudGroup, steelMat, 44.0, 0.3, 0.3, 0, 37.2, -17.0);
-  box(cloudGroup, steelMat, 0.3, 0.3, 34.0, -22.0, 34.8, 0);
-  box(cloudGroup, steelMat, 0.3, 0.3, 34.0, +22.0, 34.8, 0);
+  box(cloudGroup, steelMat, 42.0, 0.3, 0.3, 0, 37.2, 4.0);
+  box(cloudGroup, steelMat, 42.0, 0.3, 0.3, 0, 37.2, -22.0);
+  box(cloudGroup, steelMat, 0.3, 0.3, 26.0, -21.0, 34.8, -9.0);
+  box(cloudGroup, steelMat, 0.3, 0.3, 26.0, +21.0, 34.8, -9.0);
 
-  // B) 上层凌空翼幕 (Upper Flying Canopy, y = 46m, 32m x 22m)
+  // B) 上层凌空翼幕 (Z = -35..-13)
   const cloudGeo2 = createSaddleCloudGeometry(32.0, 22.0, 2.6);
   const cloud2 = new THREE.Mesh(cloudGeo2, cloudMatDay);
-  cloud2.position.set(0, 46.0, -14.0);
+  cloud2.position.set(0, 46.0, -24.0);
   cloud2.rotation.z = 0.05;
   cloud2.userData.isCloud = true;
   cloud2.userData.keepUv = true;
   cloudGroup.add(cloud2);
-  box(cloudGroup, steelMat, 32.0, 0.25, 0.25, 0, 47.0, -3.0);
-  box(cloudGroup, steelMat, 32.0, 0.25, 0.25, 0, 47.0, -25.0);
+  box(cloudGroup, steelMat, 32.0, 0.25, 0.25, 0, 47.0, -13.0);
+  box(cloudGroup, steelMat, 32.0, 0.25, 0.25, 0, 47.0, -35.0);
 
-  // C) 下层前庭遮阳天幕 (Lower Entrance Canopy, y = 26m, 34m x 20m)
-  const cloudGeo3 = createSaddleCloudGeometry(34.0, 20.0, 2.2);
+  // C) 下层前庭遮阳天幕 (Z = +20..+36)
+  const cloudGeo3 = createSaddleCloudGeometry(34.0, 16.0, 2.0);
   const cloud3 = new THREE.Mesh(cloudGeo3, cloudMatDay);
-  cloud3.position.set(0, 26.0, +18.0);
+  cloud3.position.set(0, 26.0, +28.0);
   cloud3.rotation.z = -0.04;
   cloud3.userData.isCloud = true;
   cloud3.userData.keepUv = true;
   cloudGroup.add(cloud3);
-  box(cloudGroup, steelMat, 34.0, 0.25, 0.25, 0, 27.0, 28.0);
-  box(cloudGroup, steelMat, 34.0, 0.25, 0.25, 0, 27.0, 8.0);
+  box(cloudGroup, steelMat, 34.0, 0.25, 0.25, 0, 27.0, 36.0);
+  box(cloudGroup, steelMat, 34.0, 0.25, 0.25, 0, 27.0, 20.0);
 
   // 高强不锈钢抗风张拉斜拉索网 (Prestressed Stainless Steel Stay Cables to Atrium Walls)
   for (const cz of [-28, -14, 0, 14, 28]) {
@@ -508,10 +507,9 @@ export function createGrandeArche(kit: SurfaceKit) {
   }
   archCore.add(cloudGroup);
 
-  // 4. 中空中庭独立全景玻璃电梯井 (Freestanding Panoramic Glass Elevator Spine, y = 14m ~ 88m)
-  // 位于 X = 0, Z = -2m，全高 74 米无横向附着，直通顶层观景台
+  // 4. 中空中庭独立全景玻璃电梯井（位于 Z = +12m，避开主云朵张拉膜天幕净空上升）
   const elevatorGroup = new THREE.Group();
-  elevatorGroup.position.set(0, 0, -2.0);
+  elevatorGroup.position.set(0, 0, 12.0);
 
   // 四根纵向主导轨立柱
   for (const ex of [-1.5, 1.5]) {
@@ -607,19 +605,19 @@ export function createGrandeArche(kit: SurfaceKit) {
   // 中央空中展厅低矮露台核心舱 (Low-Profile Central Sky Pavilion, 严守顶部水平基准线)
   box(archCore, marbleWhite, 36.0, 1.2, 44.0, 0, 110.9, 0);
 
-  // 7. 周边经典地标语境：CNIT 巨型三角拱壳大厅 (CNIT Triangular Shell Dome)
+  // 7. 周边经典地标语境：CNIT 巨型三角拱壳大厅 (外移至 X=118m 避开北侧塔楼穿模)
   const cnitGroup = new THREE.Group();
-  cnitGroup.position.set(92.0, 2.0, 44.0);
+  cnitGroup.position.set(118.0, 2.0, 44.0);
   cnitGroup.rotation.y = -0.32;
   const cnitShell = new THREE.Mesh(
-    new THREE.ConeGeometry(54.0, 34.0, 3),
+    new THREE.ConeGeometry(46.0, 32.0, 3),
     cnitConcrete
   );
   cnitShell.rotation.y = Math.PI / 6;
-  cnitShell.position.set(0, 17.0, 0);
+  cnitShell.position.set(0, 16.0, 0);
   cnitGroup.add(cnitShell);
 
-  const cnitGlass = new THREE.Mesh(new THREE.CylinderGeometry(46.0, 50.0, 14.0, 3, 1, true), glassDay);
+  const cnitGlass = new THREE.Mesh(new THREE.CylinderGeometry(39.0, 43.0, 14.0, 3, 1, true), glassDay);
   cnitGlass.rotation.y = Math.PI / 6;
   cnitGlass.position.set(0, 7.0, 0);
   cnitGlass.userData.isOfficeGlass = true;

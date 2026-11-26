@@ -54,24 +54,23 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
   const ironMeshes: THREE.Mesh[] = [];
   const glassMeshes: THREE.Mesh[] = [];
 
-  // 1. 战神广场绿荫台基 (Champ de Mars Plinth)
-  const parkBase = box(root, stone(0x27361b, 0.95, 0.0), 160, 1.2, 160, 0, 0, 0);
+  // 1. 战神广场绿荫台基 (真实塔基占宽 ~125x125m)
+  const parkBase = box(root, stone(0x27361b, 0.95, 0.0), 190, 1.2, 190, 0, 0, 0);
   parkBase.userData.skipLines = true;
 
-  // 2. 四足倾斜熟铁桁架巨柱 (Four Slanted Pylons, y = 0 ~ 57m)
-  // 底座中心：(±42, 0, ±42) -> 一层中心：(±23, 57, ±23)
+  // 2. 四足倾斜熟铁桁架巨柱 (底座外缘 ±62m ≈ 124m 见方，精准对应实景 125x125m)
   const legPositions = [
-    { x: -42, z: -42, tx: -23, tz: -23 }, // NW
-    { x: 42, z: -42, tx: 23, tz: -23 },  // NE
-    { x: 42, z: 42, tx: 23, tz: 23 },    // SE
-    { x: -42, z: 42, tx: -23, tz: 23 },   // SW
+    { x: -51, z: -51, tx: -23, tz: -23 }, // N / Corner
+    { x: 51, z: -51, tx: 23, tz: -23 },
+    { x: 51, z: 51, tx: 23, tz: 23 },
+    { x: -51, z: 51, tx: -23, tz: 23 },
   ];
 
   for (const lp of legPositions) {
     // 双层花岗岩减震基墩
-    const ped1 = box(root, masonryMat, 20, 2.5, 20, lp.x, 0.6, lp.z);
+    const ped1 = box(root, masonryMat, 22, 2.5, 22, lp.x, 0.6, lp.z);
     ped1.userData.skipLines = true;
-    const ped2 = box(root, masonryMat, 16, 2.5, 16, lp.x, 3.1, lp.z);
+    const ped2 = box(root, masonryMat, 17, 2.5, 17, lp.x, 3.1, lp.z);
     ped2.userData.skipLines = true;
 
     const legDx = lp.tx - lp.x;
@@ -176,10 +175,10 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
   // 3. 四面深邃宏伟的抛物线大拱券 (Monumental Base Arches, y = 0 ~ 39m)
   // 拱券深度加厚至 14 米，拥有双层上下弧梁与辐射状腹杆
   const archConfigs = [
-    { x: 0, z: -32.5, rotY: 0 },
-    { x: 32.5, z: 0, rotY: Math.PI / 2 },
-    { x: 0, z: 32.5, rotY: 0 },
-    { x: -32.5, z: 0, rotY: Math.PI / 2 },
+    { x: 0, z: -41.5, rotY: 0 },
+    { x: 41.5, z: 0, rotY: Math.PI / 2 },
+    { x: 0, z: 41.5, rotY: 0 },
+    { x: -41.5, z: 0, rotY: Math.PI / 2 },
   ];
   for (const ac of archConfigs) {
     const archGroup = new THREE.Group();
@@ -187,7 +186,7 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
     archGroup.rotation.y = ac.rotY;
 
     const ptsCount = 20;
-    const archSpan = 65;
+    const archSpan = 74;
     const archPeak = 39;
     const archDepth = 14.0; // 深度加厚至 14 米，完全填满两腿间距！
 
@@ -248,10 +247,12 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
   const p1Outer = box(root, deckMat, 72, 4.2, 72, 0, 57, 0);
   p1Outer.userData.skipLines = true;
 
-  // 外围 72 位法国科学家金色雕刻铭文楣饰 (The 72 Scientists Frieze)
+  // 外围 72 位法国科学家金色雕刻铭文楣饰 (包覆平台四面)
   for (const rotY of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
-    const friezeBar = box(root, goldSpireMat, 66, 2.2, 0.6, 0, 59.5, 36.1);
-    friezeBar.rotation.y = rotY;
+    const fg = new THREE.Group();
+    box(fg, goldSpireMat, 66, 2.2, 0.6, 0, 59.5, 36.1);
+    fg.rotation.y = rotY;
+    root.add(fg);
   }
 
   const p1Rim = box(root, ironDay, 73.5, 1.8, 73.5, 0, 60.5, 0);
@@ -476,15 +477,23 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
   centralSpine.position.y = 115 + (spireH + 23) / 2;
   ironMeshes.push(centralSpine);
 
-  // 4 根粗壮的主塔角柱 (Corner Tower Columns, 从 y = 138m 完美承接过渡腿)
+  // 4 根随塔身斜向均匀收分的主塔角柱（底部 ±7.25m 连续收拢至顶部 ±4.0m）
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
+      const bOff = 7.25;
+      const tOff = 4.0;
+      const dx = sx * (tOff - bOff);
+      const dz = sz * (tOff - bOff);
+      const colLen = Math.hypot(dx, spireH, dz);
       const col = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.70, 1.15, spireH, 6),
+        new THREE.CylinderGeometry(0.70, 1.15, colLen, 6),
         ironDay
       );
-      col.position.set(sx * 5.8, spireBaseY + spireH / 2, sz * 5.8);
-      col.rotation.y = Math.PI / 4;
+      col.position.set(sx * ((bOff + tOff) / 2), spireBaseY + spireH / 2, sz * ((bOff + tOff) / 2));
+      col.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(dx, spireH, dz).normalize()
+      );
       root.add(col);
       ironMeshes.push(col);
     }
@@ -569,12 +578,12 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
   root.add(p3Upper);
   ironMeshes.push(p3Upper);
 
-  // 9. 镀金穹顶、旋转灯塔与广播发射桅杆 (Dome, Lantern & Broadcast Mast, y = 295m ~ 330m)
+  // 9. 镀金穹顶、旋转灯塔与广播发射桅杆 (严密衔接 P3Upper y=291.5m 无断层)
   const cupola = new THREE.Mesh(
     new THREE.SphereGeometry(4.6, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2),
     goldSpireMat
   );
-  cupola.position.set(0, 295.5, 0);
+  cupola.position.set(0, 291.5, 0);
   root.add(cupola);
 
   const beaconGlassMat = new THREE.MeshStandardMaterial({
@@ -586,24 +595,24 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
     new THREE.CylinderGeometry(2.8, 3.6, 6.5, 14),
     beaconGlassMat
   );
-  lantern.position.set(0, 299.5, 0);
+  lantern.position.set(0, 298.5, 0);
   root.add(lantern);
 
   const mastLower = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.2, 2.4, 15, 8),
+    new THREE.CylinderGeometry(1.2, 2.4, 16, 8),
     goldSpireMat
   );
-  mastLower.position.set(0, 310.5, 0);
+  mastLower.position.set(0, 309.5, 0);
   root.add(mastLower);
 
   const mastPinnacle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.35, 1.2, 14, 8),
+    new THREE.CylinderGeometry(0.35, 1.2, 13, 8),
     goldSpireMat
   );
-  mastPinnacle.position.set(0, 324.5, 0);
+  mastPinnacle.position.set(0, 323.5, 0);
   root.add(mastPinnacle);
 
-  for (const ay of [306, 312, 318, 324]) {
+  for (const ay of [305, 311, 317, 323]) {
     box(root, goldSpireMat, 5.2, 0.3, 0.3, 0, ay, 0);
     box(root, goldSpireMat, 0.3, 0.3, 5.2, 0, ay, 0);
   }
@@ -617,7 +626,7 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
 
   // 10. 360° 双光束旋转探照灯 (Lighthouse Beacon)
   const beaconGroup = new THREE.Group();
-  beaconGroup.position.set(0, 301, 0);
+  beaconGroup.position.set(0, 298.5, 0);
   const beamMat = new THREE.MeshBasicMaterial({
     color: 0xfef08a,
     transparent: true,

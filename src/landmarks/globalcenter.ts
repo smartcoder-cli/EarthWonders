@@ -62,15 +62,14 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
   group.name = "ChengduGlobalCenter";
 
   // 真实尺寸与坐标系映射：
-  // 东西长 500 米（沿当地东西 X 轴，-X 对应东面天府大道，+X 对应西面益州大道）
-  // 南北宽 400 米（沿当地南北 Z 轴，+Z 对应北面锦城大道，-Z 对应南面绕城高速/锦城湖）
+  // 东西宽 400 米（-X 东面天府大道，+X 西面益州大道），南北长 500 米（+Z 北面锦城大道，-Z 南面锦城湖）
   // 主体高 72 米，中央双曲波浪与玻璃苍穹最高达 112 米
-  const L_EW = 500;
-  const W_NS = 400;
+  const L_EW = 400;
+  const W_NS = 500;
   const BASE_H = 72;
   const CORNER_R = 38;
-  const ATRIUM_L = 230;
-  const ATRIUM_W = 150;
+  const ATRIUM_L = 150;
+  const ATRIUM_W = 230;
 
   const facadeDay = makeGlobalCenterFacadeTexture(false);
   const facadeNight = makeGlobalCenterFacadeTexture(true);
@@ -150,13 +149,14 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
   bodyGeo.rotateX(-Math.PI / 2);
   const body = new THREE.Mesh(bodyGeo, wallMatDay);
   body.userData.isWall = true;
+  body.userData.keepUv = true;
   group.add(body);
 
-  // 2. 标志性海鸥展翅海浪起伏钢构曲面大屋顶 (Undulating Seagull Wave Roof, 65m ~ 103m)
-  const roofCols = 64;
-  const roofRows = 52;
-  const roofW = L_EW + 24; // 524m 悬挑
-  const roofD = W_NS + 24; // 424m 悬挑
+  // 2. 标志性海鸥展翅海浪起伏钢构曲面大屋顶（镂空中央天幕区域以便透过玻璃苍穹俯瞰天堂岛海洋乐园）
+  const roofCols = 52;
+  const roofRows = 64;
+  const roofW = L_EW + 24; // 424m 悬挑
+  const roofD = W_NS + 24; // 524m 悬挑
   const roofGeo = new THREE.PlaneGeometry(roofW, roofD, roofCols, roofRows);
   roofGeo.rotateX(-Math.PI / 2);
 
@@ -164,17 +164,11 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     const nz = z / (roofD / 2); // -1 (South) to 1 (North)
     const nx = x / (roofW / 2); // -1 (East, Tianfu Ave) to 1 (West, Yizhou Ave)
 
-    // 南北向标志性「M 型海浪双波峰」(M-Wave Twin Crests)
-    // 严密契合天府大道立面实景照片：
-    // nz = 0（正中心大门/中庭上空）为下凹的波谷
-    // nz = ±0.52（南北两翼）为高耸飞扬的海鸥展翅双波峰
-    // nz = ±1.0（建筑尽端）平缓回落并在端部角点微翘
-    const waveZ = -Math.cos(nz * Math.PI * 2.0) * 14.5 + Math.pow(Math.abs(nz), 4) * 4.5;
+    const waveZ = -Math.cos(nz * Math.PI * 2.0) * 10.5 + Math.pow(Math.abs(nz), 4) * 3.5;
+    const swoopX = Math.cos(nx * Math.PI * 0.5) * 11.0;
 
-    // 东西向海鸥展翅中央拱顶跨度 (Central Barrel Vault Swoop)
-    const swoopX = Math.cos(nx * Math.PI * 0.5) * 13.0;
-
-    return BASE_H + 4 + waveZ + swoopX;
+    // 保持波谷最低标高高于 72m 女儿墙顶沿
+    return BASE_H + 14.5 + waveZ + swoopX;
   };
 
   const posAttr = roofGeo.attributes.position;
@@ -182,6 +176,20 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     const x = posAttr.getX(i);
     const z = posAttr.getZ(i);
     posAttr.setY(i, getWaveY(x, z));
+  }
+  if (roofGeo.index) {
+    const idx = roofGeo.index.array;
+    const kept: number[] = [];
+    for (let i = 0; i < idx.length; i += 3) {
+      const i0 = idx[i];
+      const i1 = idx[i + 1];
+      const i2 = idx[i + 2];
+      const cx = (posAttr.getX(i0) + posAttr.getX(i1) + posAttr.getX(i2)) / 3;
+      const cz = (posAttr.getZ(i0) + posAttr.getZ(i1) + posAttr.getZ(i2)) / 3;
+      if (Math.abs(cx) < ATRIUM_L / 2 - 4 && Math.abs(cz) < ATRIUM_W / 2 - 4) continue;
+      kept.push(i0, i1, i2);
+    }
+    roofGeo.setIndex(kept);
   }
   roofGeo.computeVertexNormals();
 
@@ -252,16 +260,18 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     side: THREE.DoubleSide,
   });
 
-  const domeGeo = new THREE.CylinderGeometry(75, 75, ATRIUM_L, 36, 16, true, 0, Math.PI);
-  domeGeo.rotateZ(Math.PI / 2);
-  domeGeo.scale(1.0, 0.45, 1.0); // 苍穹跨度 150m，拱高 33.75m，顶点达 112m
+  // 筒拱轴线沿南北（Z）方向延伸 230m，东西跨度 150m（X = ±75m），顶点约 112m
+  const domeGeo = new THREE.CylinderGeometry(75, 75, ATRIUM_W, 36, 16, true, -Math.PI / 2, Math.PI);
+  domeGeo.rotateX(-Math.PI / 2);
+  domeGeo.scale(1.0, 0.45, 1.0);
   domeGeo.translate(0, BASE_H + 6, 0);
 
   const glassVault = new THREE.Mesh(domeGeo, glassVaultMatDay);
   glassVault.userData.isVault = true;
+  glassVault.userData.keepUv = true;
   group.add(glassVault);
 
-  // 玻璃苍穹两端封闭拱山花玻璃 (End Cap Tympanums)
+  // 玻璃苍穹南北两端封闭拱山花玻璃 (End Cap Tympanums at Z = ±ATRIUM_W/2)
   const tympanumShape = new THREE.Shape();
   tympanumShape.moveTo(-75, 0);
   tympanumShape.absarc(0, 0, 75, Math.PI, 0, false);
@@ -271,8 +281,7 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
 
   for (const side of [-1, 1]) {
     const tympanum = new THREE.Mesh(tympanumGeo, glassVaultMatDay);
-    tympanum.rotation.y = side === 1 ? Math.PI / 2 : -Math.PI / 2;
-    tympanum.position.set(side * (ATRIUM_L / 2), BASE_H + 6, 0);
+    tympanum.position.set(0, BASE_H + 6, side * (ATRIUM_W / 2));
     tympanum.userData.isVault = true;
     group.add(tympanum);
   }
@@ -284,21 +293,21 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     metalness: 0.1,
   });
 
-  const ribXs = [-95, -70, -45, -20, 0, 20, 45, 70, 95];
-  ribXs.forEach((rx) => {
-    const ribGeo = new THREE.CylinderGeometry(75.5, 75.5, 1.4, 36, 1, true, 0, Math.PI);
-    ribGeo.rotateZ(Math.PI / 2);
+  const ribZs = [-95, -70, -45, -20, 0, 20, 45, 70, 95];
+  ribZs.forEach((rz) => {
+    const ribGeo = new THREE.CylinderGeometry(75.5, 75.5, 1.4, 36, 1, true, -Math.PI / 2, Math.PI);
+    ribGeo.rotateX(-Math.PI / 2);
     ribGeo.scale(1.0, 0.455, 1.0);
-    ribGeo.translate(rx, BASE_H + 6, 0);
+    ribGeo.translate(0, BASE_H + 6, rz);
     group.add(new THREE.Mesh(ribGeo, steelMat));
   });
 
-  // 顶脊与两侧主要纵向主梁桁架 (Longitudinal Truss Beams)
+  // 顶脊与两侧主要纵向主梁桁架 (Longitudinal Truss Beams along Z)
   for (const angle of [Math.PI * 0.5, Math.PI * 0.25, Math.PI * 0.75]) {
-    const zOffset = Math.cos(angle) * 75.5;
+    const xOffset = Math.cos(angle) * 75.5;
     const yOffset = Math.sin(angle) * 75.5 * 0.455;
-    const purlin = new THREE.Mesh(new THREE.BoxGeometry(ATRIUM_L, 0.9, 0.9), steelMat);
-    purlin.position.set(0, BASE_H + 6 + yOffset, zOffset);
+    const purlin = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, ATRIUM_W), steelMat);
+    purlin.position.set(xOffset, BASE_H + 6 + yOffset, 0);
     group.add(purlin);
   }
 
@@ -308,7 +317,7 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     roughness: 0.1,
     metalness: 0.2,
   });
-  const pool = new THREE.Mesh(new THREE.BoxGeometry(160, 1.5, 75), poolMat);
+  const pool = new THREE.Mesh(new THREE.BoxGeometry(85, 1.5, 145), poolMat);
   pool.position.set(0, 0.8, -15);
   group.add(pool);
 
@@ -317,8 +326,8 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     roughness: 0.95,
     metalness: 0.05,
   });
-  const beach = new THREE.Mesh(new THREE.BoxGeometry(180, 1.2, 35), beachMat);
-  beach.position.set(0, 0.6, 32);
+  const beach = new THREE.Mesh(new THREE.BoxGeometry(105, 1.2, 42), beachMat);
+  beach.position.set(0, 0.6, 72);
   group.add(beach);
 
   // 室内巨型环幕 LED 屏幕 (Giant Indoor Ocean LED Screen)
@@ -333,8 +342,8 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     emissiveIntensity: 1.2,
     roughness: 0.25,
   });
-  const screen = new THREE.Mesh(new THREE.BoxGeometry(150, 20, 2), screenMatDay);
-  screen.position.set(0, 10, -50);
+  const screen = new THREE.Mesh(new THREE.BoxGeometry(100, 20, 2), screenMatDay);
+  screen.position.set(0, 10, -96);
   screen.userData.isScreen = true;
   group.add(screen);
 
@@ -352,10 +361,9 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
     }
   }
 
-  // 6. 东面天府大道主入口：标志性放射状巨型拱形玻璃门厅 (Tianfu Avenue Grand Sunburst Arch Canopy)
-  // 位于 X = -250 (东侧面向天府大道与锦城广场)，正好对应 M 型波浪的中央谷底，拱高 28m，跨度 80m
+  // 6. 东面天府大道主入口：位于 X = -200 (面向天府大道)，仅绕 Z 轴旋 90° 使弧檐沿 Z 展布对齐拱肋
   const archCanopyGroup = new THREE.Group();
-  archCanopyGroup.position.set(-250, 0, 0);
+  archCanopyGroup.position.set(-ox, 0, 0);
 
   const archSpanR = 40; // 半径 40m，跨度 80m
   const archDepth = 35; // 向天府大道悬挑 35m
@@ -363,7 +371,6 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
   // 拱顶透光玻璃穹顶
   const archShellGeo = new THREE.CylinderGeometry(archSpanR, archSpanR, archDepth, 32, 8, true, 0, Math.PI);
   archShellGeo.rotateZ(Math.PI / 2);
-  archShellGeo.rotateY(Math.PI / 2);
   archShellGeo.scale(1.0, 0.72, 1.0); // 拱高约 28.8m
   archShellGeo.translate(-archDepth / 2, 0, 0);
 
@@ -417,22 +424,22 @@ export function createChengduGlobalCenter(_kit: SurfaceKit): THREE.Group {
 
   // 东侧天府大道迎宾前广场微地景与喷泉水系 (Tianfu Avenue Arrival Plaza)
   const plazaMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
-  const eastPlaza = new THREE.Mesh(new THREE.BoxGeometry(45, 0.8, 260), plazaMat);
-  eastPlaza.position.set(-272, 0.4, 0);
+  const eastPlaza = new THREE.Mesh(new THREE.BoxGeometry(45, 0.8, 320), plazaMat);
+  eastPlaza.position.set(-222, 0.4, 0);
   group.add(eastPlaza);
 
   const eastFountainMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.15, metalness: 0.6 });
-  for (const fz of [-65, 0, 65]) {
+  for (const fz of [-80, 0, 80]) {
     const fountain = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 1.2, 24), eastFountainMat);
-    fountain.position.set(-272, 0.9, fz);
+    fountain.position.set(-222, 0.9, fz);
     group.add(fountain);
   }
 
-  // 7. 南侧锦城湖/绕城高速迎宾门厅 (South Lake & Highway Portal)
-  // 位于 Z = -200 (面向锦城湖)，半圆弧形落地玻璃大堂
+  // 7. 南侧锦城湖迎宾门厅：位于 Z = -250 并绕 Y 转 180° 向南外挑伸出
   const southPortalGeo = new THREE.CylinderGeometry(42, 42, 22, 24, 1, true, -Math.PI * 0.5, Math.PI);
   const southPortal = new THREE.Mesh(southPortalGeo, eastCanopyMatDay);
-  southPortal.position.set(0, 11, -200);
+  southPortal.position.set(0, 11, -oz);
+  southPortal.rotation.y = Math.PI;
   southPortal.userData.isCanopy = true;
   group.add(southPortal);
 

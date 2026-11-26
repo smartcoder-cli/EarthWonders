@@ -49,9 +49,9 @@ export function createChichenItza(kit: SurfaceKit) {
   }
   cyl(root, dark, 0.45, 0.55, 5.2, -1.6, y + 0.3, -6.4, 8);
   cyl(root, dark, 0.45, 0.55, 5.2, 1.6, y + 0.3, -6.4, 8);
-  box(root, comb, 15.8, 4.2, 2.0, 0, y + 6.4, 0);
+  box(root, comb, 13.4, 3.4, 1.8, 0, y + 6.4, 0);
   for (let i = 0; i < 7; i++) {
-    box(root, comb, 1.15, 3.2, 1.4, -6 + i * 2, y + 10.4, 0);
+    box(root, comb, 1.1, 2.4, 1.2, -5.4 + i * 1.8, y + 9.8, 0);
   }
 
   for (const dir of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
@@ -61,8 +61,11 @@ export function createChichenItza(kit: SurfaceKit) {
     }
     box(stair, accent, 1.15, 24, 1.15, -4.7, 0, -15);
     box(stair, accent, 1.15, 24, 1.15, 4.7, 0, -15);
-    serpentHead(stair, dark, -4.6, -30.2);
-    serpentHead(stair, dark, 4.6, -30.2);
+    if (dir === 0) {
+      // 羽蛇神头仅设于北侧主阶梯底端，且吻部朝北（-Z）向外
+      serpentHead(stair, dark, -4.6, -30.2, Math.PI);
+      serpentHead(stair, dark, 4.6, -30.2, Math.PI);
+    }
     stair.rotation.y = dir;
     root.add(stair);
   }
@@ -78,7 +81,8 @@ export function createChichenItza(kit: SurfaceKit) {
   const ringR = ringL.clone();
   ringR.position.x = 16.2;
   court.add(ringL, ringR);
-  court.position.set(-118, 0, 8);
+  // 大球场位于库库尔坎西北方（modelHeading=198 下 -X 为西偏北，-Z 为北偏东）
+  court.position.set(-118, 0, -88);
   root.add(court);
 
   const caracol = new THREE.Group();

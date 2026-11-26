@@ -504,15 +504,15 @@ export function createHZMB(_kit: SurfaceKit): THREE.Group {
   plazaLawn.userData.skipLines = true;
   group.add(plazaLawn);
 
-  // 8. 南侧海事综合救援巡航专用码头 (South Maintenance & Marine Rescue Wharf)
+  // 8. 南侧海事综合救援巡航专用码头 (modelHeading=-75 下 +X 为南侧)
   const wharfGeo = new THREE.BoxGeometry(26, 3.8, 48);
   const wharf = new THREE.Mesh(wharfGeo, islandConcreteMat);
-  wharf.position.set(-98, 3.8, 10);
+  wharf.position.set(98, 3.8, 10);
   wharf.userData.skipLines = true;
   group.add(wharf);
 
   // 码头下部支撑桩基 (Marine Concrete Pilings)
-  for (let px = -90; px >= -106; px -= 8) {
+  for (let px = 90; px <= 106; px += 8) {
     for (let pz = -10; pz <= 30; pz += 12) {
       const piling = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 4.2, 12), islandConcreteMat);
       piling.position.set(px, 2.1, pz);
@@ -525,9 +525,9 @@ export function createHZMB(_kit: SurfaceKit): THREE.Group {
     const boatZ = -2 + b * 20;
     const boatHullGeo = new THREE.BoxGeometry(5.2, 2.2, 14);
     const boatHull = new THREE.Mesh(boatHullGeo, bridgeMat);
-    boatHull.position.set(-115, 1.8, boatZ);
+    boatHull.position.set(115, 1.8, boatZ);
     const boatCabin = new THREE.Mesh(new THREE.BoxGeometry(4.0, 1.8, 7.0), glassDayMat);
-    boatCabin.position.set(-115, 3.4, boatZ - 1.0);
+    boatCabin.position.set(115, 3.4, boatZ - 1.0);
     group.add(boatHull, boatCabin);
   }
 

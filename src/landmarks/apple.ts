@@ -164,12 +164,14 @@ export function createApplePark(_kit: SurfaceKit): THREE.Group {
   const outerWall = new THREE.Mesh(outerCylGeo, wallMatDay);
   outerWall.position.y = BUILDING_H / 2;
   outerWall.userData.isWall = true;
+  outerWall.userData.keepUv = true;
   group.add(outerWall);
 
   const innerCylGeo = new THREE.CylinderGeometry(INNER_R, INNER_R, BUILDING_H, 128, 1, true);
   const innerWall = new THREE.Mesh(innerCylGeo, wallMatDay);
   innerWall.position.y = BUILDING_H / 2;
   innerWall.userData.isWall = true;
+  innerWall.userData.keepUv = true;
   group.add(innerWall);
 
   // 2. 每层的纯白悬挑遮阳板与檐口 (Louvers & Canopies)
@@ -193,6 +195,7 @@ export function createApplePark(_kit: SurfaceKit): THREE.Group {
   roofGeo.rotateX(-Math.PI / 2);
   const roof = new THREE.Mesh(roofGeo, solarRoofMat);
   roof.position.y = BUILDING_H + 0.05;
+  roof.userData.keepUv = true;
   group.add(roof);
 
   // 4. 建筑环形混凝土地基座
@@ -305,9 +308,9 @@ export function createApplePark(_kit: SurfaceKit): THREE.Group {
     group.add(tree);
   }
 
-  // 6. 史蒂夫·乔布斯剧院 (Steve Jobs Theater)
+  // 6. 史蒂夫·乔布斯剧院 (实景位于主环东南方向：Tellux heading=0 下 -X 为东，-Z 为南)
   const theaterGroup = new THREE.Group();
-  theaterGroup.position.set(225, 0, 175);
+  theaterGroup.position.set(-106, 0, -377);
 
   const moundGeo = new THREE.CylinderGeometry(38, 48, 3.8, 36);
   const mound = new THREE.Mesh(moundGeo, lawnMat);
@@ -351,16 +354,16 @@ export function createApplePark(_kit: SurfaceKit): THREE.Group {
   roofDisc.position.y = 3.8 + THEATER_H + 0.6;
   theaterGroup.add(roofDisc);
 
-  const coreGeo = new THREE.CylinderGeometry(6, 6, THEATER_H, 24);
-  const coreMat = new THREE.MeshStandardMaterial({
-    color: 0xf8fafc,
-    roughness: 0.35,
-    metalness: 0.15,
+  // 无柱大堂：仅设通往下沉礼堂的地面石材楼梯矮护栏（高 1.0m，屋顶全无中柱支撑）
+  const stairRingGeo = new THREE.CylinderGeometry(6.5, 6.5, 1.0, 24, 1, true);
+  const stairRingMat = new THREE.MeshStandardMaterial({
+    color: 0xf1f5f9,
+    roughness: 0.45,
+    side: THREE.DoubleSide,
   });
-  const core = new THREE.Mesh(coreGeo, coreMat);
-  core.position.y = 3.8 + THEATER_H / 2;
-  core.userData.isTheaterCore = true;
-  theaterGroup.add(core);
+  const stairRing = new THREE.Mesh(stairRingGeo, stairRingMat);
+  stairRing.position.y = 3.8 + 0.5;
+  theaterGroup.add(stairRing);
 
   group.add(theaterGroup);
 

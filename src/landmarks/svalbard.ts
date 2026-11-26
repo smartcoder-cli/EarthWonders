@@ -94,15 +94,14 @@ export function createSvalbardSeedVault(_kit: SurfaceKit): THREE.Group {
     metalness: 0.85,
   });
 
-  // 1. 标志性破雪而出梯形混凝土入口巨石棱柱 (Platåberget Monolithic Wedge Portal)
-  // 尺寸：宽 6.8m (X: -3.4 到 +3.4)，进深 36m (Z: -21 到 +15)，前高 15.5m，后高 6.0m
-  const portalW = 6.8;
-  const halfW = portalW / 2; // 3.4
+  // 1. 标志性破雪而出梯形混凝土入口棱柱（按实景比例校准：宽 4.6m，前高 10.5m）
+  const portalW = 4.6;
+  const halfW = portalW / 2; // 2.3
   const frontZ = 15.0;
   const frontTopZ = 13.8;
   const backZ = -21.0;
-  const frontH = 15.5;
-  const rearH = 6.0;
+  const frontH = 10.5;
+  const rearH = 5.0;
   const lengthZ = frontTopZ - backZ; // 34.8
   const slopeAngle = Math.atan2(frontH - rearH, lengthZ); // 倾斜角
   const slopeLen = Math.hypot(lengthZ, frontH - rearH);
@@ -167,7 +166,7 @@ export function createSvalbardSeedVault(_kit: SurfaceKit): THREE.Group {
   group.add(artRoof);
 
   // 前立面上半部艺术棱镜立面 (Upper Facade Prism Cladding, Y from 5.6 to frontH)
-  const alcoveH = 5.6;
+  const alcoveH = 4.5;
   const facadeArtH = frontH - alcoveH;
   const facadeArtGeo = new THREE.BoxGeometry(portalW - 0.4, facadeArtH, 0.35);
   const frontTiltAngle = Math.atan2(frontZ - frontTopZ, frontH);
@@ -260,9 +259,9 @@ export function createSvalbardSeedVault(_kit: SurfaceKit): THREE.Group {
   // 4. 柏拉图山永久冻土山体斜坡与北极雪原地貌 (Platåberget Mountain Slope & Arctic Snow Mantle)
   // 宽 130m，纵深 140m (Z: +45 到 -95)，真实复现末日方舟嵌入北极极地冻土山脉破雪而出的雄伟全貌
   const mountainWidth = 130;
-  const mountainDepth = 140;
+  const mountainDepth = 155;
   const segsX = 48;
-  const segsZ = 44;
+  const segsZ = 48;
 
   function createMountainSlope() {
     const geo = new THREE.PlaneGeometry(mountainWidth, mountainDepth, segsX, segsZ);
@@ -273,14 +272,13 @@ export function createSvalbardSeedVault(_kit: SurfaceKit): THREE.Group {
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
       const x = v.x;
-      // PlaneGeometry 原点在中心，Z 范围 -70 到 +70
-      // 沿 Z 平移，使实际世界坐标 worldZ 覆盖 +45 (引道前端雪原) 到 -95 (柏拉图山平顶台地)
-      const worldZ = v.z - 25;
+      // 沿 Z 平移覆盖 +59 (完整托起 +57m 引道) 到 -96 (柏拉图山平顶台地)
+      const worldZ = v.z - 18.5;
 
       const isBoundary =
         Math.abs(x) > mountainWidth / 2 - 0.2 ||
-        worldZ > 44.5 ||
-        worldZ < -94.5;
+        worldZ > 58.5 ||
+        worldZ < -95.5;
 
       if (isBoundary) {
         v.y = -2.0;
@@ -369,7 +367,6 @@ export function createSvalbardSeedVault(_kit: SurfaceKit): THREE.Group {
   const causeway = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.6, 42), roadMat);
   causeway.position.set(0, 0.3, frontZ + 21);
   causeway.userData.skipLines = true;
-  group.add(causeway);
   group.add(causeway);
 
   // 两侧不锈钢安全护柱与警示指示灯 (Security Bollards with Top LED Rings)

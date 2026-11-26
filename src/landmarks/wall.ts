@@ -47,7 +47,7 @@ function addWatchTower(
     tower.add(face);
   }
   box(tower, brick, 12.6, 0.4, 9.8, 0, 13.7, 0);
-  squareParapet(tower, brickDark, 12.6, 14.1, 0.7, 0.9, 1.45);
+  squareParapet(tower, brickDark, 12.6, 14.1, 0.7, 0.9, 1.45, 9.8);
   if (withHut) {
     hardGableHut(tower, brick, brickDark, tile, 5.6, 4.2, 14.1, 2.9);
   }
@@ -196,11 +196,15 @@ export function createGreatWall(kit: SurfaceKit) {
     inner.rotation.set(pitch, yaw, 0, "YXZ");
     root.add(inner);
 
-    for (const side of [-2.55, 2.55]) {
+    // 仅外侧（+X 局部外向塞外一侧）设 1.7m 高垛口，内侧保留低矮宇墙
+    for (const alongFrac of [-0.28, 0.28]) {
+      const mx = (p0.x + p1.x) / 2 + dx * alongFrac;
+      const my = (p0.y + p1.y) / 2 + dy * alongFrac;
+      const mz = (p0.z + p1.z) / 2 + dz * alongFrac;
       dummy.position.set(
-        (p0.x + p1.x) / 2 + Math.cos(yaw) * side,
-        (p0.y + p1.y) / 2 + wallH + 0.95,
-        (p0.z + p1.z) / 2 - Math.sin(yaw) * side,
+        mx + Math.cos(yaw) * 2.55,
+        my + wallH + 0.95,
+        mz - Math.sin(yaw) * 2.55,
       );
       dummy.rotation.set(pitch, yaw, 0, "YXZ");
       dummy.updateMatrix();

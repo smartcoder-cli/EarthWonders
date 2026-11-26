@@ -126,9 +126,12 @@ export function createBurjKhalifa(_kit: SurfaceKit): THREE.Group {
     const yBottom = 8 + t * tierH;
     for (let w = 0; w < 3; w++) {
       const angle = wingAngles[w];
-      // 严密契合沙漠之花灵感的 26 级顺时针螺旋退台收分
+      // 严密契合沙漠之花灵感的 26 级顺时针螺旋退台收分，保留经典纤细阶梯轮廓
       const setbackStep = Math.floor((t * 3 + w) / 2);
-      const wingLen = Math.max(76 - setbackStep * 5.2, 16);
+      const wingLen =
+        setbackStep <= 11
+          ? 76 - setbackStep * 5.2
+          : Math.max(18.8 - (setbackStep - 11) * 0.9, 6.5);
       const wingWidth = Math.max(26 - t * 0.95, 9.5);
       const dirX = Math.cos(angle);
       const dirZ = Math.sin(angle);
@@ -163,19 +166,19 @@ export function createBurjKhalifa(_kit: SurfaceKit): THREE.Group {
     }
   }
 
-  // 3. Spire & Pinnacle (585m to 828m)
-  const spireLower = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 13.5, 115, 6), spireMat);
-  spireLower.position.y = 585 + 115 / 2 + 8;
+  // 3. Spire & Pinnacle (核心筒 593m 接续至精确 828m 塔尖)
+  const spireLower = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 13.5, 107, 6), spireMat);
+  spireLower.position.y = 593 + 107 / 2;
   spireLower.castShadow = true;
   group.add(spireLower);
 
   const pinnacle = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 5.5, 128, 8), spireMat);
-  pinnacle.position.y = 700 + 128 / 2 + 8;
+  pinnacle.position.y = 700 + 128 / 2;
   pinnacle.castShadow = true;
   group.add(pinnacle);
 
   const beacon = new THREE.Mesh(new THREE.SphereGeometry(2.5, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff1744 }));
-  beacon.position.set(0, 828, 0);
+  beacon.position.set(0, 829, 0);
   group.add(beacon);
 
   group.userData.hasInspection = true;

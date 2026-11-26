@@ -261,11 +261,17 @@ export function squareBattlements(
   count = 5,
   merlon = 1.08,
   height = 1.55,
+  sizeZ = size,
 ) {
-  const half = size / 2 - merlon * 0.28;
-  const span = size - merlon;
+  const halfX = size / 2 - merlon * 0.28;
+  const halfZ = sizeZ / 2 - merlon * 0.28;
+  const spanX = size - merlon;
+  const spanZ = sizeZ - merlon;
   for (let side = 0; side < 4; side++) {
     const yaw = (side * Math.PI) / 2;
+    const isXEdge = side % 2 === 0;
+    const half = isXEdge ? halfX : halfZ;
+    const span = isXEdge ? spanZ : spanX;
     for (let i = 0; i < count; i++) {
       const along = (i / Math.max(count - 1, 1) - 0.5) * span;
       const x = Math.cos(yaw) * half - Math.sin(yaw) * along;
@@ -283,13 +289,14 @@ export function squareParapet(
   thick = 0.72,
   wallH = 0.95,
   merlonH = 1.5,
+  sizeZ = size,
 ) {
-  const inner = size - thick;
-  box(parent, material, size, wallH, thick, 0, y, -(size / 2) + thick / 2);
-  box(parent, material, size, wallH, thick, 0, y, size / 2 - thick / 2);
-  box(parent, material, thick, wallH, inner, -(size / 2) + thick / 2, y, 0);
-  box(parent, material, thick, wallH, inner, size / 2 - thick / 2, y, 0);
-  squareBattlements(parent, material, size, y + wallH, 5, 1.08, merlonH);
+  const innerZ = sizeZ - thick * 2;
+  box(parent, material, size, wallH, thick, 0, y, -(sizeZ / 2) + thick / 2);
+  box(parent, material, size, wallH, thick, 0, y, sizeZ / 2 - thick / 2);
+  box(parent, material, thick, wallH, innerZ, -(size / 2) + thick / 2, y, 0);
+  box(parent, material, thick, wallH, innerZ, size / 2 - thick / 2, y, 0);
+  squareBattlements(parent, material, size, y + wallH, 5, 1.08, merlonH, sizeZ);
 }
 
 export function hardGableHut(
@@ -332,6 +339,7 @@ export function incaHouse(
   x: number,
   z: number,
   rotY = 0,
+  y = 0,
 ) {
   const g = new THREE.Group();
   box(g, wall, w, h, d, 0, 0, 0);
@@ -343,7 +351,7 @@ export function incaHouse(
   const roofMesh = new THREE.Mesh(gableRoofGeo(w + 1.2, d + 0.8, h * 0.72), roof);
   roofMesh.position.y = h;
   g.add(roofMesh);
-  g.position.set(x, 0, z);
+  g.position.set(x, y, z);
   g.rotation.y = rotY;
   parent.add(g);
 }
@@ -476,7 +484,7 @@ export function coursedPyramid(
   return group;
 }
 
-export function serpentHead(parent: THREE.Object3D, material: Mat, x: number, z: number) {
+export function serpentHead(parent: THREE.Object3D, material: Mat, x: number, z: number, yaw = 0) {
   const head = new THREE.Group();
   box(head, material, 2.5, 2.1, 5.6, 0, 0.15, 0);
   box(head, material, 2.1, 1.15, 3.6, 0, 2.15, 0.35);
@@ -492,6 +500,7 @@ export function serpentHead(parent: THREE.Object3D, material: Mat, x: number, z:
   eyeR.position.x = 0.82;
   head.add(eyeL, eyeR);
   head.position.set(x, 0, z);
+  head.rotation.y = yaw;
   parent.add(head);
 }
 

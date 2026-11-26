@@ -6,24 +6,16 @@ export function createFastTelescope(kit: SurfaceKit): THREE.Group {
   group.name = "FAST";
 
   const dishRadius = 250;
-  const rimHeight = 90;
-  const dishBottom = 20; // 凹面反射面最低中心点 (高程20m，边缘圈梁高程90m，净下凹深度70m)
+  const rimHeight = 95;
+  const dishBottom = 15; // 凹面反射面中心高程 15m，圈梁高程 95m（净凹深 80m）
 
-  // 1. Karst Sinkhole Rim & Surrounding Slopes
-  const craterGeo = new THREE.CylinderGeometry(dishRadius + 140, dishRadius + 4, 110, 48, 4, true);
-  const craterMat = mapped(kit.grass, { color: 0x3d5c36, roughness: 0.92, metersPerTile: 20 });
-  const crater = new THREE.Mesh(craterGeo, craterMat);
-  crater.position.set(0, 55, 0);
-  crater.receiveShadow = true;
-  group.add(crater);
-
-  // 坑底基座
+  // 1. 圈梁底盘（收窄至与 250m 口径圈梁柱脚对齐，避免在真实喀斯特山体外部产生多余的“大锅底”）
   const basinFloor = new THREE.Mesh(
-    new THREE.CircleGeometry(dishRadius + 8, 36),
-    mapped(kit.machu, { color: 0x334433, roughness: 0.95, metersPerTile: 12 }),
+    new THREE.CircleGeometry(dishRadius + 2, 48),
+    mapped(kit.machu, { color: 0x2d3b2e, roughness: 0.95, metersPerTile: 12 }),
   );
   basinFloor.rotation.x = -Math.PI / 2;
-  basinFloor.position.set(0, 5, 0);
+  basinFloor.position.set(0, 1.0, 0);
   basinFloor.receiveShadow = true;
   group.add(basinFloor);
 
@@ -106,10 +98,10 @@ export function createFastTelescope(kit: SurfaceKit): THREE.Group {
     group.add(pier);
   }
 
-  // 4. Six Feed-Cabin Support Towers (6 馈源支撑塔)
+  // 4. Six Feed-Cabin Support Towers (6 馈源支撑塔：基础承台落地至 y=0，上部塔身至 y=205m)
   const towerCount = 6;
   const towerRadius = dishRadius + 22;
-  const towerH = 115;
+  const towerH = 110;
   const towerMat = new THREE.MeshStandardMaterial({
     color: 0xaec0cf,
     metalness: 0.78,
@@ -123,6 +115,12 @@ export function createFastTelescope(kit: SurfaceKit): THREE.Group {
     const tx = Math.cos(a) * towerRadius;
     const tz = Math.sin(a) * towerRadius;
     const ty = rimHeight;
+
+    const legBase = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 11.5, ty, 4), pierMat);
+    legBase.rotation.y = a;
+    legBase.position.set(tx, ty / 2, tz);
+    legBase.castShadow = true;
+    group.add(legBase);
 
     const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 9.5, towerH, 4), towerMat);
     tower.rotation.y = a;
@@ -143,7 +141,7 @@ export function createFastTelescope(kit: SurfaceKit): THREE.Group {
   }
 
   // 5. Center Suspended Feed Cabin (馈源舱)
-  const cabinPos = new THREE.Vector3(0, rimHeight + 52, 0);
+  const cabinPos = new THREE.Vector3(0, rimHeight + 50, 0);
   const cabinMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     metalness: 0.85,

@@ -59,10 +59,10 @@ export function createStatueOfLiberty(kit: SurfaceKit) {
   const islandGround = cyl(root, walkMat, 116, 118, 1.5, 0, 0, 0, 32);
   islandGround.receiveShadow = true;
 
-  // 东侧渡轮码头栈桥 (Ferry Dock Pier projecting east into the bay)
-  box(root, pierMat, 14.0, 1.6, 38.0, 0, 0.4, 130.0);
-  box(root, pedestalTrim, 16.0, 0.8, 18.0, 0, 1.6, 142.0); // 码头雨棚候船亭
-  for (const bz of [118, 128, 138, 146]) {
+  // 西北侧（新泽西湾侧 -Z）渡轮码头栈桥，面向雕像背后广场而非正面航道
+  box(root, pierMat, 14.0, 1.6, 38.0, 0, 0.4, -130.0);
+  box(root, pedestalTrim, 16.0, 0.8, 18.0, 0, 1.6, -142.0); // 码头雨棚候船亭
+  for (const bz of [-118, -128, -138, -146]) {
     cyl(root, bronzePlinth, 0.4, 0.4, 2.4, -7.5, 0.8, bz, 8); // 缆桩
     cyl(root, bronzePlinth, 0.4, 0.4, 2.4, +7.5, 0.8, bz, 8);
   }
@@ -157,10 +157,10 @@ export function createStatueOfLiberty(kit: SurfaceKit) {
     }
 
     const pedimentGeo = new THREE.ConeGeometry(5.2, 2.0, 3);
-    pedimentGeo.rotateZ(Math.PI);
     pedimentGeo.rotateY(Math.PI / 6);
     const pediment = new THREE.Mesh(pedimentGeo, pedestalTrim);
-    pediment.position.set(0, 16.2, 12.0);
+    pediment.scale.set(1, 1, 0.25);
+    pediment.position.set(0, 16.5, 12.2);
     portalGrp.add(pediment);
     portalGrp.rotation.y = rot;
     root.add(portalGrp);
@@ -310,39 +310,39 @@ export function createStatueOfLiberty(kit: SurfaceKit) {
     statueGroup.add(ray);
   }
 
-  // G. 左手紧抱《独立宣言》法典石板 (The Tablet of Law, y = 67.5 ~ 76.5m)
-  const leftUpperArm = cyl(statueGroup, copperDay, 0.8, 0.9, 4.2, -2.4, 71.8, 0.3, 8);
-  leftUpperArm.rotation.z = 0.45;
-  const leftForeArm = cyl(statueGroup, copperDay, 0.7, 0.8, 3.8, -2.5, 68.6, 1.4, 8);
+  // G. 解剖学左手（面朝 +Z 时位于 +X 一侧）紧抱《独立宣言》法典石板 (y = 67.5 ~ 76.5m)
+  const leftUpperArm = cyl(statueGroup, copperDay, 0.8, 0.9, 4.2, 2.4, 71.8, 0.3, 8);
+  leftUpperArm.rotation.z = -0.45;
+  const leftForeArm = cyl(statueGroup, copperDay, 0.7, 0.8, 3.8, 2.5, 68.6, 1.4, 8);
   leftForeArm.rotation.x = -0.6;
-  leftForeArm.rotation.z = -0.3;
+  leftForeArm.rotation.z = 0.3;
 
   const tablet = new THREE.Mesh(new THREE.BoxGeometry(1.9, 4.2, 0.55), copperHighlight);
-  tablet.position.set(-2.6, 70.8, 1.9);
-  tablet.rotation.set(0.2, 0.4, 0.15);
+  tablet.position.set(2.6, 70.8, 1.9);
+  tablet.rotation.set(0.2, -0.4, -0.15);
   statueGroup.add(tablet);
   const tabletFace = new THREE.Mesh(new THREE.BoxGeometry(1.6, 3.8, 0.08), copperDark);
-  tabletFace.position.set(-2.55, 70.8, 2.2);
-  tabletFace.rotation.set(0.2, 0.4, 0.15);
+  tabletFace.position.set(2.55, 70.8, 2.2);
+  tabletFace.rotation.set(0.2, -0.4, -0.15);
   statueGroup.add(tabletFace);
-  box(statueGroup, copperDay, 0.7, 1.2, 0.45, -1.9, 70.8, 2.2);
+  box(statueGroup, copperDay, 0.7, 1.2, 0.45, 1.9, 70.8, 2.2);
 
-  // H. 右臂高擎与镀金火炬 (Raised Right Arm & The Torch, y = 74.0 ~ 93.0m)
-  const rightUpperArm = cyl(statueGroup, copperDay, 0.85, 0.95, 5.2, 2.2, 74.5, 0.2, 8);
-  rightUpperArm.rotation.z = -0.15;
+  // H. 解剖学右臂（面朝 +Z 时位于 -X 一侧）高擎 24K 镀金火炬 (y = 74.0 ~ 93.0m)
+  const rightUpperArm = cyl(statueGroup, copperDay, 0.85, 0.95, 5.2, -2.2, 74.5, 0.2, 8);
+  rightUpperArm.rotation.z = 0.15;
   const sleeve = new THREE.Mesh(new THREE.ConeGeometry(1.6, 3.2, 8, 1, true), copperDark);
   sleeve.rotation.x = Math.PI;
-  sleeve.position.set(2.4, 75.8, 0.2);
+  sleeve.position.set(-2.4, 75.8, 0.2);
   statueGroup.add(sleeve);
 
-  cyl(statueGroup, copperDay, 0.65, 0.78, 5.8, 2.5, 79.5, 0.3, 8);
+  cyl(statueGroup, copperDay, 0.65, 0.78, 5.8, -2.5, 79.5, 0.3, 8);
   const hand = new THREE.Mesh(new THREE.SphereGeometry(0.75, 8, 8), copperDay);
-  hand.position.set(2.5, 85.0, 0.3);
+  hand.position.set(-2.5, 85.0, 0.3);
   statueGroup.add(hand);
 
-  cyl(statueGroup, copperDark, 0.55, 0.4, 2.8, 2.5, 85.4, 0.3, 8);
+  cyl(statueGroup, copperDark, 0.55, 0.4, 2.8, -2.5, 85.4, 0.3, 8);
   const torchBalcony = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.9, 0.9, 12), copperHighlight);
-  torchBalcony.position.set(2.5, 87.2, 0.3);
+  torchBalcony.position.set(-2.5, 87.2, 0.3);
   statueGroup.add(torchBalcony);
 
   // 纯金火焰雕塑 (24K Gold Leaf Flame, y = 87.5 ~ 93.0m)
@@ -350,9 +350,9 @@ export function createStatueOfLiberty(kit: SurfaceKit) {
     new THREE.ConeGeometry(1.1, 4.8, 8),
     torchGoldDay
   );
-  flameMesh.position.set(2.5, 87.6 + 4.8 / 2, 0.3);
-  flameMesh.rotation.y = 0.4;
-  flameMesh.rotation.z = 0.08;
+  flameMesh.position.set(-2.5, 87.6 + 4.8 / 2, 0.3);
+  flameMesh.rotation.y = -0.4;
+  flameMesh.rotation.z = -0.08;
   flameMesh.userData.isTorchFlame = true;
   statueGroup.add(flameMesh);
 
@@ -361,13 +361,13 @@ export function createStatueOfLiberty(kit: SurfaceKit) {
     new THREE.SphereGeometry(0.7, 8, 8),
     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
   );
-  flameCore.position.set(2.5, 89.6, 0.3);
+  flameCore.position.set(-2.5, 89.6, 0.3);
   flameCore.visible = false;
   statueGroup.add(flameCore);
 
   // 火焰点光源 (夜间照亮王冠与雕像)
   const torchLight = new THREE.PointLight(0xffb833, 0.8, 65, 1.2);
-  torchLight.position.set(2.5, 90.5, 0.3);
+  torchLight.position.set(-2.5, 90.5, 0.3);
   torchLight.userData.isTorchLight = true;
   statueGroup.add(torchLight);
 

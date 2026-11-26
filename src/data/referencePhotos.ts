@@ -32,10 +32,10 @@ export const REFERENCE_PHOTOS: Record<string, ReferencePhoto> = {
   },
   petra: {
     image: "/photos/petra.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/6/62/Al_Khazneh_Petra_edit_2.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Al_Khazneh_Petra_edit_2.jpg",
-    credit: "照片：Graham Racher, MrPanyGoff / Wikimedia Commons · CC BY-SA 2.0",
-    alt: "佩特拉卡兹尼神殿宝库立面实景照片",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/3/3f/Al_Khaznah_-_PETRA_%2834417013340%29.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Al_Khaznah_-_PETRA_(34417013340).jpg",
+    credit: "照片：ali keke / Wikimedia Commons · Public domain",
+    alt: "佩特拉玫瑰色砂岩峡谷与卡兹尼神殿全景实景照片",
   },
   colosseum: {
     image: "/photos/colosseum.jpg",
@@ -88,10 +88,10 @@ export const REFERENCE_PHOTOS: Record<string, ReferencePhoto> = {
   },
   burj: {
     image: "/photos/burj.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/a/a6/Burj_Khalifa_%2816260269606%29.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Burj_Khalifa_(16260269606).jpg",
-    credit: "照片：Donaldytong / Wikimedia Commons · CC BY-SA 3.0",
-    alt: "迪拜哈利法塔全貌实景照片",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/8/8f/Dubai%2C_United_Arab_Emirates_%28Unsplash_suv4vuJsH6g%29.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Dubai,_United_Arab_Emirates_(Unsplash_suv4vuJsH6g).jpg",
+    credit: "照片：Caleb Whiting / Wikimedia Commons · CC0",
+    alt: "迪拜哈利法塔与迪拜市中心及人工湖全景实景照片",
   },
   apple: {
     image: "/photos/apple.jpg",
@@ -137,10 +137,10 @@ export const REFERENCE_PHOTOS: Record<string, ReferencePhoto> = {
   },
   liberty: {
     image: "/photos/liberty.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Statue_of_Liberty_7.jpg/960px-Statue_of_Liberty_7.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Statue_of_Liberty_7.jpg",
-    credit: "照片：William Warby / Wikimedia Commons · CC BY 2.0",
-    alt: "纽约自由岛自由女神像正面实景照片",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Liberty_Island_photo_Don_Ramey_Logan.jpg",
+    page: "https://commons.wikimedia.org/wiki/File:Liberty_Island_photo_Don_Ramey_Logan.jpg",
+    credit: "照片：Don Ramey Logan / Wikimedia Commons · CC BY 4.0",
+    alt: "纽约自由岛与伍德堡星形要塞及自由女神像航拍全景实景照片",
   },
   defense: {
     image: "/photos/defense.jpg",
@@ -165,10 +165,10 @@ export const REFERENCE_PHOTOS: Record<string, ReferencePhoto> = {
   },
   futuremuseum: {
     image: "/photos/futuremuseum.jpg",
-    fallbackImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Museum_of_the_Future.jpg/1280px-Museum_of_the_Future.jpg",
-    page: "https://commons.wikimedia.org/wiki/File:Museum_of_the_Future.jpg",
-    credit: "照片：Александр Сигачёв / Wikimedia Commons · CC BY-SA 4.0",
-    alt: "迪拜未来博物馆流线型环形建筑实景照片",
+    fallbackImage: "https://upload.wikimedia.org/wikipedia/en/8/8c/Museum_of_the_future%2C_Dubai.jpeg",
+    page: "https://en.wikipedia.org/wiki/File:Museum_of_the_future,_Dubai.jpeg",
+    credit: "照片：Lyonerov / Wikipedia · CC BY-SA 4.0",
+    alt: "迪拜未来博物馆椭圆环体、阿拉伯书法立面与绿丘台地全景实景照片",
   },
   sagrada: {
     image: "/photos/sagrada.jpg",

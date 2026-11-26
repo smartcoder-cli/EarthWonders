@@ -284,6 +284,7 @@ function createEavesRoof(
 
   const roofMesh = new THREE.Mesh(geo, tileMat);
   roofMesh.userData.isTile = true;
+  roofMesh.userData.keepUv = true;
   g.add(roofMesh);
 
   // 四周纯白漆喰封檐板 (白漆喰総塗籠)
@@ -661,7 +662,7 @@ export function createHimeji(_kit: SurfaceKit): THREE.Group {
 
   function regP(m: THREE.Mesh) { swappablePlaster.push(m); return m; }
   function regS(m: THREE.Mesh) { swappableStone.push(m); return m; }
-  function regW(m: THREE.Mesh) { swappableWindow.push(m); return m; }
+  function regW(m: THREE.Mesh) { m.userData.keepUv = true; swappableWindow.push(m); return m; }
 
   function collectTiles(obj: THREE.Object3D) {
     obj.traverse((c) => {
@@ -861,27 +862,27 @@ export function createHimeji(_kit: SurfaceKit): THREE.Group {
     regW(box(daitenshu, windowMatDay, 0.2, 1.7, 1.2, -t5W / 2 - 0.08, t5Y + 1.4, sz));
   }
 
-  // 顶层主屋顶：入母屋造，主脊沿南北向贯通，三角形大山墙破风直接面向西方与东方！
-  const roof5 = createEavesRoof(t5W, t5D, 3.4, 2.0, 0.2, t5D * 0.65, tileMatDay, whiteTrimMat);
+  // 顶层主屋顶：入母屋造，大棟主脊沿东西向（±X）贯通，金光鯱瓦立于东西两端
+  const roof5 = createEavesRoof(t5W, t5D, 3.4, 2.0, t5W * 0.68, 0.2, tileMatDay, whiteTrimMat);
   roof5.position.y = t5Y + t5H;
   daitenshu.add(roof5);
 
-  // 西面入母屋破风山花装饰板与悬鱼
-  const topGableW = createChidoriGable(t5W * 0.88, 0.8, 2.5, tileMatDay, whiteTrimMat, woodMat);
+  const topGableW = createChidoriGable(t5D * 0.85, 0.8, 2.4, tileMatDay, whiteTrimMat, woodMat);
   topGableW.rotation.y = -Math.PI / 2;
   topGableW.position.set(-t5W / 2 + 0.1, t5Y + t5H + 0.35, 0);
   daitenshu.add(topGableW);
 
-  // 大棟顶脊瓦与南北两端高耸的【金光鯱瓦】(Golden Shachihoko)
-  const ridgeHalfLen = (t5D * 0.65) / 2 - 0.2;
-  const shachiNorth = createShachihoko(0.98, goldMat);
-  shachiNorth.position.set(0, t5Y + t5H + 3.5, -ridgeHalfLen);
-  shachiNorth.rotation.y = Math.PI;
-  daitenshu.add(shachiNorth);
+  // 大棟东西两端高耸的【金光鯱瓦】(Golden Shachihoko)
+  const ridgeHalfLen = (t5W * 0.68) / 2 - 0.2;
+  const shachiWest = createShachihoko(0.98, goldMat);
+  shachiWest.position.set(-ridgeHalfLen, t5Y + t5H + 3.5, 0);
+  shachiWest.rotation.y = Math.PI / 2;
+  daitenshu.add(shachiWest);
 
-  const shachiSouth = createShachihoko(0.98, goldMat);
-  shachiSouth.position.set(0, t5Y + t5H + 3.5, ridgeHalfLen);
-  daitenshu.add(shachiSouth);
+  const shachiEast = createShachihoko(0.98, goldMat);
+  shachiEast.position.set(ridgeHalfLen, t5Y + t5H + 3.5, 0);
+  shachiEast.rotation.y = -Math.PI / 2;
+  daitenshu.add(shachiEast);
 
   root.add(daitenshu);
 
@@ -913,17 +914,18 @@ export function createHimeji(_kit: SurfaceKit): THREE.Group {
 
     // 3 层顶楼与金鯱
     regP(box(nishiKeep, plasterMatDay, 7.2, 3.4, 6.0, 0, 8.5, 0));
-    const r3 = createEavesRoof(7.2, 6.0, 1.9, 1.4, 0.2, 3.6, tileMatDay, whiteTrimMat);
+    const r3 = createEavesRoof(7.2, 6.0, 1.9, 1.4, 4.4, 0.2, tileMatDay, whiteTrimMat);
     r3.position.y = 11.9;
     nishiKeep.add(r3);
 
-    const sN = createShachihoko(0.55, goldMat);
-    sN.position.set(0, 13.9, -1.5);
-    sN.rotation.y = Math.PI;
-    nishiKeep.add(sN);
-    const sS = createShachihoko(0.55, goldMat);
-    sS.position.set(0, 13.9, 1.5);
-    nishiKeep.add(sS);
+    const sW = createShachihoko(0.55, goldMat);
+    sW.position.set(-1.9, 13.9, 0);
+    sW.rotation.y = Math.PI / 2;
+    nishiKeep.add(sW);
+    const sE = createShachihoko(0.55, goldMat);
+    sE.position.set(1.9, 13.9, 0);
+    sE.rotation.y = -Math.PI / 2;
+    nishiKeep.add(sE);
   }
   westWing.add(nishiKeep);
 

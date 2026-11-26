@@ -159,6 +159,7 @@ function makeUtzonSphericalVault(opts: UtzonVaultOptions): THREE.Group {
 
   const shellMesh = new THREE.Mesh(shellGeo, tileMat);
   shellMesh.userData.isShell = true;
+  shellMesh.userData.keepUv = true;
   vault.add(shellMesh);
 
   // 1. 实心预制混凝土拱口封边 (Thick Precast Concrete Arch Rim)
@@ -426,7 +427,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   const lowPromShape = new THREE.Shape();
   const pw = 72;
   const pzNorth = 118;
-  const pzSouth = -118;
+  const pzSouth = -142;
   lowPromShape.moveTo(-pw + 22, pzNorth);
   lowPromShape.lineTo(pw - 22, pzNorth);
   lowPromShape.lineTo(pw, pzNorth - 22);
@@ -483,15 +484,13 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   }
 
   // ==========================================
-  // 2. 东副厅：琼·萨瑟兰歌剧院厅 (Joan Sutherland Opera Theatre - Hall B, 位于东侧 X = +22)
-  // 契合海港朝向：面向北海港视角，东厅位于画面左侧，体量约为西大厅的 86%
+  // 2. 东副厅：琼·萨瑟兰歌剧院厅 (Opera Theatre - Hall B, Tellux 坐标系 -X 为东侧)
   // ==========================================
-  const otX = 22;
+  const otX = -22;
 
-  // Shell B3: 北海港前厅主风帆（高 46m，面向海港 +Z，外悬挑折角琥珀幕墙 13m）
   const vB3 = makeUtzonSphericalVault({
     spanW: 34,
-    peakH: 46,
+    peakH: 39,
     depthD: 36,
     facing: 1,
     hasGlass: true,
@@ -506,15 +505,14 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vB3.position.set(otX, PODIUM_H, 22);
   group.add(vB3);
 
-  // Shell B2: 中央高耸主厅帆（高 54m，向北海港方向叠落，高侧窗采光幕墙高出 B3 顶）
   const vB2 = makeUtzonSphericalVault({
     spanW: 40,
-    peakH: 54,
+    peakH: 46,
     depthD: 44,
     facing: 1,
     hasGlass: true,
     glassCantilever: 9,
-    glassBaseY: 24, // 高侧窗采光带
+    glassBaseY: 20,
     tileMat: shellMatDay,
     ridgeMat,
     archRimMat,
@@ -524,10 +522,9 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vB2.position.set(otX, PODIUM_H, -4);
   group.add(vB2);
 
-  // Shell B1: 南向观众厅/舞台帆（高 38m，反向朝南 -Z 迎向大台阶）
   const vB1 = makeUtzonSphericalVault({
     spanW: 32,
-    peakH: 38,
+    peakH: 32.5,
     depthD: 32,
     facing: -1,
     hasGlass: false,
@@ -540,10 +537,9 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vB1.position.set(otX, PODIUM_H, -34);
   group.add(vB1);
 
-  // Shell B0: 南向后部叠落入口帆（高 28m，朝南 -Z，带南向琥珀幕墙）
   const vB0 = makeUtzonSphericalVault({
     spanW: 24,
-    peakH: 28,
+    peakH: 24,
     depthD: 24,
     facing: -1,
     hasGlass: true,
@@ -558,25 +554,22 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vB0.position.set(otX, PODIUM_H, -56);
   group.add(vB0);
 
-  // 东侧与内侧低矮侧翼风帆
-  const sideB_out = makeSideLouvreShell(16, 22, 20, 1, shellMatDay, ridgeMat, archRimMat, mullionMat);
-  sideB_out.position.set(otX + 17, PODIUM_H, -20);
+  const sideB_out = makeSideLouvreShell(16, 19, 20, 1, shellMatDay, ridgeMat, archRimMat, mullionMat);
+  sideB_out.position.set(otX - 17, PODIUM_H, -20);
   group.add(sideB_out);
 
-  const sideB_in = makeSideLouvreShell(14, 20, 18, -1, shellMatDay, ridgeMat, archRimMat, mullionMat);
-  sideB_in.position.set(otX - 17, PODIUM_H, -20);
+  const sideB_in = makeSideLouvreShell(14, 17, 18, -1, shellMatDay, ridgeMat, archRimMat, mullionMat);
+  sideB_in.position.set(otX + 17, PODIUM_H, -20);
   group.add(sideB_in);
 
   // ==========================================
-  // 3. 西主厅：大音乐厅 (Concert Hall Complex - Hall A, 位于西侧 X = -22)
-  // 歌剧院最大体量核心：双重主峰高达 67m，面向北海港视角位于画面正中
+  // 3. 西主厅：大音乐厅 (Concert Hall - Hall A, Tellux 坐标系 +X 为西侧，主峰含台基高达 67m)
   // ==========================================
-  const chX = -22;
+  const chX = 22;
 
-  // Shell A3: 北海港前厅主风帆（高 54m，面向海港 +Z，外悬挑折角琥珀幕墙 15m）
   const vA3 = makeUtzonSphericalVault({
     spanW: 40,
-    peakH: 54,
+    peakH: 46,
     depthD: 40,
     facing: 1,
     hasGlass: true,
@@ -591,15 +584,14 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vA3.position.set(chX, PODIUM_H, 26);
   group.add(vA3);
 
-  // Shell A2: 中央最高耸主峰帆（高 64m，气势磅礴，高出前厅的高侧窗采光幕墙）
   const vA2 = makeUtzonSphericalVault({
     spanW: 46,
-    peakH: 64,
+    peakH: 54.5,
     depthD: 50,
     facing: 1,
     hasGlass: true,
     glassCantilever: 11,
-    glassBaseY: 28, // 高侧窗采光带
+    glassBaseY: 24,
     tileMat: shellMatDay,
     ridgeMat,
     archRimMat,
@@ -609,10 +601,9 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vA2.position.set(chX, PODIUM_H, -2);
   group.add(vA2);
 
-  // Shell A1: 南向观众厅主帆（高 46m，反向朝南 -Z 迎向大台阶）
   const vA1 = makeUtzonSphericalVault({
     spanW: 38,
-    peakH: 46,
+    peakH: 39,
     depthD: 38,
     facing: -1,
     hasGlass: false,
@@ -625,10 +616,9 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vA1.position.set(chX, PODIUM_H, -36);
   group.add(vA1);
 
-  // Shell A0: 南向舞台叠落帆（高 34m，朝南 -Z，带南向琥珀幕墙）
   const vA0 = makeUtzonSphericalVault({
     spanW: 28,
-    peakH: 34,
+    peakH: 29,
     depthD: 28,
     facing: -1,
     hasGlass: true,
@@ -643,26 +633,24 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   vA0.position.set(chX, PODIUM_H, -60);
   group.add(vA0);
 
-  // 西侧与内侧低矮侧翼风帆
-  const sideA_out = makeSideLouvreShell(18, 24, 22, -1, shellMatDay, ridgeMat, archRimMat, mullionMat);
-  sideA_out.position.set(chX - 19, PODIUM_H, -18);
+  const sideA_out = makeSideLouvreShell(18, 20.5, 22, -1, shellMatDay, ridgeMat, archRimMat, mullionMat);
+  sideA_out.position.set(chX + 19, PODIUM_H, -18);
   group.add(sideA_out);
 
-  const sideA_in = makeSideLouvreShell(14, 20, 18, 1, shellMatDay, ridgeMat, archRimMat, mullionMat);
-  sideA_in.position.set(chX + 19, PODIUM_H, -18);
+  const sideA_in = makeSideLouvreShell(14, 17, 18, 1, shellMatDay, ridgeMat, archRimMat, mullionMat);
+  sideA_in.position.set(chX - 19, PODIUM_H, -18);
   group.add(sideA_in);
 
   // ==========================================
-  // 4. 西南翼：贝尼朗餐厅与酒吧组群 (Bennelong Restaurant - Hall C, 位于西侧 X = -52)
-  // 位于西南方位台基旁，北向与西北向朝向悉尼海港大桥与海面，在画面右侧展开
+  // 4. 西南翼：贝尼朗餐厅与酒吧组群 (Bennelong Restaurant - Hall C, 位于西侧 +X = +52)
   // ==========================================
   const restGroup = new THREE.Group();
-  restGroup.position.set(-52, PODIUM_H, -60);
-  restGroup.rotation.y = -Math.PI * 0.08;
+  restGroup.position.set(52, PODIUM_H, -60);
+  restGroup.rotation.y = Math.PI * 0.08;
 
   const vC2 = makeUtzonSphericalVault({
     spanW: 24,
-    peakH: 26,
+    peakH: 22.5,
     depthD: 26,
     facing: 1,
     hasGlass: true,
@@ -679,12 +667,12 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
 
   const vC1 = makeUtzonSphericalVault({
     spanW: 18,
-    peakH: 18,
+    peakH: 15.5,
     depthD: 20,
     facing: 1,
     hasGlass: true,
     glassCantilever: 6,
-    glassBaseY: 10,
+    glassBaseY: 8.5,
     tileMat: shellMatDay,
     ridgeMat,
     archRimMat,
