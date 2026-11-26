@@ -2,18 +2,19 @@
  * 智能级联瓦片加载与快速超分重采样 (Fast Tile Fallback & Resampler)
  *
  * 核心目标：
- * 解决偏远山区（如马丘比丘等）ArcGIS 返回 2521 字节 "Map data not yet available" 灰色占位贴图或 404 的问题。
+ * 1. 解决偏远山区/海域（如马丘比丘等）ArcGIS 返回占位图或 404 的问题。
+ * 2. 解决斜视角地标背后远景瓦片因超时、HTTP 429/5xx 限流、网络抖动或低层级（z <= 10）缺失导致的永久黑洞/不加载问题。
  *
  * 性能架构原则：
  * 1. 零开销透传 (Zero-overhead Pass-through)：
- *    对于 99% 的正常高清卫星瓦片（尺寸 > 3500 字节），直接原样返回原生 Response，
- *    完全走浏览器原生流式加载、原生 HTTP/2 多路复用与硬盘缓存，0ms 额外开销，绝对不堵塞并发网络。
- * 2. 精准占位图拦截 (Surgical Placeholder Interception)：
- *    仅当瓦片为 404 或尺寸 <= 3500 字节且确认为 ArcGIS 灰色占位图时触发回退。
- * 3. 祖先瓦片聚合共享缓存 (Coalesced Ancestor Reuse)：
- *    缺失区域的所有子瓦片共享同一块已覆盖的父级卫星瓦片 (z=15 或 16)。
- *    仅需 1 次网络请求即可在内存中毫秒级为周边所有缺失瓦片完成四叉树平滑重采样合成，
- *    杜绝递归深层瀑布请求对浏览器连接槽位的死锁耗尽。
+ *    对于正常高清卫星瓦片（HTTP 200、非文本错误页且 Content-Length > 3500 字节），直接原样返回原生 Response，
+ *    完全走浏览器原生流式加载与硬盘缓存。
+ * 2. 独立超时与短退避重试 (Bounded Timeout & Transient Retry)：
+ *    为外网瓦片请求附加独立的 AbortController 超时上限（避免挂死连接长期占满 4/25 并发槽位），
+ *    遇到超时、网络异常或 408/429/5xx 时先短退避重试 1 次；仍失败则立即回退到祖先重采样。
+ * 3. 全层级祖先重采样兜底 (Full-range Coalesced Ancestor Reuse)：
+ *    对任意层级 z >= 1（不再局限于 z >= 10）在内存中合并拉取最近可用祖先瓦片并重采样为 256x256 JPEG，
+ *    优先复用已解码的 LRU 祖先位图，消除空白块并避免底层 DataCache 永久锁死在 rejected Promise。
  */
 
 export interface TileCoords {
@@ -24,10 +25,25 @@ export interface TileCoords {
   search: string;
 }
 
+export interface TileProviderOptions {
+  /** 单次外部瓦片网络请求超时毫秒数（默认 9000ms） */
+  timeoutMs?: number;
+  /** 遇到临时网络错误或 408/429/5xx 的快速重试次数（默认 1 次） */
+  retryCount?: number;
+  /** 重试退避基础等待毫秒数（默认 280ms） */
+  retryDelayMs?: number;
+  /** 可选自定义重采样回调（供无 DOM 单测注入） */
+  resampleTile?: (coords: TileCoords, originalFetch: typeof fetch, signal: AbortSignal | null) => Promise<ArrayBuffer | null>;
+}
+
 const TILE_URL_PATTERN = /(https?:\/\/[^\/]+(?:\/[^\/]+)*\/tile\/)(\d+)\/(\d+)\/(\d+)(\?.*)?$/i;
 
+const DEFAULT_TILE_TIMEOUT_MS = 9000;
+const DEFAULT_TRANSIENT_RETRIES = 1;
+const DEFAULT_RETRY_DELAY_MS = 280;
+
 // 缓存已解码的父级卫星图，供同区域多块子瓦片瞬间重采样（带 LRU 容量限制防内存无界增长）
-const MAX_PARENT_BITMAP_CACHE = 64;
+const MAX_PARENT_BITMAP_CACHE = 96;
 const parentBitmapCache = new Map<string, ImageBitmap>();
 const inFlightParentFetches = new Map<string, Promise<ImageBitmap | null>>();
 
@@ -43,6 +59,14 @@ function setParentBitmapCache(key: string, bitmap: ImageBitmap): void {
     }
   }
   parentBitmapCache.set(key, bitmap);
+}
+
+export function clearParentBitmapCache(): void {
+  for (const bitmap of parentBitmapCache.values()) {
+    bitmap?.close?.();
+  }
+  parentBitmapCache.clear();
+  inFlightParentFetches.clear();
 }
 
 export function parseTileUrl(url: string): TileCoords | null {
@@ -82,24 +106,152 @@ export function fastHash32(buffer: ArrayBuffer): number {
 }
 
 /**
- * 判断给定瓦片数据是否为已知 ArcGIS 缺失占位图
+ * 判断给定瓦片数据是否为已知 ArcGIS 缺失占位图或无效空包
  */
 export function isPlaceholderTile(buffer: ArrayBuffer): boolean {
   const byteLen = buffer.byteLength;
-  if (PLACEHOLDER_EXACT_SIZES.has(byteLen)) {
+  if (byteLen === 0 || PLACEHOLDER_EXACT_SIZES.has(byteLen)) {
     return true;
   }
   if (byteLen <= 3500) {
     const text = new TextDecoder("latin1").decode(new Uint8Array(buffer, 0, Math.min(byteLen, 1024)));
-    if (text.includes("not yet available") || text.includes("Map data not yet") || text.includes("No Data Available")) {
+    if (
+      text.includes("not yet available") ||
+      text.includes("Map data not yet") ||
+      text.includes("No Data Available")
+    ) {
       return true;
     }
   }
   return false;
 }
 
+export function isNonImageContentType(contentType: string | null | undefined): boolean {
+  if (!contentType) return false;
+  const lower = contentType.toLowerCase();
+  return (
+    lower.includes("text/") ||
+    lower.includes("application/json") ||
+    lower.includes("application/xml") ||
+    lower.includes("application/xhtml")
+  );
+}
+
+function isErrorPayloadText(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength === 0 || buffer.byteLength > 3500) return false;
+  const sample = new TextDecoder("latin1")
+    .decode(new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 256)))
+    .trimStart()
+    .toLowerCase();
+  return (
+    sample.startsWith("<html") ||
+    sample.startsWith("<!doctype") ||
+    sample.startsWith("<?xml") ||
+    sample.startsWith('{"error"')
+  );
+}
+
+export function shouldRetryTileStatus(status: number): boolean {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
 /**
- * 获取指定祖先瓦片的解码位图（带内存缓存与请求合并）
+ * 构建用于回退采样的祖先层级顺序（覆盖高、中、低所有 zoom >= 1 层级，避免 z <= 10 远景失去兜底）
+ */
+export function buildFallbackLevels(z: number): number[] {
+  if (!Number.isFinite(z) || z <= 0) return [];
+
+  const candidates =
+    z > 16
+      ? [16, 15, 14, 12]
+      : [z - 1, z - 2, z - 3, z - 5];
+
+  const unique: number[] = [];
+  for (const lvl of candidates) {
+    if (lvl >= 0 && lvl < z && !unique.includes(lvl)) {
+      unique.push(lvl);
+    }
+  }
+  return unique;
+}
+
+function createAbortError(): DOMException {
+  return new DOMException("The user aborted a request.", "AbortError");
+}
+
+function createTimeoutError(timeoutMs: number): Error {
+  const err = new Error(`Tile fetch timed out after ${timeoutMs}ms`);
+  err.name = "TimeoutError";
+  return err;
+}
+
+function sleepWithSignal(ms: number, signal: AbortSignal | null | undefined): Promise<void> {
+  if (signal?.aborted) return Promise.reject(createAbortError());
+  if (ms <= 0) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(createAbortError());
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function fetchOnceWithTimeout(
+  originalFetch: typeof fetch,
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  callerSignal: AbortSignal | null | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  if (callerSignal?.aborted) {
+    throw createAbortError();
+  }
+
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  let timedOut = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const onCallerAbort = () => {
+    controller?.abort();
+  };
+
+  if (controller) {
+    callerSignal?.addEventListener("abort", onCallerAbort, { once: true });
+    if (timeoutMs > 0 && Number.isFinite(timeoutMs)) {
+      timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, timeoutMs);
+    }
+  }
+
+  try {
+    const nextInit: RequestInit = controller
+      ? { ...(init ?? {}), signal: controller.signal }
+      : (init ?? {});
+    return await originalFetch(input, nextInit);
+  } catch (err) {
+    if (callerSignal?.aborted) {
+      throw createAbortError();
+    }
+    if (timedOut) {
+      throw createTimeoutError(timeoutMs);
+    }
+    throw err;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    callerSignal?.removeEventListener("abort", onCallerAbort);
+  }
+}
+
+/**
+ * 获取指定祖先瓦片的解码位图（带内存缓存与并发请求合并）
  */
 async function getAncestorBitmap(
   baseUrl: string,
@@ -107,7 +259,8 @@ async function getAncestorBitmap(
   y: number,
   x: number,
   search: string,
-  originalFetch: typeof window.fetch,
+  originalFetch: typeof fetch,
+  timeoutMs: number,
 ): Promise<ImageBitmap | null> {
   const key = coordKey(baseUrl, z, y, x);
   const cached = parentBitmapCache.get(key);
@@ -123,12 +276,15 @@ async function getAncestorBitmap(
   const fetchPromise = (async () => {
     try {
       const url = makeTileUrl(baseUrl, z, y, x, search);
-      const res = await originalFetch(url);
-      if (res.status !== 200) return null;
+      const res = await fetchOnceWithTimeout(originalFetch, url, undefined, null, timeoutMs);
+      if (res.status !== 200 || isNonImageContentType(res.headers.get("content-type"))) {
+        return null;
+      }
       const buf = await res.arrayBuffer();
       if (isPlaceholderTile(buf)) return null;
 
-      const blob = new Blob([buf], { type: "image/jpeg" });
+      const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
+      const blob = new Blob([buf], { type: mime });
       const bitmap = await createImageBitmap(blob, {
         premultiplyAlpha: "none",
         colorSpaceConversion: "none",
@@ -173,7 +329,7 @@ async function resampleFromBitmap(
   ancestorZ: number,
 ): Promise<ArrayBuffer> {
   const depth = childZ - ancestorZ;
-  const scale = 1 << depth;
+  const scale = 2 ** depth;
   const subW = ancestorBitmap.width / scale;
   const subH = ancestorBitmap.height / scale;
   const subX = (childX % scale) * subW;
@@ -208,23 +364,45 @@ async function resampleFromBitmap(
 }
 
 /**
- * 针对缺失或占位瓦片，快速匹配其可用祖先层级并重采样
+ * 针对缺失、占位或网络失败瓦片，先零开销检索已缓存祖先位图，再按层级链拉取并重采样
  */
 async function synthesizeFallbackTile(
   coords: TileCoords,
-  originalFetch: typeof window.fetch,
+  originalFetch: typeof fetch,
+  signal: AbortSignal | null | undefined,
+  timeoutMs: number,
 ): Promise<ArrayBuffer | null> {
   const { baseUrl, z, y, x, search } = coords;
-  const targetLevels = [Math.min(16, z - 1), 15, 14].filter((lvl) => lvl < z && lvl >= 10);
 
+  // 1. 先检查最近几层祖先位图是否已在内存中命中（0ms 无网络兜底）
+  const minCachedAncestor = Math.max(0, z - 6);
+  for (let pz = z - 1; pz >= minCachedAncestor; pz--) {
+    if (signal?.aborted) return null;
+    const scale = 2 ** (z - pz);
+    const px = Math.floor(x / scale);
+    const py = Math.floor(y / scale);
+    const cached = parentBitmapCache.get(coordKey(baseUrl, pz, py, px));
+    if (cached) {
+      parentBitmapCache.delete(coordKey(baseUrl, pz, py, px));
+      parentBitmapCache.set(coordKey(baseUrl, pz, py, px), cached);
+      try {
+        return await resampleFromBitmap(cached, z, y, x, pz);
+      } catch {
+        // fallback to network fetch below
+      }
+    }
+  }
+
+  // 2. 依次尝试从较近的祖先层级抓取并解码
+  const targetLevels = buildFallbackLevels(z);
   for (const pz of targetLevels) {
-    const depth = z - pz;
-    const scale = 1 << depth;
+    if (signal?.aborted) return null;
+    const scale = 2 ** (z - pz);
     const px = Math.floor(x / scale);
     const py = Math.floor(y / scale);
 
-    const ancestor = await getAncestorBitmap(baseUrl, pz, py, px, search, originalFetch);
-    if (ancestor) {
+    const ancestor = await getAncestorBitmap(baseUrl, pz, py, px, search, originalFetch, timeoutMs);
+    if (ancestor && !signal?.aborted) {
       try {
         return await resampleFromBitmap(ancestor, z, y, x, pz);
       } catch {
@@ -236,18 +414,19 @@ async function synthesizeFallbackTile(
   return null;
 }
 
-let providerInstalled = false;
-
 /**
- * 安装智能瓦片提供器拦截器
+ * 创建带超时控制、短退避重试与全层级重采样兜底的 fetch 处理器（方便单测与注入复用）
  */
-export function installTileProvider(): void {
-  if (providerInstalled) return;
-  providerInstalled = true;
+export function createTileFetchHandler(
+  originalFetch: typeof fetch,
+  options: TileProviderOptions = {},
+): typeof fetch {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TILE_TIMEOUT_MS;
+  const retryCount = Math.max(0, options.retryCount ?? DEFAULT_TRANSIENT_RETRIES);
+  const retryDelayMs = Math.max(0, options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS);
+  const resampleFn = options.resampleTile;
 
-  const originalFetch = window.fetch.bind(window);
-
-  window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const url =
       typeof input === "string"
         ? input
@@ -256,71 +435,125 @@ export function installTileProvider(): void {
           : (input as Request).url;
 
     const coords = parseTileUrl(url);
-
-    // 非卫星瓦片请求，完全走原生 fetch
     if (!coords) {
       return originalFetch(input, init);
     }
 
-    const signal = init?.signal ?? (input instanceof Request ? input.signal : null);
+    const signal = init?.signal ?? (typeof Request !== "undefined" && input instanceof Request ? input.signal : null);
     if (signal?.aborted) {
-      throw new DOMException("The user aborted a request.", "AbortError");
+      throw createAbortError();
     }
 
-    try {
-      const res = await originalFetch(input, init);
+    let lastRes: Response | null = null;
+    let rawBuf: ArrayBuffer | null = null;
+    let lastError: unknown = null;
 
-      // (A) 若正常返回 200 且数据体正常（> 3500 字节），绝不可能是占位图，零开销直接透传原生 Response
-      const lenHeader = res.headers.get("content-length");
-      const len = lenHeader ? parseInt(lenHeader, 10) : 0;
-      if (res.status === 200 && len > 3500) {
-        return res;
-      }
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      try {
+        const res = await fetchOnceWithTimeout(originalFetch, input, init, signal, timeoutMs);
+        lastRes = res;
 
-      // (B) 若为 200 但尺寸极小 (<= 3500 字节)，检验是否为带有占位图标记的残缺图
-      let rawBuf: ArrayBuffer | null = null;
-      if (res.status === 200) {
-        rawBuf = await res.arrayBuffer();
-        if (!isPlaceholderTile(rawBuf)) {
-          return new Response(rawBuf, {
-            status: 200,
-            statusText: "OK",
-            headers: res.headers,
-          });
+        if (res.status === 200) {
+          const contentType = res.headers.get("content-type");
+          const lenHeader = res.headers.get("content-length");
+          const len = lenHeader ? parseInt(lenHeader, 10) : 0;
+
+          // (A) 正常高清卫星图直接零拷贝透传
+          if (len > 3500 && !isNonImageContentType(contentType)) {
+            return res;
+          }
+
+          // (B) 小尺寸或未标明长度的响应需检验正文，排除占位图及 HTTP 200 伪装的文本/JSON 错误页
+          rawBuf = await res.arrayBuffer();
+          if (
+            rawBuf.byteLength > 0 &&
+            !isNonImageContentType(contentType) &&
+            !isPlaceholderTile(rawBuf) &&
+            !isErrorPayloadText(rawBuf)
+          ) {
+            return new Response(rawBuf, {
+              status: 200,
+              statusText: "OK",
+              headers: res.headers,
+            });
+          }
+
+          // 命中占位图或错误文本页，无需重试同 URL，直接回退祖先重采样
+          break;
+        }
+
+        // (C) 404 通常为固定缺块，无需重试直接进祖先重采样
+        if (res.status === 404) {
+          break;
+        }
+
+        // (D) 408/425/429/5xx 等临时服务端异常：短退避后重试
+        if (shouldRetryTileStatus(res.status) && attempt < retryCount) {
+          await sleepWithSignal(retryDelayMs * (attempt + 1), signal);
+          continue;
+        }
+        break;
+      } catch (err) {
+        if ((err instanceof DOMException && err.name === "AbortError") || signal?.aborted) {
+          throw createAbortError();
+        }
+        lastError = err;
+        if (attempt < retryCount) {
+          await sleepWithSignal(retryDelayMs * (attempt + 1), signal);
+          continue;
         }
       }
-
-      // (C) 404 或命中占位图，启动祖先快速重采样
-      if (!signal?.aborted) {
-        const synthesizedBuf = await synthesizeFallbackTile(coords, originalFetch);
-        if (synthesizedBuf) {
-          return new Response(synthesizedBuf, {
-            status: 200,
-            statusText: "OK",
-            headers: {
-              "Content-Type": "image/jpeg",
-              "Content-Length": String(synthesizedBuf.byteLength),
-              "X-Earth-Wonders-Fallback": "resampled",
-            },
-          });
-        }
-      }
-
-      if (rawBuf) {
-        return new Response(rawBuf, {
-          status: res.status,
-          statusText: res.statusText,
-          headers: res.headers,
-        });
-      }
-      return res;
-    } catch (err) {
-      if ((err instanceof DOMException && err.name === "AbortError") || signal?.aborted) {
-        throw err instanceof DOMException ? err : new DOMException("The user aborted a request.", "AbortError");
-      }
-      throw err;
     }
+
+    if (signal?.aborted) {
+      throw createAbortError();
+    }
+
+    // 启动祖先快速重采样兜底（含 z <= 10 低层级及网络/5xx/429 异常）
+    const synthesizedBuf = resampleFn
+      ? await resampleFn(coords, originalFetch, signal ?? null)
+      : await synthesizeFallbackTile(coords, originalFetch, signal, timeoutMs);
+
+    if (synthesizedBuf) {
+      return new Response(synthesizedBuf, {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "Content-Type": "image/jpeg",
+          "Content-Length": String(synthesizedBuf.byteLength),
+          "X-Earth-Wonders-Fallback": "resampled",
+        },
+      });
+    }
+
+    if (lastRes && (lastRes.status === 404 || rawBuf !== null)) {
+      return rawBuf !== null
+        ? new Response(rawBuf, {
+            status: lastRes.status,
+            statusText: lastRes.statusText,
+            headers: lastRes.headers,
+          })
+        : lastRes;
+    }
+
+    if (lastError !== null) {
+      throw lastError;
+    }
+    throw new Error(`Failed to load tile (${lastRes?.status ?? "unknown"}): ${url}`);
   };
+}
 
-  console.info("✨ [EarthWonders] 轻量高效的卫星瓦片无缝回退层已就绪。");
+let providerInstalled = false;
+
+/**
+ * 安装智能瓦片提供器拦截器
+ */
+export function installTileProvider(options: TileProviderOptions = {}): void {
+  if (providerInstalled || typeof window === "undefined") return;
+  providerInstalled = true;
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = createTileFetchHandler(originalFetch, options);
+
+  console.info("✨ [EarthWonders] 增强版卫星瓦片超时保护、自动重试与全层级重采样层已就绪。");
 }

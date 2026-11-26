@@ -196,11 +196,11 @@ describe("DroneOrbitController Unit Tests", () => {
     expect(tileset.maxTilesProcessed).toBe(250);
     expect(tileset.downloadQueue.maxJobs).toBe(25);
 
-    // 开启航拍：瓦片防抖自适应启动
+    // 开启航拍：适度放宽 errorTarget 同时保留足够遍历深度与下载并发，防止背后远景瓦片饿死
     orbit.start(wonder, pivot);
     expect(tileset.errorTarget).toBe(5.5);
-    expect(tileset.maxTilesProcessed).toBe(80);
-    expect(tileset.downloadQueue.maxJobs).toBe(4);
+    expect(tileset.maxTilesProcessed).toBe(240);
+    expect(tileset.downloadQueue.maxJobs).toBe(12);
     expect(tileset.lruCache.maxSize).toBe(15000);
 
     // 退出航拍：恢复极清与初始并发

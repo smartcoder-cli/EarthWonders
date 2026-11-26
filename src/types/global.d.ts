@@ -19,14 +19,37 @@ export interface TelluxRawControls {
   getUpDirection?: (point: THREE.Vector3, target: THREE.Vector3) => void;
 }
 
+export interface TilesetPluginLike {
+  name?: string;
+  processQueue?: {
+    items?: unknown[];
+    currJobs?: number;
+    maxJobs?: number;
+  };
+  resetFailedOverlays?: () => void;
+}
+
 export interface OptimizedTileset {
   errorTarget?: number;
   maxTilesProcessed?: number;
+  plugins?: TilesetPluginLike[];
+  stats?: {
+    queued?: number;
+    downloading?: number;
+    parsing?: number;
+    loaded?: number;
+    failed?: number;
+  };
   downloadQueue?: {
     items: unknown[];
     currJobs: number;
     maxJobs?: number;
     priorityCallback: ((a: unknown, b: unknown) => number) | null;
+  };
+  parseQueue?: {
+    items?: unknown[];
+    currJobs?: number;
+    maxJobs?: number;
   };
   lruCache?: {
     minSize: number;
@@ -34,6 +57,10 @@ export interface OptimizedTileset {
     minBytesSize?: number;
     maxBytesSize?: number;
   };
+  resetFailedTiles?: () => void;
+  addEventListener?: (type: string, listener: (event: unknown) => void) => void;
+  removeEventListener?: (type: string, listener: (event: unknown) => void) => void;
+  dispatchEvent?: (event: { type: string }) => void;
 }
 
 declare global {
