@@ -1043,7 +1043,7 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       nameZh: "中空中庭独立全景玻璃电梯井",
       nameEn: "Freestanding Panoramic Glass Elevators",
       category: "工程智慧",
-      position: [0, 50.0, 12.0],
+      position: [-17.0, 52.0, 0.0],
       focusDistance: 150,
       focusHeading: 250,
       focusPitch: -22,
