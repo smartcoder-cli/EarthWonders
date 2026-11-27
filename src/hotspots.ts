@@ -97,6 +97,21 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
         "长城顶部的马道通常由三层透水青砖用白石灰糯米浆勾缝铺筑。面向塞外的一侧修筑有约 1.7 米高的垛墙，墙上留有瞭望口和下方用以射箭射铳的转角射孔；面向内侧的一侧则为约 1 米高的低矮宇墙以防人马跌落。为了防止山洪浸泡城基，马道内侧每隔数米便留有花岗岩“吐水嘴”，雨水能够迅速自石槽泻入山涧。",
       funFact: "铺设马道的青砖重达数十公斤，黏合剂使用了古法熟石灰与糯米胶浆混合，硬度可与现代标号水泥媲美。",
     },
+    {
+      id: "wall-beacon",
+      wonderId: "wall",
+      nameZh: "孤立峰巅烽火台与羊马护墙",
+      nameEn: "Solitary Beacon Tower & Perimeter Yard",
+      category: "军事奇迹",
+      position: [-24.75, 38.95, -91.16],
+      focusDistance: 72,
+      focusHeading: 52,
+      focusPitch: -22,
+      summary: "屹立于长城外侧高耸山脊上的收分墩台，承担着百里传警的『昼则举烟、夜则举火』通信使命。",
+      description:
+        "与跨墙而建的空心敌楼不同，烽火台常选址于主城墙外侧数十米的高地山巅，自下而上采用砖石包砌并逐层向内收分。台脚环绕有防御马队突袭的方形『羊马护墙』与拱券铁门，台顶四角立有铁制悬火兜笼（烟笼），一旦哨兵发现敌情，立刻在台顶燃起狼粪、艾草掺硝石的浓烟与火光，按来敌人数配合鸣炮数量分级报警。",
+      funFact: "明代规定每遇敌情按百人一烟、五百人二烟递增，最高五烟五炮，数百里内的蓟镇军情在数小时内即可快传京师。",
+    },
   ],
 
   petra: [
@@ -114,6 +129,21 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       description:
         "在阿拉伯语中，卡兹尼（Al-Khazneh）意为“法老的宝库”。当地游牧民族贝都因人千百年来流传着一个神话：逃亡的埃及法老将无穷的金银财宝藏匿于神殿顶部的这口石瓮之中。为了获取财宝，过去数百年间的贝都因部落猎人经常端起猎枪和火绳枪朝宝瓮射击，希望将石瓮打碎让金币倾泻而出，因此石瓮表面至今密布枪击凿痕。",
       funFact: "事实上，这口宝瓮是与整座佩特拉峭壁一体整石雕刻而成的实心坚硬砂岩，里面空无一物，根本不是容器。",
+    },
+    {
+      id: "petra-tholos",
+      wonderId: "petra",
+      nameZh: "断裂山花与圆形神龛（Tholos）",
+      nameEn: "Broken Pediments & Central Tholos Rotunda",
+      category: "历史传奇",
+      position: [0, 26.5, -5.8],
+      focusDistance: 52,
+      focusHeading: 260,
+      focusPitch: -12,
+      summary: "融汇希腊化巴洛克与埃及神庙美学的二层中轴奇观，中央圆亭周围浮雕女神雕像与对称断裂半山花相映成趣。",
+      description:
+        "卡兹尼神殿二层最为建筑史家称奇的构造，是两侧对称断开的『断裂山花（Broken Pediment）』将中央圆亭（Tholos）优雅地环抱在核心。圆形神龛外立柱雕刻细腻，正面神龛内雕有手执丰饶角的幸运女神蒂刻—伊西斯（Tyche-Isis），两侧则分布着执斧的亚马逊女战士与成对胜利女神浮雕，堪称东西方古典文明交融的石刻绝唱。",
+      funFact: "由于神殿紧嵌在狭长的蛇道（Al-Siq）峡谷尽头，风沙与日晒几乎无法直吹立面，使其得以两千年如一日地保持玫瑰粉红质感与清晰浮雕。",
     },
     {
       id: "petra-facade",
@@ -163,6 +193,36 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
         "为了保护五万名观战贵族与市民免遭罗马盛夏地中海暴晒，顶层外檐装有 240 根粗壮的实木桅杆，上面悬挂由亚麻与帆布缝制的巨大遮阳篷（Velarium）。遮阳篷呈巨型同心圆环形，中央留有圆形通风天窗。操纵这一复杂索具系统的是罗马米塞努姆驻港舰队抽调的专业水兵，其原理与大型风帆战舰的索具调帆完全一致。",
       funFact: "古罗马文献记载，巨型遮阳篷拉开时伴有阵阵如雷鸣般的风帆猎猎声，看台周围还会喷洒掺有藏红花香精的冰凉薄雾为观众降温。",
     },
+    {
+      id: "colosseum-orders",
+      wonderId: "colosseum",
+      nameZh: "北侧完整四层叠柱式拱廊",
+      nameEn: "Intact Northern Four-Tier Classical Orders",
+      category: "建筑奇观",
+      position: [0, 24, -79],
+      focusDistance: 120,
+      focusHeading: 195,
+      focusPitch: -14,
+      summary: "历经地震与中世纪采石劫掠后仅存的完整北半侧外墙，由下而上完美示范了古典建筑的叠柱式法则。",
+      description:
+        "高 48.5 米的北侧完整石灰华外墙保留了古罗马建筑最经典的『叠柱式（Superposition of Orders）』语法：底层采用敦实厚重的多立克式半圆柱托起入口，二层过渡为卷涡优雅的爱奥尼柱式，三层则换上繁复华丽的科林斯柱式拱券（拱门内曾立有大理石雕像），最顶层第四层则以实墙壁柱开窗收束。这一构图奠定了此后文艺复兴宫殿与西方大型公共建筑的标准立面范式。",
+      funFact: "斗兽场在古代共有 80 道外圈编号入口拱门，凭骨牌入场券进出，散场时五万名观众竟只需不到 15 分钟便可全部安全疏散。",
+    },
+    {
+      id: "colosseum-buttress",
+      wonderId: "colosseum",
+      nameZh: "瓦拉迪尔与斯泰恩斜撑砖砌扶壁",
+      nameEn: "19th-Century Valadier & Stern Brick Buttresses",
+      category: "历史传奇",
+      position: [93, 24, 2],
+      focusDistance: 85,
+      focusHeading: 65,
+      focusPitch: -18,
+      summary: "东西两侧断面处的巨大红砖三角斜撑墙体，是 19 世纪教廷工程师力挽狂澜防止拱廊倒塌的保护杰作。",
+      description:
+        "1349 年罗马大地震导致斗兽场南侧外圈坍塌，随后数百年间残石被拆去兴建圣彼得大教堂等教廷宫殿，致使北侧完整外立面的两端悬空岌岌可危。1807 年建筑师斯泰恩（Raffaele Stern）与 1826 年朱塞佩·瓦拉迪尔（Giuseppe Valadier）先后在东、西断口处筑起巨型红砖三角斜撑扶壁，刻意选用与浅色石灰华截然不同的赤陶砖，体现『可识别的历史加固』现代文物修复原则。",
+      funFact: "这组巨大的斜撑扶壁也被公认为人类建筑文物保护史上第一次大规模遵循最小干预与材质可区分原则的里程碑工程。",
+    },
   ],
 
   chichen: [
@@ -196,6 +256,36 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
         "整座库库尔坎金字塔是一座由石头建造的天文日历丰碑：金字塔四面均设有中央通天大台阶，每一面恰好有 91 级台阶，四面相加为 364 级，加上最顶部通往神殿的最后一级基石，总和为 365 级，严丝合缝对应太阳历（Haab'）的一年 365 天。金字塔分为九层台基，被中央台阶分割为左右各 18 块凹凸截面，正好对应玛雅历法中的 18 个月。",
       funFact: "如果站在金字塔底端的大台阶正前方用力拍击双手，回音穿过台阶缝隙会在塔顶反射出酷似美洲凤尾绿咬鹃（Quetzal）清脆啼鸣的神奇声响。",
     },
+    {
+      id: "chichen-ballcourt",
+      wonderId: "chichen",
+      nameZh: "美洲最大古代中美洲大球场",
+      nameEn: "The Great Ballcourt (Pok-Ta-Pok Arena)",
+      category: "历史传奇",
+      position: [-118, 9, -88],
+      focusDistance: 105,
+      focusHeading: 225,
+      focusPitch: -24,
+      summary: "长 168 米的南北双墙狭长赛场，高墙半腰垂直嵌着一对精致石环，见证融合体育与祭祀的神圣球赛。",
+      description:
+        "奇琴伊察大球场是整个前哥伦布美洲规模最宏大的中美洲球戏（Pok-Ta-Pok）竞技场。两侧高耸垂直的石墙上方各悬嵌一枚雕刻缠绕蛇纹的竖直石环。两支全副护具的武士球队不能使用手脚，仅凭臀部、肘部与膝盖将重达数公斤的实心天然橡胶球击穿半空石环。球场北南两端看台具有不可思议的声学聚焦效果，在一端低语几乎可传遍另一端。",
+      funFact: "在球场墙基浮雕中刻有胜利者或队长献祭的震撼场面，在玛雅世界观里，这场生死竞技直接象征太阳英雄战胜冥界魔王、维系宇宙运转的宇宙仪式。",
+    },
+    {
+      id: "chichen-caracol",
+      wonderId: "chichen",
+      nameZh: "蜗牛形「埃尔卡拉科尔」天文台",
+      nameEn: "El Caracol Spiral Astronomical Observatory",
+      category: "考古之谜",
+      position: [-72, 24, 58],
+      focusDistance: 75,
+      focusHeading: 215,
+      focusPitch: -22,
+      summary: "玛雅遗址中罕见的圆形双层石塔，内部有螺旋阶梯与精密对齐金星和春秋分落日的观测窄窗。",
+      description:
+        "西班牙人因塔内螺旋盘旋而上的阶梯将其命名为『埃尔卡拉科尔（El Caracol，意为蜗牛）』。这座罕见的圆形平台天文台建于两层矩形基座之上，上层半球穹顶内凿有多扇朝向精确方位角的观测窄缝窗道——其中三条射线直指金星北移极限与南移极限，其余窗道则精确锁定春分秋分日落方位。玛雅祭司借此推算出准确度达万年误差仅数小时的金星会合周期。",
+      funFact: "金星周期在玛雅文明中直接主宰战争发起与宗教庆典时机，圆塔在天文历法上具有等同现代国家天文台的地位。",
+    },
   ],
 
   machu: [
@@ -228,6 +318,36 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       description:
         "马丘比丘坐落在年降水量超 2000 毫米的热带高山雨林带。印加工程师修建了多达 700 层的花岗岩石砌梯田。梯田剖面精妙至极：底层为大块花岗岩块与碎石，中层为河沙透水层，表层覆盖富含有机质的肥沃耕土。这种结构不仅在雨季像海绵般吸水排泄、杜绝山体滑坡泥石流，更在白天吸收太阳辐射，夜间向农作物缓缓释放地热以抵御高原霜冻。",
       funFact: "现代地质勘探表明，马丘比丘古城近 60% 的工程量均隐藏在地表之下，其暗渠地下排水系统至今运转顺畅，甚至未出现过一次严重积水坍塌。",
+    },
+    {
+      id: "machu-sun-temple",
+      wonderId: "machu",
+      nameZh: "太阳神庙弧形无灰浆神墙",
+      nameEn: "Curved Ashlar Wall of Temple of the Sun",
+      category: "建筑奇观",
+      position: [-8, 25, -22],
+      focusDistance: 45,
+      focusHeading: 345,
+      focusPitch: -20,
+      summary: "全城唯一采用半圆形弧面精密研磨巨石砌筑的神庙圣殿，窗口直射夏至日出第一缕阳光。",
+      description:
+        "坐落在天然巨大花岗岩磐石之上的太阳神庙（Torreón），以印加建筑中罕见而极难加工的半圆弧墙围合。每一块花岗岩石块均通过石头相互反复打磨至严丝合缝，不用一滴灰浆，连锋利的刀片也无法插入缝隙。弧墙上特意凿开的梯形朝东窗户，在每年 6 月南半球冬至日破晓瞬间，精确将第一束晨光垂直投射在神庙中央的祭祀岩石上。",
+      funFact: "神庙正下方的天然岩洞经过工匠精细雕凿成壁龛，极可能曾供奉或安放印加皇室的木乃伊圣骸（皇家陵墓 Royal Tomb）。",
+    },
+    {
+      id: "machu-huayna",
+      wonderId: "machu",
+      nameZh: "瓦伊纳比丘圣山奇峰（年青之峰）",
+      nameEn: "Huayna Picchu Sacred Summit Backdrop",
+      category: "考古之谜",
+      position: [10, 96, -82],
+      focusDistance: 140,
+      focusHeading: 335,
+      focusPitch: -15,
+      summary: "拔地而起高踞古城正北方的碧绿尖峰，如守护神般俯瞰乌鲁班巴河 300 米深马蹄形大峡谷。",
+      description:
+        "几乎所有经典马丘比丘明信片背景中巍然耸立的尖削绿峰，便是盖丘亚语意为『年青的山峰』的瓦伊纳比丘（Huayna Picchu）。峰顶高出遗址约 270 米，印加人沿着近乎垂直的悬崖凿出了著名的『死亡阶梯（Stairs of Death）』与悬崖庙宇月亮神殿（Temple of the Moon）。印加高阶祭司与哨兵在此居高临下监测峡谷动静并观测四时星象。",
+      funFact: "如果换个高空俯视角度审视马丘比丘与瓦伊纳比丘整个山脊轮廓，许多人认为它们恰似一只正在山巅振翅欲飞的安第斯神鹰（Condor）。",
     },
   ],
 
@@ -357,6 +477,21 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
         "为了在二战钢铁配额紧张的情况下迅速建成，建筑师乔治·伯格斯特龙采用了钢筋混凝土而非钢框架，并设计了五层同心环。各环之间相隔约 6.5 米的露天光井，使得即使是深处内环的办公室也能获得充足的采光与自然通风。",
       funFact: "大楼总共拥有 7754 扇窗户，全部按日夜标准网格矩阵设计，是人类早期参数化装配建筑的典范。",
     },
+    {
+      id: "pentagon-corridors",
+      wonderId: "pentagon",
+      nameZh: "十条放射走廊与七分钟步程奇迹",
+      nameEn: "10 Radial Corridors & 7-Minute Walk Topology",
+      category: "工程智慧",
+      position: [0, 23, -166],
+      focusDistance: 135,
+      focusHeading: -45,
+      focusPitch: -32,
+      summary: "贯穿 A 至 E 五环、由顶角与边中点射出的 10 条高速放射走廊，使这座庞大城堡内部任意两点皆可在七分钟内直达。",
+      description:
+        "虽然五角大楼占地约 60 万平方米、走廊累计总长达 28 公里，但在空间拓扑效率上堪称传奇。五角建筑不仅拥有 A 至 E 五条同心回廊，还从五个顶点和五条边中点修筑了 10 条笔直贯通各环的宽阔放射廊（编号 Corridors 1–10），配合斜坡道取代高耗能电梯，实现了 2.6 万名工作人员在任意两间办公室之间步行不超过 7 分钟的惊人动线效率。",
+      funFact: "建造五角大楼时，工期仅用 16 个月便宣告竣工；施工中几乎用尽了波托马克河挖出的 68 万吨砂砾用来现场拌制钢筋混凝土。",
+    },
   ],
   fast: [
     {
@@ -389,6 +524,21 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
         "虽然整体基座是 500 米口径的球面，但在跟踪天体目标时，反射面下方的数千根下拉索会牵引特定区域的反射面板下沉，实时形成一个直径 300 米的瞬时抛物面，将射电电磁波精准汇聚在悬空馈源舱中。",
       funFact: "如果把 FAST 整个反射面装满水，可以给全世界每个人分到近四瓶水。",
     },
+    {
+      id: "fast-ring-beam",
+      wonderId: "fast",
+      nameZh: "千米周长巨型圈梁与喀斯特洼坑",
+      nameEn: "1,570m Steel Ring Beam & Karst Sinkhole",
+      category: "历史传奇",
+      position: [250, 95, 0],
+      focusDistance: 165,
+      focusHeading: 65,
+      focusPitch: -22,
+      summary: "架设于 50 根格构钢柱上的 500 米直径环形巨型圈梁，将万余吨高强钢索网牢牢锚固在贵州大窝凼天坑。",
+      description:
+        "为这口超级大锅提供天然托碗的，是科学家耗时 17 年从数千个云贵山洼中精选出的『大窝凼』喀斯特溶蚀天坑——天然漏斗地形让雨水顺岩溶地下暗河渗排，避免雨季蓄水淹锅，同时节省了上千万立方米爆破土石方。周圈高悬百米的巨型空心钢结构圈梁全长逾 1.57 公里，承受着整个主动索网高达万吨的水平拉力。",
+      funFact: "为了保护天眼极其敏锐的无线电接收静区，方圆 5 公里被划为严格的电磁波宁静核心区，甚至连手机和数码相机都需要严加管控。",
+    },
   ],
   burj: [
     {
@@ -420,6 +570,36 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       description:
         "摩天大楼最大的自然挑战是高空狂风造成的涡旋脱落震动。建筑大师阿德里安·史密斯采用了 Y 型平面的「支柱核心筒」结构，随着楼层上升，三翼逐一顺时针/逆时针退缩。这种螺旋台阶式外形打乱了风流的共振频率，大幅减小了塔身的风致摆动。",
       funFact: "哈利法塔表面覆盖了 14.2 万平方米的铝合金与中空隔热反射玻璃，相当于 17 个标准足球场的面积。",
+    },
+    {
+      id: "burj-observatory",
+      wonderId: "burj",
+      nameZh: "555 米「At The Top SKY」云端观景台",
+      nameEn: "At The Top & SKY Cloud Observation Decks",
+      category: "隐秘空间",
+      position: [0, 505, 18],
+      focusDistance: 150,
+      focusHeading: 120,
+      focusPitch: -18,
+      summary: "坐落于第 124、125 与 148 层的全球标志性高空悬挑玻璃台，双层超高速电梯以每秒 10 米直刺云霄。",
+      description:
+        "乘搭每秒 10 米（约合每小时 36 公里）的全球最快双层高速电梯，仅需 60 秒便能从地下大厅直冲云端观景平台。第 124 层设有开放式露天环廊玻璃幕墙，而高达 555 米的第 148 层『At The Top SKY』更是俯瞰迪拜人工棕榈岛、阿拉伯海湾与远方大漠的绝佳天际线观景窗。",
+      funFact: "由于迪拜沙漠冬季早晚经常涌来贴地平流低云，站在第 124 层以上的访客常常体验到置身云海之巅、四周摩天楼尖穿云而出的奇观。",
+    },
+    {
+      id: "burj-fountain",
+      wonderId: "burj",
+      nameZh: "哈利法湖音乐喷泉与防沉降群桩基座",
+      nameEn: "Dubai Fountain Lake & Friction Pile Foundation",
+      category: "工程智慧",
+      position: [130, 8, 90],
+      focusDistance: 210,
+      focusHeading: 120,
+      focusPitch: -24,
+      summary: "30 英亩人工湖围绕着高塔下的环形台基；沙地之下却深埋着 192 根长达 50 米的抗腐蚀摩擦灌注桩。",
+      description:
+        "在哈利法塔紧邻建筑南侧的广阔圆形湖区，正是闻名世界的迪拜音乐喷泉（喷水高度可达 150 米，相当于 50 层高楼）。为了在松软的沙漠钙质砂岩地质上托起高达 50 万吨重的建筑主体，工程师浇筑了 3.7 米厚的巨型 Y 形钢筋混凝土承台，其下深打 192 根直径 1.5 米、深达 50 米的摩擦灌注桩，并配以外加电流阴极保护以抵御含盐地下水腐蚀。",
+      funFact: "塔楼中央空调系统每天在潮湿波斯湾海风中凝结出的纯净冷凝水高达 1500 万加仑（约 20 个奥运泳池水量），全部被回收用于灌溉周边草坪与补给景观喷泉湖。",
     },
   ],
   apple: [
@@ -514,6 +694,36 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       description:
         "歌剧院向海港开敞的各壳顶开口，由巨大的钢构架与琥珀色玻璃幕墙封闭。玻璃采用特制双层夹胶工艺，能隔绝海面强风风噪与多余热辐射，同时为室内音乐厅提供温暖的天然滤光环境。",
       funFact: "大音乐厅内部由澳大利亚原生红柳桉木与白桦木精雕细琢，拥有世界最大的机械动作管风琴，共计 10,154 根音管。",
+    },
+    {
+      id: "sydney-podium",
+      wonderId: "sydney",
+      nameZh: "花岗岩纪念碑台基与百米迎宾长阶",
+      nameEn: "Monumental Granite Podium & Forecourt Steps",
+      category: "建筑奇观",
+      position: [0, 8, -116],
+      focusDistance: 130,
+      focusHeading: 155,
+      focusPitch: -22,
+      summary: "约恩·乌松借鉴玛雅大神庙基台灵感筑就的 96 米宽花岗岩大台阶，将城市喧嚣与海港艺术圣殿庄严抬升隔离。",
+      description:
+        "游览尤卡坦玛雅遗址后，乌松深受中美洲神庙高台抬升神圣场域的震撼。他决定将歌剧院所有的设备机房、后台通道、货运与车辆动线全部隐匿在一座由预制粉红花岗岩饰面的纪念碑式巨大平台之中（总面积逾两公顷，基桩深扎海床 25 米），南端以长达近百米的开阔花岗岩阶梯隆重抬升，让游人如同攀登祭坛般步入壳顶下的纯粹艺术世界。",
+      funFact: "整个海港半岛基座下方打入了 588 根混凝土海下承重桩，使歌剧院宛如一艘永久锚泊在便利朗角的雕塑方舟。",
+    },
+    {
+      id: "sydney-bennelong",
+      wonderId: "sydney",
+      nameZh: "贝尼朗厅小贝壳餐厅组群",
+      nameEn: "Bennelong Wing & Waterfront Shells",
+      category: "隐秘空间",
+      position: [52, 26, -54],
+      focusDistance: 85,
+      focusHeading: 130,
+      focusPitch: -18,
+      summary: "独立依偎于主音乐厅西南翼的两枚灵动小贝壳，俯瞰皇家植物园与海港大桥。",
+      description:
+        "除了大音乐厅与琼·萨瑟兰歌剧院这两组主体连拱壳群外，西南端台基边缘还独立栖息着第三组体量轻巧的壳顶组群——贝尼朗餐厅（Bennelong）。它由两枚顺承同一母球曲率的错落小贝壳拼合成，正对悉尼港湾与海港大桥，透过向南敞开的倾斜玻璃幕墙可边享美食边饱览全景码头帆影。",
+      funFact: "整个半岛的名字源自 18 世纪初协助早期总督与当地土著部落沟通的重要人物本内朗（Bennelong），这间餐厅亦以此得名。",
     },
   ],
   globalcenter: [
@@ -671,6 +881,36 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
         "两条主悬索单根重达 2.45 万吨，内含 27,572 根镀锌钢丝。最初美国海军曾提议将其漆成黑黄相间的斑马条纹以利航行，但建筑师坚持选用特制的「国际橘 (International Orange)」，这种暖调橙红不仅在北加州常年海雾中具备极高穿透力，还与周围蓝海金山绿岸相得益彰。",
       funFact: "主缆内包含的钢丝总长度达 12.9 万公里，足以绕地球赤道整整三圈还多。",
     },
+    {
+      id: "goldengate-deck",
+      wonderId: "goldengate",
+      nameZh: "67 米净空加劲钢桁架与抗风柔性桥面",
+      nameEn: "Warren Truss Stiffening Deck & Vertical Suspenders",
+      category: "工程智慧",
+      position: [0, 72, 220],
+      focusDistance: 210,
+      focusHeading: 225,
+      focusPitch: -18,
+      summary: "全长 2.7 公里的悬吊加劲钢桁架桥面，距离海峡狂涛高出 67 米，可承受大风下数米的横向弹性摆动。",
+      description:
+        "金门海峡连接太平洋与旧金山湾，终年强风凛冽、潮汐暗流汹涌。为保证大型远洋巨轮与航空母舰顺利通行，桥面净空高达海面以上 67 米。双向六车道桥面两侧依托通长的钢结构加劲桁架（Stiffening Truss）提供抗扭刚度，并通过数百根成对垂直吊索稳稳吊挂在上方弧形主缆之下。在历史上最猛烈的风浪中，跨中桥面曾实现安全弹性侧摆逾两米。",
+      funFact: "1987 年大桥建成 50 周年庆典当天，三十多万民众涌上大桥游行，惊人的额外负荷甚至将桥面天然拱形弧度一度压平了约 2.1 米，却依然安然无恙！",
+    },
+    {
+      id: "goldengate-anchorage",
+      wonderId: "goldengate",
+      nameZh: "南北万吨级重力式混凝土锚碇座",
+      nameEn: "Gravity Concrete Cable Anchorages",
+      category: "建筑奇观",
+      position: [0, 32, -1280],
+      focusDistance: 220,
+      focusHeading: 215,
+      focusPitch: -24,
+      summary: "重达数万吨、深扎海岸岩层的巨型重力混凝土锚块，如同拔河选手的双脚稳稳拽住整座悬索桥的巨力。",
+      description:
+        "整座金门大桥两根主缆承受的张力高达数万吨级，桥塔仅负责垂直向下的压力传导，真正负责向水平与斜向拉住整个跨海重量的是位于南北两岸尽端的巨型重力式混凝土锚碇室。每根主缆在这里如瀑布般分散成 61 股钢索束，再张紧锚固在一根根深深浇筑在岩石地基深处的钢拉杆锚块之中。",
+      funFact: "南岸基础施工恰巧直接修筑在著名的圣安德烈亚斯断层带边缘激流岩礁上，潜水员当年必须在浑浊冰冷的海流中靠触摸完成水下围堰定位。",
+    },
   ],
   svalbard: [
     {
@@ -702,6 +942,21 @@ export const LANDMARK_HOTSPOTS: Record<string, Hotspot[]> = {
       description:
         "根据挪威法律，超过一定造价的公共工程必须包含艺术品。艺术家 Dyveke Sanne 设计了覆盖于入口顶部与上立面的「永久回响（Perpetual Repercussion）」。白昼它折射纯净雪山阳光，漫长极夜则散发出深邃青翠的翡翠光芒，向茫茫北极苍穹昭示着生命的延续。",
       funFact: "即使外部电力彻底中断，山体内部常年稳定的冻土环境也能确保地温在数十年内保持在零度以下，是全球最安全的无源自然冰箱。",
+    },
+    {
+      id: "svalbard-airlock",
+      wonderId: "svalbard",
+      nameZh: "重型防爆气密门斗与冻土深库通道",
+      nameEn: "Blast-Proof Airlock & Mountain Vault Tunnel",
+      category: "工程智慧",
+      position: [0, 3.2, 14.4],
+      focusDistance: 24,
+      focusHeading: 198,
+      focusPitch: -10,
+      summary: "深入山体的双开防爆气密门禁系统，保护着其后 120 米岩层隧道与零下 18℃ 的三重地下基因宝库。",
+      description:
+        "混凝土棱柱门厅下方的深凹处设置了坚固的防爆气密金属门斗与多道安全气闸门，门前配有醒目黄色警戒密封条及照明安全灯护柱。平时整座种子库无人驻守，每年仅寥寥数次由工作人员核验开启进入。穿过防爆门后是一条深入砂岩内 120 米的斜坡隔热隧道，尽头分为三座独立库室，用以防范战争、洪水与小行星撞击带来的物种灭绝危机。",
+      funFact: "全球首个从斯瓦尔巴种子库紧急提领「救命备份」的国家是叙利亚——内战摧毁了阿勒颇种子研究站后，科研人员在黎巴嫩成功凭提取的备份样本重启耐旱小麦与大麦育种。",
     },
   ],
   liberty: [

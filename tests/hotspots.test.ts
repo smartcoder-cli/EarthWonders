@@ -3,11 +3,11 @@ import { LANDMARK_HOTSPOTS } from "../src/hotspots";
 import { WONDERS } from "../src/wonders";
 
 describe("Landmark Hotspots Integrity", () => {
-  it("every wonder should have defined hotspots with valid 3D positions", () => {
+  it("every wonder should have at least 3 defined hotspots with valid 3D positions", () => {
     for (const w of WONDERS) {
       const spots = LANDMARK_HOTSPOTS[w.id];
       expect(spots, `Wonder ${w.id} must have hotspots defined`).toBeDefined();
-      expect(spots.length).toBeGreaterThanOrEqual(1);
+      expect(spots.length, `Wonder ${w.id} should have at least 3 hotspots`).toBeGreaterThanOrEqual(3);
 
       for (const spot of spots) {
         expect(spot.wonderId).toBe(w.id);
@@ -15,6 +15,7 @@ describe("Landmark Hotspots Integrity", () => {
         expect(spot.nameEn.length).toBeGreaterThan(0);
         expect(spot.summary.length).toBeGreaterThan(0);
         expect(spot.description.length).toBeGreaterThan(0);
+        expect(spot.funFact.length).toBeGreaterThan(0);
         expect(spot.position).toHaveLength(3);
         expect(spot.position.every((val) => typeof val === "number" && !Number.isNaN(val))).toBe(true);
         expect(spot.focusDistance).toBeGreaterThan(0);
@@ -30,6 +31,6 @@ describe("Landmark Hotspots Integrity", () => {
         allIds.add(spot.id);
       }
     }
-    expect(allIds.size).toBeGreaterThan(50);
+    expect(allIds.size).toBeGreaterThanOrEqual(72);
   });
 });
