@@ -1,9 +1,191 @@
 import * as THREE from "three";
 import { type SurfaceKit } from "../surfaces";
-import {
-  stone,
-  box,
-} from "./_shared";
+import { stone, box } from "./_shared";
+
+/**
+ * 轻量级钢结构桁架几何合并累加器：
+ * 将数百至数千根角柱、次弦杆、X 型腹杆与连系梁合并为少量 BufferGeometry，
+ * 同时保留精确面法线、UV 与 Crisp Box Edge（配合 _lines.ts 生成锻铁轮廓线）。
+ */
+class IronTrussAccumulator {
+  private positions: number[] = [];
+  private normals: number[] = [];
+  private uvs: number[] = [];
+  private indices: number[] = [];
+
+  private static readonly BASE_BOX = new THREE.BoxGeometry(1, 1, 1);
+  private static readonly V = new THREE.Vector3();
+  private static readonly N = new THREE.Vector3();
+  private static readonly UP = new THREE.Vector3(0, 1, 0);
+  private static readonly M = new THREE.Matrix4();
+  private static readonly Q = new THREE.Quaternion();
+  private static readonly S = new THREE.Vector3();
+  private static readonly DIR = new THREE.Vector3();
+  private static readonly MID = new THREE.Vector3();
+  private static readonly NM = new THREE.Matrix3();
+
+  addBoxMatrix(matrix: THREE.Matrix4, sx: number, sy: number, sz: number) {
+    const base = IronTrussAccumulator.BASE_BOX;
+    const posAttr = base.getAttribute("position") as THREE.BufferAttribute;
+    const normAttr = base.getAttribute("normal") as THREE.BufferAttribute;
+    const uvAttr = base.getAttribute("uv") as THREE.BufferAttribute;
+    const idxAttr = base.getIndex()!;
+
+    const vertOffset = this.positions.length / 3;
+    const v = IronTrussAccumulator.V;
+    const n = IronTrussAccumulator.N;
+    const nm = IronTrussAccumulator.NM.getNormalMatrix(matrix);
+
+    for (let i = 0; i < posAttr.count; i++) {
+      v.set(posAttr.getX(i) * sx, posAttr.getY(i) * sy, posAttr.getZ(i) * sz).applyMatrix4(matrix);
+      this.positions.push(v.x, v.y, v.z);
+
+      n.set(normAttr.getX(i), normAttr.getY(i), normAttr.getZ(i)).applyMatrix3(nm).normalize();
+      this.normals.push(n.x, n.y, n.z);
+
+      this.uvs.push(uvAttr.getX(i), uvAttr.getY(i));
+    }
+
+    for (let i = 0; i < idxAttr.count; i++) {
+      this.indices.push(vertOffset + idxAttr.getX(i));
+    }
+  }
+
+  addBox(
+    cx: number,
+    cy: number,
+    cz: number,
+    sx: number,
+    sy: number,
+    sz: number,
+    rx = 0,
+    ry = 0,
+    rz = 0,
+  ) {
+    const m = IronTrussAccumulator.M;
+    const q = IronTrussAccumulator.Q.setFromEuler(new THREE.Euler(rx, ry, rz));
+    m.compose(new THREE.Vector3(cx, cy, cz), q, IronTrussAccumulator.S.set(1, 1, 1));
+    this.addBoxMatrix(m, sx, sy, sz);
+  }
+
+  addStrut(a: THREE.Vector3, b: THREE.Vector3, w: number, d = w) {
+    const dir = IronTrussAccumulator.DIR.subVectors(b, a);
+    const len = dir.length();
+    if (len < 1e-4) return;
+    dir.multiplyScalar(1 / len);
+    const mid = IronTrussAccumulator.MID.addVectors(a, b).multiplyScalar(0.5);
+    const q = IronTrussAccumulator.Q.setFromUnitVectors(IronTrussAccumulator.UP, dir);
+    const m = IronTrussAccumulator.M.compose(mid, q, IronTrussAccumulator.S.set(1, 1, 1));
+    this.addBoxMatrix(m, w, len, d);
+  }
+
+  toMesh(material: THREE.Material): THREE.Mesh {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(this.positions, 3));
+    geo.setAttribute("normal", new THREE.Float32BufferAttribute(this.normals, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(this.uvs, 2));
+    geo.setIndex(this.indices);
+    return new THREE.Mesh(geo, material);
+  }
+}
+
+/** 真实埃菲尔铁塔平滑指数收分腿心偏移 & 单腿半宽曲线 (y: 0 ~ 276m) */
+function eiffelLegProfile(y: number): { center: number; halfW: number } {
+  // 关键高程控制点：地面(0) -> 一层(57) -> 二层(115) -> 汇合区(192) -> 顶层(276)
+  if (y <= 57) {
+    const t = y / 57;
+    // 微凹指数曲线：下宽上收
+    const center = 48.0 * (1 - t) + 24.2 * t - 3.6 * Math.sin(t * Math.PI);
+    const halfW = 11.2 * (1 - t) + 6.6 * t - 0.8 * Math.sin(t * Math.PI);
+    return { center, halfW };
+  }
+  if (y <= 115) {
+    const t = (y - 57) / 58;
+    const center = 24.2 * (1 - t) + 13.4 * t - 1.8 * Math.sin(t * Math.PI);
+    const halfW = 6.6 * (1 - t) + 4.4 * t - 0.35 * Math.sin(t * Math.PI);
+    return { center, halfW };
+  }
+  const t = Math.min(1, (y - 115) / 77);
+  const center = 13.4 * (1 - t) + 5.6 * t - 0.9 * Math.sin(t * Math.PI);
+  const halfW = 4.4 * (1 - t) + 3.6 * t;
+  return { center, halfW };
+}
+
+function upperShaftHalfW(y: number): number {
+  const t = Math.max(0, Math.min(1, (y - 192) / 84));
+  return 9.2 * (1 - t) + 5.2 * t - 0.55 * Math.sin(t * Math.PI);
+}
+
+/** 获取单条腿截面上的 4 个角点 (index 0..3 CCW around leg center) */
+function legCorners(y: number, sx: number, sz: number): THREE.Vector3[] {
+  const { center, halfW } = eiffelLegProfile(y);
+  const cx = sx * center;
+  const cz = sz * center;
+  return [
+    new THREE.Vector3(cx - halfW, y, cz - halfW),
+    new THREE.Vector3(cx + halfW, y, cz - halfW),
+    new THREE.Vector3(cx + halfW, y, cz + halfW),
+    new THREE.Vector3(cx - halfW, y, cz + halfW),
+  ];
+}
+
+/** 在一对矩形截面的四面内添加双分格 X 型格构腹杆、次弦杆与环梁 */
+function appendTaperedTrussStage(
+  acc: IronTrussAccumulator,
+  bCorners: THREE.Vector3[],
+  tCorners: THREE.Vector3[],
+  chordW: number,
+  braceW: number,
+  subdivideFace: boolean,
+  withInternalDiaphragm: boolean,
+) {
+  // 4 根主斜角弦杆
+  for (let c = 0; c < 4; c++) {
+    acc.addStrut(bCorners[c], tCorners[c], chordW);
+  }
+
+  for (let side = 0; side < 4; side++) {
+    const next = (side + 1) % 4;
+    const b0 = bCorners[side];
+    const b1 = bCorners[next];
+    const t0 = tCorners[side];
+    const t1 = tCorners[next];
+
+    // 底部及中部水平环箍梁
+    acc.addStrut(b0, b1, braceW * 1.15);
+
+    if (subdivideFace) {
+      const bm = new THREE.Vector3().lerpVectors(b0, b1, 0.5);
+      const tm = new THREE.Vector3().lerpVectors(t0, t1, 0.5);
+      const m0 = new THREE.Vector3().lerpVectors(b0, t0, 0.5);
+      const m1 = new THREE.Vector3().lerpVectors(b1, t1, 0.5);
+      const mm = new THREE.Vector3().lerpVectors(bm, tm, 0.5);
+
+      // 次级竖向中脊柱 + 半高水平横梁
+      acc.addStrut(bm, tm, braceW * 0.92);
+      acc.addStrut(m0, m1, braceW * 0.85);
+
+      // 4 格密布 X 型交叉斜撑，极大增强锻铁密实血肉感
+      acc.addStrut(b0, mm, braceW * 0.72);
+      acc.addStrut(bm, m0, braceW * 0.72);
+      acc.addStrut(bm, m1, braceW * 0.72);
+      acc.addStrut(b1, mm, braceW * 0.72);
+
+      acc.addStrut(m0, tm, braceW * 0.72);
+      acc.addStrut(mm, t0, braceW * 0.72);
+      acc.addStrut(mm, t1, braceW * 0.72);
+      acc.addStrut(m1, tm, braceW * 0.72);
+    } else {
+      acc.addStrut(b0, t1, braceW * 0.82);
+      acc.addStrut(b1, t0, braceW * 0.82);
+    }
+  }
+
+  if (withInternalDiaphragm) {
+    acc.addStrut(bCorners[0], bCorners[2], braceW * 0.78);
+    acc.addStrut(bCorners[1], bCorners[3], braceW * 0.78);
+  }
+}
 
 export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
   const root = new THREE.Group();
@@ -15,7 +197,6 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
     roughness: 0.65,
     metalness: 0.75,
   });
-  // 熟铁骨架夜间香槟金泛光材质 (Golden Floodlit Champagne Glow)
   const ironNight = new THREE.MeshStandardMaterial({
     color: 0xfbbf24,
     roughness: 0.45,
@@ -50,600 +231,558 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
     transparent: true,
     opacity: 0.85,
   });
+  const liftCarMat = new THREE.MeshStandardMaterial({
+    color: 0xd97706,
+    roughness: 0.35,
+    metalness: 0.7,
+  });
 
   const ironMeshes: THREE.Mesh[] = [];
   const glassMeshes: THREE.Mesh[] = [];
+
+  const lowerAcc = new IronTrussAccumulator();
+  const midAcc = new IronTrussAccumulator();
+  const upperAcc = new IronTrussAccumulator();
+  const detailAcc = new IronTrussAccumulator();
 
   // 1. 战神广场绿荫台基 (真实塔基占宽 ~125x125m)
   const parkBase = box(root, stone(0x27361b, 0.95, 0.0), 190, 1.2, 190, 0, 0, 0);
   parkBase.userData.skipLines = true;
 
-  // 2. 四足倾斜熟铁桁架巨柱 (底座外缘 ±62m ≈ 124m 见方，精准对应实景 125x125m)
-  const legPositions = [
-    { x: -51, z: -51, tx: -23, tz: -23 }, // N / Corner
-    { x: 51, z: -51, tx: 23, tz: -23 },
-    { x: 51, z: 51, tx: 23, tz: 23 },
-    { x: -51, z: 51, tx: -23, tz: 23 },
+  // 2. 四足大型花岗岩减震基墩 + 四条弯曲线格构空间桁架巨柱 (y = 3 ~ 55m)
+  const signs: Array<[number, number]> = [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
   ];
 
-  for (const lp of legPositions) {
-    // 双层花岗岩减震基墩
-    const ped1 = box(root, masonryMat, 22, 2.5, 22, lp.x, 0.6, lp.z);
+  for (const [sx, sz] of signs) {
+    const p0 = eiffelLegProfile(0);
+    const px = sx * p0.center;
+    const pz = sz * p0.center;
+
+    // 阶梯式花岗岩基墩（贴合脚掌外廓）
+    const ped1 = box(root, masonryMat, 27, 2.5, 27, px, 0.6, pz);
     ped1.userData.skipLines = true;
-    const ped2 = box(root, masonryMat, 17, 2.5, 17, lp.x, 3.1, lp.z);
+    const ped2 = box(root, masonryMat, 23.5, 2.2, 23.5, px, 3.1, pz);
     ped2.userData.skipLines = true;
 
-    const legDx = lp.tx - lp.x;
-    const legDz = lp.tz - lp.z;
-    const legLen = Math.hypot(legDx, 57, legDz);
-    const slopeQuat = new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0),
-      new THREE.Vector3(legDx, 57, legDz).normalize()
-    );
-
-    // 每条腿作为一个实体的倾斜格构空间桁架组
-    const legGroup = new THREE.Group();
-    legGroup.position.set((lp.x + lp.tx) / 2, 57 / 2, (lp.z + lp.tz) / 2);
-    legGroup.quaternion.copy(slopeQuat);
-
-    // 内部倾斜电梯轨道井核心 (Elevator Core Spine inside each leg)
-    const elevatorTrack = box(legGroup, ironDay, 2.8, legLen, 2.8, 0, -legLen / 2, 0);
-    ironMeshes.push(elevatorTrack);
-
-    // 四根粗壮主角钢弦杆 (Corner Chords, 1.5m 见方柱)
-    const halfBase = 5.2;
-    const halfTop = 3.6;
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const chord = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.85, 1.25, legLen, 4),
-          ironDay
-        );
-        chord.position.set(sx * (halfBase + halfTop) / 2, 0, sz * (halfBase + halfTop) / 2);
-        chord.rotation.y = Math.PI / 4;
-        legGroup.add(chord);
-        ironMeshes.push(chord);
-      }
+    const lowerStages = 7;
+    const yStart = 4.0;
+    const yEnd = 55.5;
+    for (let s = 0; s < lowerStages; s++) {
+      const yB = yStart + (s / lowerStages) * (yEnd - yStart);
+      const yT = yStart + ((s + 1) / lowerStages) * (yEnd - yStart);
+      const bC = legCorners(yB, sx, sz);
+      const tC = legCorners(yT, sx, sz);
+      appendTaperedTrussStage(lowerAcc, bC, tC, 1.45 - s * 0.06, 0.62, true, s % 2 === 1);
     }
 
-    // 沿腿身分布的密布横梁与 X 型对角交叉桁架腹杆 (Dense X-Truss Webs on all 4 faces)
-    const stages = 6;
-    for (let s = 0; s < stages; s++) {
-      const frac1 = s / stages - 0.5;
-      const frac2 = (s + 1) / stages - 0.5;
-      const y1 = frac1 * legLen;
-      const y2 = frac2 * legLen;
-      const midY = (y1 + y2) / 2;
-      const segH = y2 - y1;
-      const curW = (halfBase + halfTop) + (s / stages) * (halfTop - halfBase) * 2;
-
-      // 4 面环形水平腰箍梁
-      for (const side of [0, 1, 2, 3]) {
-        const isX = (side % 2 === 0);
-        const sign = side < 2 ? 1 : -1;
-        const ring = box(
-          legGroup,
-          ironDay,
-          isX ? curW : 0.8,
-          0.85,
-          isX ? 0.8 : curW,
-          isX ? 0 : sign * (curW / 2),
-          y1 - 0.4,
-          isX ? sign * (curW / 2) : 0
-        );
-        ironMeshes.push(ring);
-
-        // X 型交叉斜撑对角腹杆 (Crossed Diagonal Struts)
-        const diagLen = Math.hypot(curW, segH);
-        const diagAng = Math.atan2(segH, curW);
-
-        const d1 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, 0.65, 0.65), ironDay);
-        d1.position.set(
-          isX ? 0 : sign * (curW / 2),
-          midY,
-          isX ? sign * (curW / 2) : 0
-        );
-        if (isX) {
-          d1.rotation.z = diagAng;
-        } else {
-          d1.rotation.y = Math.PI / 2;
-          d1.rotation.x = diagAng;
-        }
-        legGroup.add(d1);
-        ironMeshes.push(d1);
-
-        const d2 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, 0.65, 0.65), ironDay);
-        d2.position.set(
-          isX ? 0 : sign * (curW / 2),
-          midY,
-          isX ? sign * (curW / 2) : 0
-        );
-        if (isX) {
-          d2.rotation.z = -diagAng;
-        } else {
-          d2.rotation.y = Math.PI / 2;
-          d2.rotation.x = -diagAng;
-        }
-        legGroup.add(d2);
-        ironMeshes.push(d2);
-      }
+    // 腿芯内部斜向轨道电梯导轨双桁架 + 爬升中缆车厢体
+    const bCenter = new THREE.Vector3(sx * eiffelLegProfile(5).center, 5, sz * eiffelLegProfile(5).center);
+    const tCenter = new THREE.Vector3(sx * eiffelLegProfile(55).center, 55, sz * eiffelLegProfile(55).center);
+    const tangentOffset = new THREE.Vector3(-sz * 1.4, 0, sx * 1.4);
+    for (const sideSgn of [-1, 1]) {
+      const rA = bCenter.clone().addScaledVector(tangentOffset, sideSgn);
+      const rB = tCenter.clone().addScaledVector(tangentOffset, sideSgn);
+      lowerAcc.addStrut(rA, rB, 0.72);
     }
-
-    root.add(legGroup);
+    // 沿斜轨横梯桁架支撑
+    for (let k = 1; k < 10; k++) {
+      const ft = k / 10;
+      const midPt = new THREE.Vector3().lerpVectors(bCenter, tCenter, ft);
+      lowerAcc.addStrut(
+        midPt.clone().addScaledVector(tangentOffset, -1),
+        midPt.clone().addScaledVector(tangentOffset, 1),
+        0.52,
+      );
+    }
+    // 东西腿内可见爬升双层玻璃轿厢
+    if (sx !== sz) {
+      const liftFrac = sx > 0 ? 0.42 : 0.68;
+      const liftPos = new THREE.Vector3().lerpVectors(bCenter, tCenter, liftFrac);
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(3.6, 4.2, 3.6), liftCarMat);
+      cabin.position.copy(liftPos);
+      root.add(cabin);
+    }
   }
 
-  // 3. 四面深邃宏伟的抛物线大拱券 (Monumental Base Arches, y = 0 ~ 39m)
-  // 拱券深度加厚至 14 米，拥有双层上下弧梁与辐射状腹杆
-  const archConfigs = [
-    { x: 0, z: -41.5, rotY: 0 },
-    { x: 41.5, z: 0, rotY: Math.PI / 2 },
-    { x: 0, z: 41.5, rotY: 0 },
-    { x: -41.5, z: 0, rotY: Math.PI / 2 },
+  // 3. 贴合四腿倾斜面的四面镂空锻铁花丝大拱券 (True Fitted Open-Lattice Arches, y = 4 ~ 42m)
+  const archFaces = [
+    { axis: "x" as const, sign: -1 },
+    { axis: "x" as const, sign: 1 },
+    { axis: "z" as const, sign: -1 },
+    { axis: "z" as const, sign: 1 },
   ];
-  for (const ac of archConfigs) {
-    const archGroup = new THREE.Group();
-    archGroup.position.set(ac.x, 0, ac.z);
-    archGroup.rotation.y = ac.rotY;
+  for (const af of archFaces) {
+    const segs = 18;
+    const archPeak = 39.5;
+    const archDeckY = 54.0;
+    const thicknessHalf = 3.2;
 
-    const ptsCount = 20;
-    const archSpan = 74;
-    const archPeak = 39;
-    const archDepth = 14.0; // 深度加厚至 14 米，完全填满两腿间距！
+    const ptOnArch = (t: number, yVal: number, offsetOut: number) => {
+      const prof = eiffelLegProfile(Math.min(54, yVal));
+      const spanHalf = prof.center - prof.halfW * 0.45;
+      const coordAlong = t * spanHalf;
+      const coordPerp = af.sign * (prof.center + prof.halfW * 0.28 + offsetOut);
+      return af.axis === "z"
+        ? new THREE.Vector3(coordAlong, yVal, coordPerp)
+        : new THREE.Vector3(coordPerp, yVal, coordAlong);
+    };
 
-    // 上下双层抛物线拱圈截面
-    const archShape = new THREE.Shape();
-    archShape.moveTo(-archSpan / 2, 0);
-    for (let i = 0; i <= ptsCount; i++) {
-      const t = (i / ptsCount) * 2 - 1;
-      const y = archPeak * (1 - t * t);
-      const x = t * (archSpan / 2);
-      archShape.lineTo(x, y);
-    }
-    for (let i = ptsCount; i >= 0; i--) {
-      const t = (i / ptsCount) * 2 - 1;
-      const y = Math.max(0, (archPeak - 4.5) * (1 - t * t));
-      const x = t * ((archSpan - 6) / 2);
-      archShape.lineTo(x, y);
-    }
-    archShape.closePath();
+    for (const off of [-thicknessHalf, thicknessHalf]) {
+      for (let i = 0; i < segs; i++) {
+        const t0 = (i / segs) * 2 - 1;
+        const t1 = ((i + 1) / segs) * 2 - 1;
+        const y0 = Math.max(4, archPeak * (1 - t0 * t0));
+        const y1 = Math.max(4, archPeak * (1 - t1 * t1));
 
-    const extrudeGeom = new THREE.ExtrudeGeometry(archShape, {
-      depth: archDepth,
-      bevelEnabled: true,
-      bevelThickness: 0.6,
-      bevelSize: 0.5,
-      bevelSegments: 2,
-    });
-    extrudeGeom.center();
-    const archMesh = new THREE.Mesh(extrudeGeom, ironDay);
-    archMesh.position.set(0, archPeak / 2, 0);
-    archGroup.add(archMesh);
-    ironMeshes.push(archMesh);
+        // 拱腹下缘双肋弦杆
+        const a0 = ptOnArch(t0, y0, off);
+        const a1 = ptOnArch(t1, y1, off);
+        lowerAcc.addStrut(a0, a1, 1.05);
 
-    // 拱腹辐射状工字钢支柱花饰
-    for (let i = 1; i < ptsCount; i++) {
-      const t = (i / ptsCount) * 2 - 1;
-      const y = (archPeak - 2.2) * (1 - t * t);
-      const x = t * (archSpan / 2);
-      for (const oz of [-5, 0, 5]) {
-        const strut = box(archGroup, ironDay, 0.7, 4.2, 0.7, x, y - 2.1, oz);
-        ironMeshes.push(strut);
+        // 拱上缘承重挑梁 (位于 y = 48.5m 一层裙底以下)
+        const topY0 = Math.min(archDeckY, y0 + 6.5 + 8.5 * t0 * t0);
+        const topY1 = Math.min(archDeckY, y1 + 6.5 + 8.5 * t1 * t1);
+        const b0 = ptOnArch(t0, topY0, off);
+        const b1 = ptOnArch(t1, topY1, off);
+        lowerAcc.addStrut(b0, b1, 0.85);
+
+        // 辐射状腹杆与拱肩花饰 X 交叉网格
+        lowerAcc.addStrut(a0, b0, 0.68);
+        lowerAcc.addStrut(a0, b1, 0.48);
+        lowerAcc.addStrut(a1, b0, 0.48);
       }
     }
 
-    // 拱顶中央装饰金徽章圆环
-    const rosette = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.5, 2.5, archDepth + 0.5, 16),
-      goldSpireMat
-    );
-    rosette.rotation.x = Math.PI / 2;
-    rosette.position.set(0, archPeak - 2.2, 0);
-    archGroup.add(rosette);
+    // 前后双片拱肋之间的横联撑杆
+    for (let i = 1; i < segs; i++) {
+      const t = (i / segs) * 2 - 1;
+      const yA = Math.max(4, archPeak * (1 - t * t));
+      lowerAcc.addStrut(
+        ptOnArch(t, yA, -thicknessHalf),
+        ptOnArch(t, yA, thicknessHalf),
+        0.65,
+      );
+    }
 
-    root.add(archGroup);
+    // 拱顶中央金色徽章环饰
+    const topMid = ptOnArch(0, archPeak - 1.2, 0);
+    const rosette = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.6, 2.6, thicknessHalf * 2 + 1.2, 16),
+      goldSpireMat,
+    );
+    rosette.position.copy(topMid);
+    if (af.axis === "z") rosette.rotation.x = Math.PI / 2;
+    else rosette.rotation.z = Math.PI / 2;
+    root.add(rosette);
   }
 
-  // 4. 一层宏伟双层大观景台 (Platform 1, y = 57m, 72m x 72m)
-  const p1Outer = box(root, deckMat, 72, 4.2, 72, 0, 57, 0);
-  p1Outer.userData.skipLines = true;
+  // 4. 一层宏伟镂空回廊大观景台 (Platform 1, y = 52 ~ 67m，中庭真实留空 + 四周悬挑托架裙廊)
+  const p1OuterW = 72;
+  const p1InnerW = 28;
+  const ringBarW = (p1OuterW - p1InnerW) / 2; // 22m 宽环廊
+  const ringMidOff = (p1OuterW + p1InnerW) / 4; // 25m
 
-  // 外围 72 位法国科学家金色雕刻铭文楣饰 (包覆平台四面)
+  // 四条环廊组成带真实中央采光天井的一层主甲板 (无一整块扁平实心饼!)
+  const ringBars = [
+    { w: p1OuterW, d: ringBarW, x: 0, z: -ringMidOff },
+    { w: p1OuterW, d: ringBarW, x: 0, z: ringMidOff },
+    { w: ringBarW, d: p1InnerW, x: -ringMidOff, z: 0 },
+    { w: ringBarW, d: p1InnerW, x: ringMidOff, z: 0 },
+  ];
+  for (const rb of ringBars) {
+    const slab = box(root, deckMat, rb.w, 2.8, rb.d, rb.x, 56.2, rb.z);
+    slab.userData.skipLines = true;
+  }
+  // 中央玻璃漫步走廊十字钢梁
+  detailAcc.addBox(0, 57.6, 0, p1InnerW, 0.9, 3.2);
+  detailAcc.addBox(0, 57.6, 0, 3.2, 0.9, p1InnerW);
+
+  // 一层外悬挑弧形牛腿斜撑 & 外立面拱廊柱列 (Cantilevered Under-Skirt Brackets)
   for (const rotY of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
     const fg = new THREE.Group();
-    box(fg, goldSpireMat, 66, 2.2, 0.6, 0, 59.5, 36.1);
+    // 72 位法国科学家金色铭文装饰带 + 外圈重型锻铁围梁
+    box(fg, goldSpireMat, 68, 1.9, 0.6, 0, 57.6, 36.2);
+    box(fg, ironDay, 72.5, 1.2, 1.4, 0, 59.3, 35.8);
+    // 天井内圈围栏
+    box(fg, ironDay, p1InnerW + 1.2, 1.1, 0.7, 0, 59.0, p1InnerW / 2);
+
+    // 每面 9 组镂空钢构弧廊立柱与斜撑托架
+    for (let k = -4; k <= 4; k++) {
+      const gx = k * 7.5;
+      // 台基外挑底部斜向牛腿支架
+      const b1 = new THREE.Vector3(gx, 52.0, 29.0);
+      const t1 = new THREE.Vector3(gx, 56.2, 36.0);
+      const b2 = new THREE.Vector3(gx, 56.2, 29.0);
+      const v1 = b1.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+      const v2 = t1.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+      const v3 = b2.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+      detailAcc.addStrut(v1, v2, 0.78);
+      detailAcc.addStrut(v1, v3, 0.65);
+
+      // 观景层护栏竖梃
+      const rB = new THREE.Vector3(gx, 59.0, 35.8).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+      const rT = new THREE.Vector3(gx, 62.0, 35.8).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+      detailAcc.addStrut(rB, rT, 0.52);
+    }
     fg.rotation.y = rotY;
     root.add(fg);
   }
 
-  const p1Rim = box(root, ironDay, 73.5, 1.8, 73.5, 0, 60.5, 0);
-  ironMeshes.push(p1Rim);
-
-  // 四座大型全景玻璃展厅与餐厅
+  // 一层四角法式四坡屋顶全景玻璃展厅 (Corner Pavilions + Pitched Mansard Roofs)
   for (const sx of [-22, 22]) {
     for (const sz of [-22, 22]) {
-      const pav = box(root, glassDay, 13, 5.2, 13, sx, 61.5, sz);
+      const pav = box(root, glassDay, 13.5, 5.2, 13.5, sx, 59.0, sz);
       pav.userData.keepUv = true;
       glassMeshes.push(pav);
-      box(root, ironDay, 14, 0.8, 14, sx, 66.5, sz);
+
+      detailAcc.addBox(sx, 64.5, sz, 14.6, 0.85, 14.6);
+      // 坡顶四隅加劲钢屋架
+      const apex = new THREE.Vector3(sx, 68.4, sz);
+      for (const [cx, cz] of [[-7, -7], [7, -7], [7, 7], [-7, 7]]) {
+        detailAcc.addStrut(new THREE.Vector3(sx + cx, 64.8, sz + cz), apex, 0.58);
+      }
     }
   }
 
-  // 中庭强化玻璃镂空透空漫步区
-  box(root, deckMat, 28, 0.6, 28, 0, 59.2, 0);
+  // 5. 一至二层弧线收敛段 (y = 58.5 ~ 114m，每腿 8 级双密 X 型格构 + 中央倾斜电梯塔与盘旋楼梯)
+  for (const [sx, sz] of signs) {
+    const midStages = 8;
+    const yStart = 58.5;
+    const yEnd = 114.2;
+    for (let s = 0; s < midStages; s++) {
+      const yB = yStart + (s / midStages) * (yEnd - yStart);
+      const yT = yStart + ((s + 1) / midStages) * (yEnd - yStart);
+      const bC = legCorners(yB, sx, sz);
+      const tC = legCorners(yT, sx, sz);
+      appendTaperedTrussStage(midAcc, bC, tC, 1.1 - s * 0.03, 0.52, true, s % 2 === 1);
+    }
+  }
 
-  // 5. 一至二层斜向收拢段 (Platform 1 to Platform 2, y = 57m ~ 115m)
-  // 腿身从 (±23, 57, ±23) 收拢至 (±13.5, 115, ±13.5)
-  for (const lp of legPositions) {
-    const startX = lp.tx;
-    const startZ = lp.tz;
-    const endX = (lp.tx > 0 ? 1 : -1) * 13.5;
-    const endZ = (lp.tz > 0 ? 1 : -1) * 13.5;
-    const legDx = endX - startX;
-    const legDz = endZ - startZ;
-    const legLen = Math.hypot(legDx, 58, legDz);
-    const slopeQuat = new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0),
-      new THREE.Vector3(legDx, 58, legDz).normalize()
-    );
+  // 一至二层中央核心：双垂直/斜向快速电梯井道骨架 + 中央旋梯桁架 + 3 道内部水平风撑格构横桥
+  const coreCols = [[-3.4, -3.4], [3.4, -3.4], [3.4, 3.4], [-3.4, 3.4]];
+  for (const [cx, cz] of coreCols) {
+    midAcc.addStrut(new THREE.Vector3(cx, 57, cz), new THREE.Vector3(cx * 0.82, 115, cz * 0.82), 0.72);
+  }
+  for (let k = 0; k < 10; k++) {
+    const y1 = 58 + k * 5.6;
+    const y2 = y1 + 5.6;
+    const f1 = 1 - (k / 10) * 0.18;
+    const f2 = 1 - ((k + 1) / 10) * 0.18;
+    const bPts = coreCols.map(([x, z]) => new THREE.Vector3(x * f1, y1, z * f1));
+    const tPts = coreCols.map(([x, z]) => new THREE.Vector3(x * f2, y2, z * f2));
+    appendTaperedTrussStage(midAcc, bPts, tPts, 0.65, 0.42, false, k % 2 === 0);
+  }
 
-    const midLegGroup = new THREE.Group();
-    midLegGroup.position.set((startX + endX) / 2, 57 + 58 / 2, (startZ + endZ) / 2);
-    midLegGroup.quaternion.copy(slopeQuat);
-
-    // 4 根加粗主角柱 (1.1m)
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const chord = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.7, 0.95, legLen, 4),
-          ironDay
+  // 3 道贯穿四腿的立体空间水平加劲联结格构桥 (y = 74m, 90m, 104m)
+  for (const hy of [74, 90, 104]) {
+    const prof = eiffelLegProfile(hy);
+    const outerSpan = prof.center * 2;
+    const off = prof.center;
+    const deckDrop = 2.6;
+    // 外圈双层平面桁架梁 + 斜向撑入中央电梯核心
+    for (const yLev of [hy - deckDrop / 2, hy + deckDrop / 2]) {
+      midAcc.addBox(0, yLev, -off, outerSpan, 0.85, 0.85);
+      midAcc.addBox(0, yLev, off, outerSpan, 0.85, 0.85);
+      midAcc.addBox(-off, yLev, 0, 0.85, 0.85, outerSpan);
+      midAcc.addBox(off, yLev, 0, 0.85, 0.85, outerSpan);
+    }
+    // 纵深桁架腹杆与四向辐射拉杆
+    const steps = 6;
+    for (let i = 0; i < steps; i++) {
+      const a0 = -off + (i / steps) * outerSpan;
+      const a1 = -off + ((i + 1) / steps) * outerSpan;
+      for (const sideOff of [-off, off]) {
+        midAcc.addStrut(
+          new THREE.Vector3(a0, hy - deckDrop / 2, sideOff),
+          new THREE.Vector3(a1, hy + deckDrop / 2, sideOff),
+          0.46,
         );
-        chord.position.set(sx * 2.8, 0, sz * 2.8);
-        chord.rotation.y = Math.PI / 4;
-        midLegGroup.add(chord);
-        ironMeshes.push(chord);
+        midAcc.addStrut(
+          new THREE.Vector3(a1, hy - deckDrop / 2, sideOff),
+          new THREE.Vector3(a0, hy + deckDrop / 2, sideOff),
+          0.46,
+        );
+        midAcc.addStrut(
+          new THREE.Vector3(sideOff, hy - deckDrop / 2, a0),
+          new THREE.Vector3(sideOff, hy + deckDrop / 2, a1),
+          0.46,
+        );
+        midAcc.addStrut(
+          new THREE.Vector3(sideOff, hy - deckDrop / 2, a1),
+          new THREE.Vector3(sideOff, hy + deckDrop / 2, a0),
+          0.46,
+        );
       }
     }
-
-    // 4 级 X 型交叉桁架
-    for (let s = 0; s < 4; s++) {
-      const frac = (s + 0.5) / 4 - 0.5;
-      const my = frac * legLen;
-      const diagLen = Math.hypot(5.6, legLen / 4);
-      const ang = Math.atan2(legLen / 4, 5.6);
-      for (const isX of [true, false]) {
-        for (const sgn of [-1, 1]) {
-          const d1 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, 0.55, 0.55), ironDay);
-          d1.position.set(isX ? 0 : sgn * 2.8, my, isX ? sgn * 2.8 : 0);
-          if (isX) d1.rotation.z = ang;
-          else { d1.rotation.y = Math.PI / 2; d1.rotation.x = ang; }
-          midLegGroup.add(d1);
-          ironMeshes.push(d1);
-
-          const d2 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, 0.55, 0.55), ironDay);
-          d2.position.set(isX ? 0 : sgn * 2.8, my, isX ? sgn * 2.8 : 0);
-          if (isX) d2.rotation.z = -ang;
-          else { d2.rotation.y = Math.PI / 2; d2.rotation.x = -ang; }
-          midLegGroup.add(d2);
-          ironMeshes.push(d2);
-        }
-      }
-    }
-
-    root.add(midLegGroup);
+    // 十字连向中央核心井道的刚性腹杆
+    midAcc.addStrut(new THREE.Vector3(-off, hy, 0), new THREE.Vector3(off, hy, 0), 0.72);
+    midAcc.addStrut(new THREE.Vector3(0, hy, -off), new THREE.Vector3(0, hy, off), 0.72);
   }
 
-  // 四腿中部重型加劲连系横梁 (y = 86m & y = 102m)
-  for (const hy of [86, 102]) {
-    const w = hy === 86 ? 38 : 31;
-    const off = hy === 86 ? 19 : 15.5;
-    box(root, ironDay, w, 2.2, 1.8, 0, hy, -off);
-    box(root, ironDay, w, 2.2, 1.8, 0, hy, off);
-    box(root, ironDay, 1.8, 2.2, w, -off, hy, 0);
-    box(root, ironDay, 1.8, 2.2, w, off, hy, 0);
-  }
-
-  // 6. 二层双层观景平台与儒勒·凡尔纳餐厅 (Platform 2, y = 115m ~ 124m, 44m x 44m)
-  const p2Outer = box(root, deckMat, 44, 3.6, 44, 0, 115, 0);
+  // 6. 二层双层观景平台与儒勒·凡尔纳全景厅 (Platform 2, y = 113 ~ 125m)
+  const p2Outer = box(root, deckMat, 44, 2.8, 44, 0, 114.2, 0);
   p2Outer.userData.skipLines = true;
-  const p2Rim = box(root, ironDay, 45.5, 1.4, 45.5, 0, 117.0, 0);
-  ironMeshes.push(p2Rim);
+  detailAcc.addBox(0, 117.2, 0, 45.4, 1.1, 45.4);
 
-  // 四角斜向外挑承托牛腿 (Cantilever Knee Braces under Platform 2)
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const brace = new THREE.Mesh(new THREE.BoxGeometry(1.2, 8.5, 1.2), ironDay);
-      brace.position.set(sx * 17.5, 111, sz * 17.5);
-      brace.rotation.z = sx * 0.45;
-      brace.rotation.x = -sz * 0.45;
-      root.add(brace);
-      ironMeshes.push(brace);
+  // 二层四角与四边斜向外挑承托牛腿桁架群
+  for (const [sx, sz] of signs) {
+    midAcc.addStrut(
+      new THREE.Vector3(sx * 14.5, 108.5, sz * 14.5),
+      new THREE.Vector3(sx * 21.5, 114.4, sz * 21.5),
+      0.95,
+    );
+  }
+  for (const rotY of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+    for (let k = -2; k <= 2; k++) {
+      const gx = k * 7.2;
+      const b1 = new THREE.Vector3(gx, 110.5, 16.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+      const t1 = new THREE.Vector3(gx, 114.4, 22.0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+      detailAcc.addStrut(b1, t1, 0.65);
     }
   }
 
-  // 凡尔纳米其林全景餐厅核心 (Jules Verne Restaurant, y = 117.5m ~ 123.5m)
-  const p2Core = box(root, glassDay, 28, 5.0, 28, 0, 119.5, 0);
+  // 凡尔纳餐厅全景玻璃核心 + 密排窗框立柱
+  const p2Core = box(root, glassDay, 28, 5.2, 28, 0, 117.6, 0);
   p2Core.userData.keepUv = true;
   glassMeshes.push(p2Core);
+  for (let i = -3; i <= 3; i++) {
+    const off = i * 4.5;
+    detailAcc.addBox(off, 120.2, 14.1, 0.45, 5.2, 0.45);
+    detailAcc.addBox(off, 120.2, -14.1, 0.45, 5.2, 0.45);
+    detailAcc.addBox(14.1, 120.2, off, 0.45, 5.2, 0.45);
+    detailAcc.addBox(-14.1, 120.2, off, 0.45, 5.2, 0.45);
+  }
 
-  // 二层露天观景天台与金色雕花护栏 (Upper Deck & Railing, y = 122.5m)
-  box(root, deckMat, 32, 1.2, 32, 0, 122.5, 0);
-  box(root, goldSpireMat, 32.5, 1.0, 32.5, 0, 123.6, 0);
+  // 二层上层露天观景台与金色护栏
+  const p2UpperDeck = box(root, deckMat, 33, 1.1, 33, 0, 122.8, 0);
+  p2UpperDeck.userData.skipLines = true;
+  box(root, goldSpireMat, 33.8, 0.9, 33.8, 0, 123.9, 0);
 
-  // 6.5. 【平滑无缝衔接】：二层至三层汇聚段四腿平滑收分与过渡拱券 (Smooth Transition Zone, y = 115m ~ 138m)
-  // 腿柱从 (±13.5, 115, ±13.5) 优雅平滑内倾收拢至 (±6.5, 138, ±6.5)
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const tLen = Math.hypot(7.0, 23.0, 7.0);
-      const tLegQuat = new THREE.Quaternion().setFromUnitVectors(
-        new THREE.Vector3(0, 1, 0),
-        new THREE.Vector3(-sx * 7.0, 23.0, -sz * 7.0).normalize()
-      );
-      const transLeg = new THREE.Group();
-      transLeg.position.set(sx * 10.0, 115 + 11.5, sz * 10.0);
-      transLeg.quaternion.copy(tLegQuat);
-
-      // 4 根渐变弦杆
-      for (const cx of [-1, 1]) {
-        for (const cz of [-1, 1]) {
-          const chord = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.65, 0.85, tLen, 4),
-            ironDay
-          );
-          chord.position.set(cx * 1.6, 0, cz * 1.6);
-          chord.rotation.y = Math.PI / 4;
-          transLeg.add(chord);
-          ironMeshes.push(chord);
-        }
-      }
-
-      // 2 级 X 型交叉桁架
-      for (let s = 0; s < 2; s++) {
-        const frac = (s + 0.5) / 2 - 0.5;
-        const my = frac * tLen;
-        const dLen = Math.hypot(3.2, tLen / 2);
-        const ang = Math.atan2(tLen / 2, 3.2);
-        for (const isX of [true, false]) {
-          for (const sgn of [-1, 1]) {
-            const d1 = new THREE.Mesh(new THREE.BoxGeometry(dLen, 0.45, 0.45), ironDay);
-            d1.position.set(isX ? 0 : sgn * 1.6, my, isX ? sgn * 1.6 : 0);
-            if (isX) d1.rotation.z = ang;
-            else { d1.rotation.y = Math.PI / 2; d1.rotation.x = ang; }
-            transLeg.add(d1);
-            ironMeshes.push(d1);
-
-            const d2 = new THREE.Mesh(new THREE.BoxGeometry(dLen, 0.45, 0.45), ironDay);
-            d2.position.set(isX ? 0 : sgn * 1.6, my, isX ? sgn * 1.6 : 0);
-            if (isX) d2.rotation.z = -ang;
-            else { d2.rotation.y = Math.PI / 2; d2.rotation.x = -ang; }
-            transLeg.add(d2);
-            ironMeshes.push(d2);
-          }
-        }
-      }
-      root.add(transLeg);
+  // 7. 平滑自然汇合段 (y = 123 ~ 192m，10 级弧线斜柱优雅并拢 + 镂空拱券与双层空中走廊)
+  for (const [sx, sz] of signs) {
+    const convStages = 10;
+    const yStart = 123.5;
+    const yEnd = 192.0;
+    for (let s = 0; s < convStages; s++) {
+      const yB = yStart + (s / convStages) * (yEnd - yStart);
+      const yT = yStart + ((s + 1) / convStages) * (yEnd - yStart);
+      const bC = legCorners(yB, sx, sz);
+      const tC = legCorners(yT, sx, sz);
+      appendTaperedTrussStage(upperAcc, bC, tC, 0.88 - s * 0.015, 0.44, true, s % 2 === 1);
     }
   }
 
-  // 四面二层上方优雅过渡抛物线拱券 (Upper Transition Arches, y = 116m ~ 132m)
-  for (const rotY of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
-    const upArchGroup = new THREE.Group();
-    upArchGroup.rotation.y = rotY;
+  // 二层上方四面镂空锻铁过渡拱券 (y = 124 ~ 146m)
+  for (const af of archFaces) {
+    const segs = 12;
+    const baseA = 124;
+    const peakA = 144;
+    const topA = 148;
+    for (let i = 0; i < segs; i++) {
+      const t0 = (i / segs) * 2 - 1;
+      const t1 = ((i + 1) / segs) * 2 - 1;
+      const y0 = baseA + (peakA - baseA) * (1 - t0 * t0);
+      const y1 = baseA + (peakA - baseA) * (1 - t1 * t1);
+      const prof0 = eiffelLegProfile(y0);
+      const prof1 = eiffelLegProfile(y1);
 
-    const uSpan = 21.0;
-    const uPeak = 14.0;
-    const uPts = 12;
-    const uShape = new THREE.Shape();
-    uShape.moveTo(-uSpan / 2, 0);
-    for (let i = 0; i <= uPts; i++) {
-      const t = (i / uPts) * 2 - 1;
-      const x = (t * uSpan) / 2;
-      const y = uPeak * (1 - t * t);
-      uShape.lineTo(x, y);
-    }
-    uShape.lineTo(uSpan / 2, uPeak + 2.0);
-    uShape.lineTo(-uSpan / 2, uPeak + 2.0);
-    uShape.closePath();
+      const pA0 = af.axis === "z"
+        ? new THREE.Vector3(t0 * prof0.center, y0, af.sign * (prof0.center + prof0.halfW * 0.15))
+        : new THREE.Vector3(af.sign * (prof0.center + prof0.halfW * 0.15), y0, t0 * prof0.center);
+      const pA1 = af.axis === "z"
+        ? new THREE.Vector3(t1 * prof1.center, y1, af.sign * (prof1.center + prof1.halfW * 0.15))
+        : new THREE.Vector3(af.sign * (prof1.center + prof1.halfW * 0.15), y1, t1 * prof1.center);
 
-    const uGeom = new THREE.ExtrudeGeometry(uShape, {
-      depth: 3.2,
-      bevelEnabled: true,
-      bevelThickness: 0.4,
-      bevelSize: 0.3,
-      bevelSegments: 2,
-    });
-    uGeom.center();
-    const uMesh = new THREE.Mesh(uGeom, ironDay);
-    uMesh.position.set(0, 116 + uPeak / 2, 10.0);
-    upArchGroup.add(uMesh);
-    ironMeshes.push(uMesh);
+      const topY0 = Math.min(topA, y0 + 4.0 + 4.0 * t0 * t0);
+      const topY1 = Math.min(topA, y1 + 4.0 + 4.0 * t1 * t1);
+      const pB0 = af.axis === "z"
+        ? new THREE.Vector3(t0 * prof0.center, topY0, af.sign * (prof0.center + prof0.halfW * 0.15))
+        : new THREE.Vector3(af.sign * (prof0.center + prof0.halfW * 0.15), topY0, t0 * prof0.center);
+      const pB1 = af.axis === "z"
+        ? new THREE.Vector3(t1 * prof1.center, topY1, af.sign * (prof1.center + prof1.halfW * 0.15))
+        : new THREE.Vector3(af.sign * (prof1.center + prof1.halfW * 0.15), topY1, t1 * prof1.center);
 
-    root.add(upArchGroup);
-  }
-
-  // 汇聚过渡环梁平台 (Convergence Collar Balcony, y = 136m ~ 138m)
-  const collar1 = box(root, ironDay, 16.8, 1.2, 16.8, 0, 136.5, 0);
-  box(root, deckMat, 15.6, 1.0, 15.6, 0, 137.6, 0);
-  box(root, goldSpireMat, 16.0, 0.8, 16.0, 0, 138.4, 0);
-  ironMeshes.push(collar1);
-
-  // 7. 二层至三层汇聚为一的主塔身巨柱 (Main Tower Spire Column, y = 138m ~ 276m)
-  // 自 14.5m 见方无缝平滑匀称收拢至 8.0m 见方，全高 138 米！
-  const spireH = 138;
-  const spireBaseY = 138;
-  const spireStepsCount = 14; // 14 级密集 X 格构节段！
-
-  // 中央重型垂直电梯井核心 (Solid Elevator Core)
-  const centralSpine = box(root, ironDay, 4.2, spireH + 23, 4.2, 0, 115, 0);
-  centralSpine.position.y = 115 + (spireH + 23) / 2;
-  ironMeshes.push(centralSpine);
-
-  // 4 根随塔身斜向均匀收分的主塔角柱（底部 ±7.25m 连续收拢至顶部 ±4.0m）
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const bOff = 7.25;
-      const tOff = 4.0;
-      const dx = sx * (tOff - bOff);
-      const dz = sz * (tOff - bOff);
-      const colLen = Math.hypot(dx, spireH, dz);
-      const col = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.70, 1.15, colLen, 6),
-        ironDay
-      );
-      col.position.set(sx * ((bOff + tOff) / 2), spireBaseY + spireH / 2, sz * ((bOff + tOff) / 2));
-      col.quaternion.setFromUnitVectors(
-        new THREE.Vector3(0, 1, 0),
-        new THREE.Vector3(dx, spireH, dz).normalize()
-      );
-      root.add(col);
-      ironMeshes.push(col);
+      upperAcc.addStrut(pA0, pA1, 0.78);
+      upperAcc.addStrut(pB0, pB1, 0.62);
+      upperAcc.addStrut(pA0, pB0, 0.48);
+      upperAcc.addStrut(pA0, pB1, 0.36);
     }
   }
 
-  // 14 级密集分布的水平围梁与 4 面交叉 X 型桁架腹杆 (Dense Façade X-Trusses)
-  for (let s = 0; s < spireStepsCount; s++) {
-    const frac1 = s / spireStepsCount;
-    const frac2 = (s + 1) / spireStepsCount;
-    const y1 = spireBaseY + frac1 * spireH;
-    const y2 = spireBaseY + frac2 * spireH;
-    const midY = (y1 + y2) / 2;
-    const segH = y2 - y1;
-    const w1 = 14.5 - frac1 * 6.5;
-    const w2 = 14.5 - frac2 * 6.5;
-    const curW = (w1 + w2) / 2;
+  // 汇合段内部双快速电梯井道 & 阶梯连系观景平台 (y = 152m, 174m, 192m)
+  for (const [ex, ez] of [[-2.0, -2.0], [2.0, -2.0], [2.0, 2.0], [-2.0, 2.0]]) {
+    upperAcc.addStrut(new THREE.Vector3(ex, 123, ez), new THREE.Vector3(ex * 0.85, 276, ez * 0.85), 0.56);
+  }
+  for (let yk = 126; yk < 274; yk += 8) {
+    const f = yk < 192 ? 2.0 : 1.75;
+    upperAcc.addStrut(new THREE.Vector3(-f, yk, -f), new THREE.Vector3(f, yk + 8, f), 0.38);
+    upperAcc.addStrut(new THREE.Vector3(f, yk, -f), new THREE.Vector3(-f, yk + 8, f), 0.38);
+  }
+  for (const ringY of [152, 174, 192]) {
+    const prof = eiffelLegProfile(ringY);
+    const rw = (prof.center + prof.halfW) * 2 + 1.8;
+    upperAcc.addBox(0, ringY, 0, rw, 1.3, rw);
+  }
 
-    // 四面闭合水平环梁
-    for (const side of [0, 1, 2, 3]) {
-      const isX = (side % 2 === 0);
-      const sign = side < 2 ? 1 : -1;
-      const ring = box(
-        root,
-        ironDay,
-        isX ? curW : 0.8,
-        0.8,
-        isX ? 0.8 : curW,
-        isX ? 0 : sign * (curW / 2),
-        y1,
-        isX ? sign * (curW / 2) : 0
-      );
-      ironMeshes.push(ring);
+  // 8. 主塔身合拢上段 (y = 192 ~ 276m，14 级双密菱形格构壁面 + 多层悬挑检修环廊)
+  const spireStages = 14;
+  const spireBaseY = 192;
+  const spireTopY = 276;
+  for (let s = 0; s < spireStages; s++) {
+    const yB = spireBaseY + (s / spireStages) * (spireTopY - spireBaseY);
+    const yT = spireBaseY + ((s + 1) / spireStages) * (spireTopY - spireBaseY);
+    const hwB = upperShaftHalfW(yB);
+    const hwT = upperShaftHalfW(yT);
+    const bCorners = [
+      new THREE.Vector3(-hwB, yB, -hwB),
+      new THREE.Vector3(hwB, yB, -hwB),
+      new THREE.Vector3(hwB, yB, hwB),
+      new THREE.Vector3(-hwB, yB, hwB),
+    ];
+    const tCorners = [
+      new THREE.Vector3(-hwT, yT, -hwT),
+      new THREE.Vector3(hwT, yT, -hwT),
+      new THREE.Vector3(hwT, yT, hwT),
+      new THREE.Vector3(-hwT, yT, hwT),
+    ];
+    appendTaperedTrussStage(upperAcc, bCorners, tCorners, 0.82 - s * 0.015, 0.42, true, s % 2 === 1);
 
-      // 双向对角 X 撑
-      const diagLen = Math.hypot(curW, segH);
-      const ang = Math.atan2(segH, curW);
-
-      const d1 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, 0.52, 0.52), ironDay);
-      d1.position.set(isX ? 0 : sign * (curW / 2), midY, isX ? sign * (curW / 2) : 0);
-      if (isX) d1.rotation.z = ang;
-      else { d1.rotation.y = Math.PI / 2; d1.rotation.x = ang; }
-      root.add(d1);
-      ironMeshes.push(d1);
-
-      const d2 = new THREE.Mesh(new THREE.BoxGeometry(diagLen, 0.52, 0.52), ironDay);
-      d2.position.set(isX ? 0 : sign * (curW / 2), midY, isX ? sign * (curW / 2) : 0);
-      if (isX) d2.rotation.z = -ang;
-      else { d2.rotation.y = Math.PI / 2; d2.rotation.x = -ang; }
-      root.add(d2);
-      ironMeshes.push(d2);
-    }
-
-    // 中途标志性外悬挑检修兼观景环廊 (Balconies at y=175m, 215m, 250m)
-    if (s === 4 || s === 8 || s === 11) {
-      const bPlat = box(root, ironDay, curW + 2.2, 0.9, curW + 2.2, 0, y1, 0);
-      ironMeshes.push(bPlat);
+    // 标志性外悬挑环廊与铁艺安全护栏 (y = 216, 240, 264m)
+    if (s === 4 || s === 8 || s === 12) {
+      const balW = hwB * 2 + 2.6;
+      detailAcc.addBox(0, yB, 0, balW, 0.95, balW);
+      detailAcc.addBox(0, yB + 1.1, balW / 2, balW, 0.35, 0.35);
+      detailAcc.addBox(0, yB + 1.1, -balW / 2, balW, 0.35, 0.35);
+      detailAcc.addBox(balW / 2, yB + 1.1, 0, 0.35, 0.35, balW);
+      detailAcc.addBox(-balW / 2, yB + 1.1, 0, 0.35, 0.35, balW);
     }
   }
 
-  // 8. 三层顶层观景台与埃菲尔私人公寓 (Platform 3, y = 276m ~ 295m)
+  // 9. 三层顶层观景台、埃菲尔私人密室与格构广播桅杆 (y = 276 ~ 330m，严密衔接且无多余光束！)
+  // 底部外挑辐射铁艺牛腿篮筐
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    detailAcc.addStrut(
+      new THREE.Vector3(Math.cos(a) * 5.0, 271.5, Math.sin(a) * 5.0),
+      new THREE.Vector3(Math.cos(a) * 8.6, 276.2, Math.sin(a) * 8.6),
+      0.52,
+    );
+  }
+
   const p3Lower = new THREE.Mesh(
-    new THREE.CylinderGeometry(8.0, 8.5, 6.5, 18),
-    glassDay
+    new THREE.CylinderGeometry(8.2, 8.6, 6.8, 18),
+    glassDay,
   );
-  p3Lower.position.set(0, 276 + 6.5 / 2, 0);
+  p3Lower.position.set(0, 276 + 6.8 / 2, 0);
   p3Lower.userData.keepUv = true;
   root.add(p3Lower);
   glassMeshes.push(p3Lower);
 
+  // 顶层玻璃廊外圈细密铁艺窗框竖梃
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2;
+    detailAcc.addStrut(
+      new THREE.Vector3(Math.cos(a) * 8.65, 276.0, Math.sin(a) * 8.65),
+      new THREE.Vector3(Math.cos(a) * 8.25, 282.8, Math.sin(a) * 8.25),
+      0.34,
+    );
+  }
+
   const p3Deck = new THREE.Mesh(
-    new THREE.CylinderGeometry(9.0, 9.0, 1.4, 18),
-    deckMat
+    new THREE.CylinderGeometry(9.3, 9.3, 1.3, 18),
+    deckMat,
   );
   p3Deck.position.set(0, 283.5, 0);
   root.add(p3Deck);
 
   const p3Upper = new THREE.Mesh(
-    new THREE.CylinderGeometry(6.2, 6.8, 8.0, 16),
-    ironDay
+    new THREE.CylinderGeometry(6.3, 6.9, 8.0, 16),
+    ironDay,
   );
-  p3Upper.position.set(0, 287.5, 0);
+  p3Upper.position.set(0, 287.8, 0);
   root.add(p3Upper);
   ironMeshes.push(p3Upper);
 
-  // 9. 镀金穹顶、旋转灯塔与广播发射桅杆 (严密衔接 P3Upper y=291.5m 无断层)
   const cupola = new THREE.Mesh(
-    new THREE.SphereGeometry(4.6, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2),
-    goldSpireMat
+    new THREE.SphereGeometry(4.8, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2),
+    goldSpireMat,
   );
-  cupola.position.set(0, 291.5, 0);
+  cupola.position.set(0, 291.8, 0);
   root.add(cupola);
 
-  const beaconGlassMat = new THREE.MeshStandardMaterial({
+  const lanternGlassMat = new THREE.MeshStandardMaterial({
     color: 0xfef08a,
     emissive: 0xfde047,
-    emissiveIntensity: 2.2,
+    emissiveIntensity: 0.9,
   });
   const lantern = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.8, 3.6, 6.5, 14),
-    beaconGlassMat
+    new THREE.CylinderGeometry(2.6, 3.4, 5.5, 14),
+    lanternGlassMat,
   );
-  lantern.position.set(0, 298.5, 0);
+  lantern.position.set(0, 298.2, 0);
   root.add(lantern);
 
-  const mastLower = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.2, 2.4, 16, 8),
-    goldSpireMat
+  // 顶部镂空菱形桁架广播天线塔 (y = 301 ~ 330m)
+  const mastStages = 6;
+  const mastY0 = 301.0;
+  const mastY1 = 326.0;
+  for (let s = 0; s < mastStages; s++) {
+    const yB = mastY0 + (s / mastStages) * (mastY1 - mastY0);
+    const yT = mastY0 + ((s + 1) / mastStages) * (mastY1 - mastY0);
+    const wB = 2.1 * (1 - s / mastStages) + 0.55;
+    const wT = 2.1 * (1 - (s + 1) / mastStages) + 0.55;
+    const bC = [
+      new THREE.Vector3(-wB, yB, -wB),
+      new THREE.Vector3(wB, yB, -wB),
+      new THREE.Vector3(wB, yB, wB),
+      new THREE.Vector3(-wB, yB, wB),
+    ];
+    const tC = [
+      new THREE.Vector3(-wT, yT, -wT),
+      new THREE.Vector3(wT, yT, -wT),
+      new THREE.Vector3(wT, yT, wT),
+      new THREE.Vector3(-wT, yT, wT),
+    ];
+    appendTaperedTrussStage(detailAcc, bC, tC, 0.34, 0.22, false, false);
+  }
+  // 细尖避雷针尖顶
+  const mastTip = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.52, 4.5, 8),
+    goldSpireMat,
   );
-  mastLower.position.set(0, 309.5, 0);
-  root.add(mastLower);
+  mastTip.position.set(0, 328.0, 0);
+  root.add(mastTip);
 
-  const mastPinnacle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.35, 1.2, 13, 8),
-    goldSpireMat
-  );
-  mastPinnacle.position.set(0, 323.5, 0);
-  root.add(mastPinnacle);
-
-  for (const ay of [305, 311, 317, 323]) {
-    box(root, goldSpireMat, 5.2, 0.3, 0.3, 0, ay, 0);
-    box(root, goldSpireMat, 0.3, 0.3, 5.2, 0, ay, 0);
+  // 环形微波广播发射皿框
+  for (const dy of [306, 313, 320]) {
+    const dishRing = new THREE.Mesh(
+      new THREE.TorusGeometry(dy === 306 ? 2.6 : dy === 313 ? 2.1 : 1.6, 0.22, 6, 16),
+      goldSpireMat,
+    );
+    dishRing.rotation.x = Math.PI / 2;
+    dishRing.position.set(0, dy, 0);
+    root.add(dishRing);
   }
 
   const redBeacon = new THREE.Mesh(
-    new THREE.SphereGeometry(0.8, 8, 8),
-    new THREE.MeshBasicMaterial({ color: 0xff0044 })
+    new THREE.SphereGeometry(0.75, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff0044 }),
   );
-  redBeacon.position.set(0, 330, 0);
+  redBeacon.position.set(0, 330.2, 0);
   root.add(redBeacon);
 
-  // 10. 360° 双光束旋转探照灯 (Lighthouse Beacon)
-  const beaconGroup = new THREE.Group();
-  beaconGroup.position.set(0, 298.5, 0);
-  const beamMat = new THREE.MeshBasicMaterial({
-    color: 0xfef08a,
-    transparent: true,
-    opacity: 0.0,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  for (const sign of [-1, 1]) {
-    const beamGeo = new THREE.ConeGeometry(10.0, 90, 16, 1, true);
-    beamGeo.rotateZ(sign * Math.PI / 2);
-    beamGeo.translate(sign * 45, 0, 0);
-    const beamMesh = new THREE.Mesh(beamGeo, beamMat);
-    beaconGroup.add(beamMesh);
+  // 将所有合批完成的熟铁格构骨架加入场景与夜间灯光列表
+  for (const acc of [lowerAcc, midAcc, upperAcc, detailAcc]) {
+    const mesh = acc.toMesh(ironDay);
+    root.add(mesh);
+    ironMeshes.push(mesh);
   }
-  root.add(beaconGroup);
 
-  // 11. 夜间建筑泛光照明
+  // 10. 夜间建筑泛光照明（保留优雅暖金塔身照明，不含多余顶层探照光束）
   const flood1 = new THREE.PointLight(0xf59e0b, 0, 130, 1.6);
   flood1.position.set(0, 42, 0);
   root.add(flood1);
@@ -656,7 +795,6 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
   flood3.position.set(0, 278, 0);
   root.add(flood3);
 
-  // 昼夜模式切换
   root.userData.hasInspection = true;
   root.userData.setNightMode = (night: boolean) => {
     for (const mesh of ironMeshes) {
@@ -665,7 +803,7 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
     for (const gm of glassMeshes) {
       gm.material = night ? glassNight : glassDay;
     }
-    beamMat.opacity = night ? 0.38 : 0.0;
+    lanternGlassMat.emissiveIntensity = night ? 2.0 : 0.6;
     flood1.intensity = night ? 3.8 : 0;
     flood2.intensity = night ? 2.8 : 0;
     flood3.intensity = night ? 2.4 : 0;
@@ -677,4 +815,3 @@ export function createEiffelTower(_kit: SurfaceKit): THREE.Group {
 // ─────────────────────────────────────────────────────────
 // 希腊雅典帕特农神庙 (Parthenon, Acropolis of Athens)
 // ─────────────────────────────────────────────────────────
-

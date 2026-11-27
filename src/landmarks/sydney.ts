@@ -20,11 +20,9 @@ function makeSydneyTileTexture(): THREE.CanvasTexture {
     for (let x = 0; x < sz; x += lidW) {
       const col = Math.floor(x / lidW);
       const isMatte = (row + col) % 3 === 0;
-      // 交错乳白高光瓷砖与浅暖米色哑光瓷砖
       g.fillStyle = isMatte ? "#ede7dc" : "#ffffff";
       g.fillRect(x + 1, y + 1, lidW - 2, lidH - 2);
 
-      // 人字形微斜对角分格微纹
       g.strokeStyle = "rgba(180, 168, 145, 0.28)";
       g.lineWidth = 1;
       g.beginPath();
@@ -39,7 +37,6 @@ function makeSydneyTileTexture(): THREE.CanvasTexture {
     }
   }
 
-  // 瓦盖间隙主勾缝线
   g.strokeStyle = "rgba(150, 138, 120, 0.4)";
   g.lineWidth = 1.5;
   for (let y = 0; y <= sz; y += lidH) {
@@ -69,7 +66,7 @@ interface UtzonVaultOptions {
   facing: 1 | -1;
   hasGlass?: boolean;
   glassCantilever?: number;
-  glassBaseY?: number; // 允许高侧窗玻璃底部悬空于前厅屋顶之上
+  glassBaseY?: number;
   tileMat: THREE.Material;
   ridgeMat: THREE.Material;
   archRimMat: THREE.Material;
@@ -77,7 +74,7 @@ interface UtzonVaultOptions {
   mullionMat: THREE.Material;
 }
 
-// 乌松经典单母球曲率风帆壳顶构建器 (Spherical Solution Utzon Vault)
+// 乌松球面三角形尖顶风帆壳体构建器 (Pointed Spherical-Triangle Utzon Sail)
 function makeUtzonSphericalVault(opts: UtzonVaultOptions): THREE.Group {
   const vault = new THREE.Group();
   const {
@@ -95,57 +92,92 @@ function makeUtzonSphericalVault(opts: UtzonVaultOptions): THREE.Group {
     mullionMat,
   } = opts;
 
-  const segsU = 32;
+  // 双偏移圆心哥特式尖拱剖面参数（保证两侧翼面在中央脊线以锐利尖顶交汇，绝非平顶圆穹）
+  const cArc = 0.85;
+  const rArc = Math.hypot(cArc, 1 + cArc);
+  const aTop = Math.atan2(1 + cArc, cArc);
+  const aBot = Math.atan2(cArc, 1 + cArc);
+
+  // 纵向主脊球面圆弧参数（从后部铰点陡峭向上伸展，至前端尖顶保持 ~27° 昂扬上冲角）
+  const thetaBase = 0.14;
+  const thetaTip = 1.10;
+  const sinBase = Math.sin(thetaBase);
+  const sinSpan = Math.sin(thetaTip) - sinBase;
+  const cosBase = Math.cos(thetaBase);
+  const cosSpan = cosBase - Math.cos(thetaTip);
+
+  const tipOverhang = depthD * 0.30;
+  const cornerSweepBack = depthD * 0.24;
+  const zRear = -facing * depthD;
+  const zTip = facing * tipOverhang;
+
+  function evalPoint(u: number, v: number, side: 1 | -1, withFlute = true): THREE.Vector3 {
+    const tau = Math.max(0, Math.min(1, 1 - u));
+    const theta = thetaBase + tau * (thetaTip - thetaBase);
+    const spineYFrac = (Math.sin(theta) - sinBase) / sinSpan;
+    const spineZFrac = (cosBase - Math.cos(theta)) / cosSpan;
+
+    const ry = peakH * spineYFrac;
+    const rz = zRear + spineZFrac * (zTip - zRear);
+
+    // 球面三角扇面宽度：前端宽阔，顺滑收敛至后部基座铰接支承点
+    const halfW = (spanW * 0.5) * Math.pow(Math.max(0, 1 - u), 0.82) + 0.55;
+
+    // 尖拱横截面双圆弧坐标 (v=0 为中央尖脊，v=1 为两侧落脚边缘)
+    const a = aTop + v * (aBot - aTop);
+    const xFrac = -cArc + rArc * Math.cos(a);
+    const yFrac = Math.max(0, -cArc + rArc * Math.sin(a));
+
+    const cx0 = side * halfW * xFrac;
+    const cy0 = ry * yFrac;
+
+    // 开口拱缘由前探尖顶向两侧角点陡峭斜向后掠，塑造标志性飞扬尖喙侧面轮廓
+    const sweepRatio = Math.pow(Math.max(0, v), 1.15);
+    const mouthDeltaZ = -facing * sweepRatio * (tipOverhang + cornerSweepBack) * (1 - u);
+    const cz0 = rz + mouthDeltaZ;
+
+    if (!withFlute) {
+      return new THREE.Vector3(cx0, cy0, cz0);
+    }
+
+    // 预制混凝土辐射状箱形肋拱浅槽肌理（中央脊线 v=0 处保持锐利零扰动）
+    const ribEnvelope = Math.sin(v * Math.PI * 0.5) * (1 - u * 0.85);
+    const flute = Math.cos(v * Math.PI * 14.0) * 0.12 * ribEnvelope;
+    const cx = cx0 + side * flute * Math.cos(v * Math.PI * 0.5);
+    const cy = Math.max(0, cy0 + flute * Math.sin(v * Math.PI * 0.5));
+    return new THREE.Vector3(cx, cy, cz0);
+  }
+
+  const segsU = 30;
   const segsV = 20;
   const positions: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
 
-  // 左右对称双翼球面三角形半壳体 (Left and Right Spherical Triangle Half-Shells)
-  for (let side = -1; side <= 1; side += 2) {
+  for (const side of [-1, 1] as const) {
     const startIdx = positions.length / 3;
 
     for (let i = 0; i <= segsU; i++) {
       const u = i / segsU;
-      // 真实乌松圆弧母球脊梁曲线：顶点在 u=0 处昂首挺立，沿余弦母球平滑顺应至基座铰点 u=1 (到达地面 ry=0)
-      const ry = peakH * Math.cos(Math.pow(u, 1.35) * Math.PI * 0.5);
-      const rz = -facing * (u * depthD);
-
-      // 横向展开半宽度：前端开阔，后部收拢汇聚至铰接支承点 (w -> 0.8m)
-      const w = (spanW * 0.5) * Math.cos(u * Math.PI * 0.5) + 0.8;
-
       for (let j = 0; j <= segsV; j++) {
         const v = j / segsV;
-        const ang = v * Math.PI * 0.5;
-        // 沿侧翼横向展开之哥特式尖拱圆弧（v=0 处具有锐利的脊脊尖线）
-        const cy0 = Math.max(0, ry * Math.pow(Math.cos(ang), 0.72));
-        const cx0 = side * w * Math.sin(ang);
-
-        // 前开口圆弧在三维母球上的前后凹凸自适
-        const deltaZ = -facing * ((1.0 - Math.cos(ang)) * spanW * 0.16 * (1.0 - u * 0.5));
-        const cz0 = rz + deltaZ;
-
-        // 预制混凝土辐射状 V 形箱形肋拱微波浪肌理 (Precast Radial Rib Fluting, 14 根肋拱)
-        const flute = Math.cos(v * Math.PI * 14.0) * 0.16 * Math.sin(ang) * (1.0 - u * 0.4);
-        const cx = cx0 + side * flute * Math.cos(ang);
-        const cy = cy0 + flute * Math.sin(ang);
-        const cz = cz0;
-
-        positions.push(cx, cy, cz);
+        const p = evalPoint(u, v, side, true);
+        positions.push(p.x, p.y, p.z);
         uvs.push(side > 0 ? v : 1.0 - v, u);
       }
     }
 
+    const outwardCCW = side * facing > 0;
     for (let i = 0; i < segsU; i++) {
       for (let j = 0; j < segsV; j++) {
         const p0 = startIdx + i * (segsV + 1) + j;
         const p1 = p0 + 1;
         const p2 = p0 + (segsV + 1);
         const p3 = p2 + 1;
-        if (side > 0) {
-          indices.push(p0, p2, p1, p1, p2, p3);
-        } else {
+        if (outwardCCW) {
           indices.push(p0, p1, p2, p1, p3, p2);
+        } else {
+          indices.push(p0, p2, p1, p1, p2, p3);
         }
       }
     }
@@ -162,34 +194,32 @@ function makeUtzonSphericalVault(opts: UtzonVaultOptions): THREE.Group {
   shellMesh.userData.keepUv = true;
   vault.add(shellMesh);
 
-  // 1. 实心预制混凝土拱口封边 (Thick Precast Concrete Arch Rim)
+  // 1. 实心预制混凝土拱口尖拱封边 (Crisp Pointed Precast Concrete Arch Rim)
   const rimPositions: number[] = [];
   const rimIndices: number[] = [];
-  for (let side = -1; side <= 1; side += 2) {
+  for (const side of [-1, 1] as const) {
     const rStart = rimPositions.length / 3;
-    const w = spanW * 0.5 + 0.8;
     for (let j = 0; j <= segsV; j++) {
       const v = j / segsV;
-      const ang = v * Math.PI * 0.5;
-      const cy = peakH * Math.pow(Math.cos(ang), 0.72);
-      const cx = side * w * Math.sin(ang);
-      const cz = -facing * ((1.0 - Math.cos(ang)) * spanW * 0.16);
+      const outer = evalPoint(0, v, side, false);
+      const inner = evalPoint(0.03, v, side, false);
+      const inwardScale = 0.945;
+      inner.x *= inwardScale;
+      inner.y *= inwardScale;
 
-      // 外缘
-      rimPositions.push(cx, cy, cz);
-      // 内缘 (沿法向向内收缩，并向内缩进)
-      const scaleIn = 0.94;
-      rimPositions.push(cx * scaleIn, cy * scaleIn, cz - facing * 1.5);
+      rimPositions.push(outer.x, outer.y, outer.z);
+      rimPositions.push(inner.x, inner.y, inner.z);
     }
+    const outwardCCW = side * facing > 0;
     for (let j = 0; j < segsV; j++) {
       const a = rStart + j * 2;
       const b = a + 1;
       const c = a + 2;
       const d = a + 3;
-      if (side > 0) {
-        rimIndices.push(a, b, c, b, d, c);
-      } else {
+      if (outwardCCW) {
         rimIndices.push(a, c, b, b, c, d);
+      } else {
+        rimIndices.push(a, b, c, b, d, c);
       }
     }
   }
@@ -200,20 +230,42 @@ function makeUtzonSphericalVault(opts: UtzonVaultOptions): THREE.Group {
   const rimMesh = new THREE.Mesh(rimGeo, archRimMat);
   vault.add(rimMesh);
 
-  // 2. 标志性洁白连续拱脊封顶梁 (Ridge Cap Beam)
-  const spinePts: THREE.Vector3[] = [];
-  for (let i = 0; i <= 28; i++) {
-    const u = i / 28;
-    const ry = peakH * Math.cos(Math.pow(u, 1.35) * Math.PI * 0.5) + 0.45;
-    const rz = -facing * (u * depthD);
-    spinePts.push(new THREE.Vector3(0, ry, rz));
+  // 2. 锐利菱形刀锋拱脊封顶梁 (Sharp Beveled Diamond Spine Cap，强化尖顶脊线)
+  const spineHalfW = 0.42;
+  const spineApexH = 0.65;
+  const spineSteps = 26;
+  const spinePos: number[] = [];
+  const spineIdx: number[] = [];
+  for (let i = 0; i <= spineSteps; i++) {
+    const u = i / spineSteps;
+    const c = evalPoint(u, 0, 1, false);
+    const wScale = 1 - u * 0.55;
+    // 3 顶点 V 型脊盖：左肩、顶棱、右肩
+    spinePos.push(
+      c.x - spineHalfW * wScale, Math.max(0, c.y - 0.12), c.z,
+      c.x, c.y + spineApexH * wScale, c.z + facing * 0.18 * (1 - u),
+      c.x + spineHalfW * wScale, Math.max(0, c.y - 0.12), c.z,
+    );
   }
-  const spineCurve = new THREE.CatmullRomCurve3(spinePts);
-  const spineGeo = new THREE.TubeGeometry(spineCurve, 32, 0.55, 8, false);
+  for (let i = 0; i < spineSteps; i++) {
+    const a = i * 3;
+    const b = (i + 1) * 3;
+    if (facing > 0) {
+      spineIdx.push(a, a + 1, b, a + 1, b + 1, b);
+      spineIdx.push(a + 1, a + 2, b + 1, a + 2, b + 2, b + 1);
+    } else {
+      spineIdx.push(a, b, a + 1, a + 1, b, b + 1);
+      spineIdx.push(a + 1, b + 1, a + 2, a + 2, b + 1, b + 2);
+    }
+  }
+  const spineGeo = new THREE.BufferGeometry();
+  spineGeo.setAttribute("position", new THREE.Float32BufferAttribute(spinePos, 3));
+  spineGeo.setIndex(spineIdx);
+  spineGeo.computeVertexNormals();
   const spineMesh = new THREE.Mesh(spineGeo, ridgeMat);
   vault.add(spineMesh);
 
-  // 3. 彼得·霍尔 (Peter Hall) 折角外悬挑琥珀色几何玻璃幕墙 (Outward-Leaning Faceted Glass Walls)
+  // 3. 彼得·霍尔 (Peter Hall) 折角外悬挑琥珀色几何玻璃幕墙 (紧密贴合尖拱开口曲率，高窗型内收衔接入前壳脊背)
   if (hasGlass) {
     const folds = 6;
     const glassPos: number[] = [];
@@ -222,31 +274,46 @@ function makeUtzonSphericalVault(opts: UtzonVaultOptions): THREE.Group {
     const topPts: THREE.Vector3[] = [];
     const midPts: THREE.Vector3[] = [];
     const botPts: THREE.Vector3[] = [];
+    const isClerestory = glassBaseY > 0.5;
 
     for (let k = 0; k <= folds; k++) {
       const alpha = (k / folds) * 2.0 - 1.0; // [-1, 1]
-      const ang = Math.abs(alpha) * Math.PI * 0.5;
+      const side: 1 | -1 = alpha >= 0 ? 1 : -1;
+      // 若为上方二阶高侧窗，收窄展开角保证下缘落回下层壳体顶部内侧，绝不悬空外挑成平棚
+      const vFrac = Math.abs(alpha) * (isClerestory ? 0.58 : 1.0);
 
-      // 拱口顶部约束点
-      const ty = Math.max(glassBaseY, peakH * 0.93 * Math.pow(Math.cos(ang), 0.72));
-      const tx = alpha * (spanW * 0.46) * Math.pow(Math.cos(ang), 0.28);
-      const tz = -facing * ((1.0 - Math.cos(ang)) * spanW * 0.16);
+      // 精确取同一尖拱前缘并向壳内微收，确保顶部尖顶严丝合缝
+      const archPt = evalPoint(0.035, vFrac, side, false);
+      const ty = Math.max(glassBaseY + 1.5, archPt.y * 0.96);
+      const tx = archPt.x * 0.93;
+      const tz = archPt.z;
       topPts.push(new THREE.Vector3(tx, ty, tz));
 
-      // 底层外挑点（倾斜前探）
-      const bx = alpha * (spanW * 0.5);
-      const by = glassBaseY;
-      const bz = facing * (glassCantilever - Math.abs(alpha) * spanW * 0.12);
-      botPts.push(new THREE.Vector3(bx, by, bz));
+      if (isClerestory) {
+        // 高侧窗底部顺势向壳体内下收，密合衔接前置壳体脊背
+        const bx = tx * 0.96;
+        const by = Math.max(0, glassBaseY - 4.0);
+        const bz = tz - facing * 1.4;
+        botPts.push(new THREE.Vector3(bx, by, bz));
 
-      // 腰线外突折痕点（创造强烈的立体折面光影）
-      const my = by + (ty - by) * 0.44;
-      const mx = (tx + bx) * 0.5 + (k % 2 === 1 ? alpha * 1.5 : 0);
-      const mz = (tz + bz) * 0.5 + facing * (k % 2 === 1 ? 2.2 : 0.6);
-      midPts.push(new THREE.Vector3(mx, my, mz));
+        const my = by + (ty - by) * 0.5;
+        const mx = (tx + bx) * 0.5 + (k % 2 === 1 ? alpha * 0.8 : 0);
+        const mz = (tz + bz) * 0.5 + facing * (k % 2 === 1 ? 1.2 : 0.3);
+        midPts.push(new THREE.Vector3(mx, my, mz));
+      } else {
+        // 主迎面厅：底层向外前探俯瞰海港
+        const bx = alpha * (spanW * 0.47);
+        const by = 0;
+        const bz = zTip + facing * (glassCantilever - vFrac * (tipOverhang + cornerSweepBack * 0.8));
+        botPts.push(new THREE.Vector3(bx, by, bz));
+
+        const my = by + (ty - by) * 0.44;
+        const mx = (tx + bx) * 0.5 + (k % 2 === 1 ? alpha * 1.4 : 0);
+        const mz = (tz + bz) * 0.5 + facing * (k % 2 === 1 ? 2.0 : 0.5);
+        midPts.push(new THREE.Vector3(mx, my, mz));
+      }
     }
 
-    // 组装折板网格 (Top -> Mid -> Bot)
     for (let k = 0; k < folds; k++) {
       const t0 = topPts[k];
       const t1 = topPts[k + 1];
@@ -255,22 +322,20 @@ function makeUtzonSphericalVault(opts: UtzonVaultOptions): THREE.Group {
       const b0 = botPts[k];
       const b1 = botPts[k + 1];
 
-      // 上半段多边形
       const idx0 = glassPos.length / 3;
       glassPos.push(t0.x, t0.y, t0.z, t1.x, t1.y, t1.z, m1.x, m1.y, m1.z, m0.x, m0.y, m0.z);
       if (facing > 0) {
-        glassInd.push(idx0, idx0 + 1, idx0 + 2, idx0, idx0 + 2, idx0 + 3);
-      } else {
         glassInd.push(idx0, idx0 + 2, idx0 + 1, idx0, idx0 + 3, idx0 + 2);
+      } else {
+        glassInd.push(idx0, idx0 + 1, idx0 + 2, idx0, idx0 + 2, idx0 + 3);
       }
 
-      // 下半段多边形
       const idx1 = glassPos.length / 3;
       glassPos.push(m0.x, m0.y, m0.z, m1.x, m1.y, m1.z, b1.x, b1.y, b1.z, b0.x, b0.y, b0.z);
       if (facing > 0) {
-        glassInd.push(idx1, idx1 + 1, idx1 + 2, idx1, idx1 + 2, idx1 + 3);
-      } else {
         glassInd.push(idx1, idx1 + 2, idx1 + 1, idx1, idx1 + 3, idx1 + 2);
+      } else {
+        glassInd.push(idx1, idx1 + 1, idx1 + 2, idx1, idx1 + 2, idx1 + 3);
       }
     }
 
@@ -322,14 +387,13 @@ function makeSideLouvreShell(
   });
   g.add(vault);
 
-  // 垂直声学青铜百叶
   const louvreCount = 5;
   for (let k = 1; k < louvreCount; k++) {
     const frac = (k / louvreCount) * 2 - 1;
-    const x = frac * (spanW * 0.35);
-    const lH = peakH * 0.55 * Math.cos(Math.abs(frac) * Math.PI * 0.45);
+    const x = frac * (spanW * 0.34);
+    const lH = peakH * 0.5 * (1 - Math.abs(frac) * 0.65);
     const louvre = new THREE.Mesh(new THREE.BoxGeometry(0.3, lH, 1.2), mullionMat);
-    louvre.position.set(x, lH * 0.5, -facing * depthD * 0.3);
+    louvre.position.set(x, lH * 0.5, -facing * depthD * 0.28);
     g.add(louvre);
   }
   return g;
@@ -362,12 +426,14 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     color: 0xf8fafc,
     roughness: 0.18,
     metalness: 0.08,
+    side: THREE.DoubleSide,
   });
 
   const archRimMat = new THREE.MeshStandardMaterial({
     color: 0xe2e8f0,
     roughness: 0.45,
     metalness: 0.05,
+    side: THREE.DoubleSide,
   });
 
   const amberGlassMatDay = new THREE.MeshStandardMaterial({
@@ -406,11 +472,9 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   });
 
   // ==========================================
-  // 1. 便利朗角雕塑感多层花岗岩纪念碑式台基 (Sculpted Multi-Tier Podium，直接坐落于真实悉尼港水体)
+  // 1. 便利朗角雕塑感多层花岗岩纪念碑式台基 (Sculpted Multi-Tier Podium)
   // ==========================================
   const PODIUM_H = 12.5;
-  // (A) 下层临海水岸环岛散步长廊 (Lower Waterfront Boardwalk, +3.5m)
-  // 契合便利朗角三面临海地势：东西宽 144m，南北长 236m，北部为 45° 倒角海岬尖端
   const lowPromShape = new THREE.Shape();
   const pw = 72;
   const pzNorth = 118;
@@ -429,7 +493,6 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   lowPromMesh.position.set(0, 3.5, 0);
   group.add(lowPromMesh);
 
-  // (B) 上层大体量花岗岩主台基核心体 (+12.5m, 宽 116m, 长 176m)
   const mainPodiumShape = new THREE.Shape();
   const mw = 58;
   const mzNorth = 82;
@@ -448,7 +511,6 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   mainPodiumMesh.position.set(0, 12.5, 0);
   group.add(mainPodiumMesh);
 
-  // 主台基东西两侧悬挑观景露台与阴影凹凸线脚
   const westTerrace = new THREE.Mesh(new THREE.BoxGeometry(6, 2.5, 144), podiumMat);
   westTerrace.position.set(-59, 11.25, -6);
   group.add(westTerrace);
@@ -457,8 +519,6 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   eastTerrace.position.set(59, 11.25, -6);
   group.add(eastTerrace);
 
-  // (C) 南端迎宾世界著名花岗岩大台阶 (Grand Monumental Southern Steps, 96m wide)
-  // 自大地前庭 (+2m) 逐级壮丽攀升至主台基 (+12.5m)
   const stepFlights = 14;
   const stepDepth = 3.2;
   const stepRise = (PODIUM_H - 2.0) / stepFlights;
@@ -471,7 +531,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   }
 
   // ==========================================
-  // 2. 东副厅：琼·萨瑟兰歌剧院厅 (Opera Theatre - Hall B, Tellux 坐标系 -X 为东侧)
+  // 2. 东副厅：琼·萨瑟兰歌剧院厅 (Opera Theatre - Hall B)
   // ==========================================
   const otX = -22;
 
@@ -481,7 +541,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 36,
     facing: 1,
     hasGlass: true,
-    glassCantilever: 13,
+    glassCantilever: 12,
     glassBaseY: 0,
     tileMat: shellMatDay,
     ridgeMat,
@@ -498,7 +558,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 44,
     facing: 1,
     hasGlass: true,
-    glassCantilever: 9,
+    glassCantilever: 8,
     glassBaseY: 20,
     tileMat: shellMatDay,
     ridgeMat,
@@ -530,7 +590,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 24,
     facing: -1,
     hasGlass: true,
-    glassCantilever: 8,
+    glassCantilever: 7,
     glassBaseY: 0,
     tileMat: shellMatDay,
     ridgeMat,
@@ -550,7 +610,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   group.add(sideB_in);
 
   // ==========================================
-  // 3. 西主厅：大音乐厅 (Concert Hall - Hall A, Tellux 坐标系 +X 为西侧，主峰含台基高达 67m)
+  // 3. 西主厅：大音乐厅 (Concert Hall - Hall A，主峰含台基高达 67m)
   // ==========================================
   const chX = 22;
 
@@ -560,7 +620,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 40,
     facing: 1,
     hasGlass: true,
-    glassCantilever: 15,
+    glassCantilever: 14,
     glassBaseY: 0,
     tileMat: shellMatDay,
     ridgeMat,
@@ -577,7 +637,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 50,
     facing: 1,
     hasGlass: true,
-    glassCantilever: 11,
+    glassCantilever: 10,
     glassBaseY: 24,
     tileMat: shellMatDay,
     ridgeMat,
@@ -609,7 +669,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 28,
     facing: -1,
     hasGlass: true,
-    glassCantilever: 10,
+    glassCantilever: 9,
     glassBaseY: 0,
     tileMat: shellMatDay,
     ridgeMat,
@@ -629,7 +689,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   group.add(sideA_in);
 
   // ==========================================
-  // 4. 西南翼：贝尼朗餐厅与酒吧组群 (Bennelong Restaurant - Hall C, 位于西侧 +X = +52)
+  // 4. 西南翼：贝尼朗餐厅与酒吧组群 (Bennelong Restaurant - Hall C)
   // ==========================================
   const restGroup = new THREE.Group();
   restGroup.position.set(52, PODIUM_H, -60);
@@ -641,7 +701,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 26,
     facing: 1,
     hasGlass: true,
-    glassCantilever: 9,
+    glassCantilever: 8,
     glassBaseY: 0,
     tileMat: shellMatDay,
     ridgeMat,
@@ -658,7 +718,7 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     depthD: 20,
     facing: 1,
     hasGlass: true,
-    glassCantilever: 6,
+    glassCantilever: 5.5,
     glassBaseY: 8.5,
     tileMat: shellMatDay,
     ridgeMat,
@@ -686,4 +746,4 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
   return group;
 }
 
-// --- 14. 成都新世纪环球中心 (Chengdu Global Center) 精细化与精准天府大道方位重构 ---
+// --- 14. 成都新世纪环球中心 (Chengdu Global Center) ---
