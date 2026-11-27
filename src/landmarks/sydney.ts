@@ -405,23 +405,10 @@ export function createSydneyOperaHouse(_kit: SurfaceKit): THREE.Group {
     metalness: 0.02,
   });
 
-  const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x1b3854,
-    roughness: 0.2,
-    metalness: 0.6,
-  });
-
   // ==========================================
-  // 1. 便利朗角雕塑感多层花岗岩纪念碑式台基 (Sculpted Multi-Tier Podium)
+  // 1. 便利朗角雕塑感多层花岗岩纪念碑式台基 (Sculpted Multi-Tier Podium，直接坐落于真实悉尼港水体)
   // ==========================================
   const PODIUM_H = 12.5;
-
-  // (0) 便利朗角悉尼海港深蓝海面基座 (Sydney Harbour Water Basin)
-  const waterBasin = new THREE.Mesh(new THREE.PlaneGeometry(240, 320), waterMat);
-  waterBasin.rotation.x = -Math.PI * 0.5;
-  waterBasin.position.set(0, 0.2, 0);
-  group.add(waterBasin);
-
   // (A) 下层临海水岸环岛散步长廊 (Lower Waterfront Boardwalk, +3.5m)
   // 契合便利朗角三面临海地势：东西宽 144m，南北长 236m，北部为 45° 倒角海岬尖端
   const lowPromShape = new THREE.Shape();

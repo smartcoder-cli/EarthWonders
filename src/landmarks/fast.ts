@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { mapped, type SurfaceKit } from "../surfaces";
+import { type SurfaceKit } from "../surfaces";
 
-export function createFastTelescope(kit: SurfaceKit): THREE.Group {
+export function createFastTelescope(_kit: SurfaceKit): THREE.Group {
   const group = new THREE.Group();
   group.name = "FAST";
 
@@ -9,17 +9,7 @@ export function createFastTelescope(kit: SurfaceKit): THREE.Group {
   const rimHeight = 95;
   const dishBottom = 15; // 凹面反射面中心高程 15m，圈梁高程 95m（净凹深 80m）
 
-  // 1. 圈梁底盘（收窄至与 250m 口径圈梁柱脚对齐，避免在真实喀斯特山体外部产生多余的“大锅底”）
-  const basinFloor = new THREE.Mesh(
-    new THREE.CircleGeometry(dishRadius + 2, 48),
-    mapped(kit.machu, { color: 0x2d3b2e, roughness: 0.95, metersPerTile: 12 }),
-  );
-  basinFloor.rotation.x = -Math.PI / 2;
-  basinFloor.position.set(0, 1.0, 0);
-  basinFloor.receiveShadow = true;
-  group.add(basinFloor);
-
-  // 2. 500m 口径主反射面（严格凹面朝天：中心低、边缘高）
+  // 1. 500m 口径主反射面（严格凹面朝天：中心低、边缘高，直接依托真实大窝凼喀斯特洼坑地形）
   const dishPts: THREE.Vector2[] = [];
   const segments = 64;
   for (let i = 0; i <= segments; i++) {

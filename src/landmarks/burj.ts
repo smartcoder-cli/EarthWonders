@@ -86,24 +86,12 @@ export function createBurjKhalifa(_kit: SurfaceKit): THREE.Group {
     roughness: 0.22,
   });
 
-  const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x0e3b5e,
-    roughness: 0.1,
-    metalness: 0.35,
-  });
-
   const plazaMat = new THREE.MeshStandardMaterial({
     color: 0xb5aba0,
     roughness: 0.85,
   });
 
-  // 1. Lake & Plaza Podium
-  const lake = new THREE.Mesh(new THREE.CircleGeometry(220, 48), waterMat);
-  lake.rotation.x = -Math.PI / 2;
-  lake.position.y = 0.2;
-  lake.receiveShadow = true;
-  group.add(lake);
-
+  // 1. Plaza Podium (直接与真实哈利法塔人工湖地形衔接，避免大半径平面水面闪烁)
   const podium = new THREE.Mesh(new THREE.CylinderGeometry(140, 150, 8, 32), plazaMat);
   podium.position.y = 4;
   podium.receiveShadow = true;

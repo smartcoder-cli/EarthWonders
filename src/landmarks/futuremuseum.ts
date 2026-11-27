@@ -363,7 +363,6 @@ export function createMuseumOfTheFuture(kit: SurfaceKit): THREE.Group {
   const plazaStone = stone(0xd6d1c7, 0.85, 0.04);
   const concreteTrim = stone(0xe2e8f0, 0.55, 0.12);
   const darkStoneWall = stone(0x645d54, 0.88, 0.05);
-  const poolWater = stone(0x0b1624, 0.08, 0.9);
 
   const diffDay = makeMuseumDiffuseTexture(false);
   const diffNight = makeMuseumDiffuseTexture(true);
@@ -400,14 +399,9 @@ export function createMuseumOfTheFuture(kit: SurfaceKit): THREE.Group {
     side: THREE.DoubleSide,
   });
 
-  // 1. 迎宾石材广场与左侧挡土翼台
-  const plaza = box(root, plazaStone, 152, 0.45, 204, 12, -0.45, 0);
-  plaza.userData.skipLines = true;
-
+  // 1. 左侧挡土翼台（移除与地表 y=0 重叠闪烁的扁平广场板与薄水池膜）
   const terraceWall = box(root, darkStoneWall, 26, 11.5, 22, 40, 0, 78);
   terraceWall.userData.skipLines = true;
-
-  box(root, poolWater, 16, 0.25, 42, 52, 0.05, 16);
 
   // 2. 连续曲面覆土生态绿丘
   const moundGeo = createSculptedGreenMoundGeometry();

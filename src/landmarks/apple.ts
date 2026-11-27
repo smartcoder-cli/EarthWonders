@@ -152,12 +152,6 @@ export function createApplePark(_kit: SurfaceKit): THREE.Group {
     side: THREE.DoubleSide,
   });
 
-  const concreteMat = new THREE.MeshStandardMaterial({
-    color: 0x94a3b8,
-    roughness: 0.8,
-    metalness: 0.1,
-    side: THREE.DoubleSide,
-  });
 
   // 1. 主环形飞船外圈与内圈玻璃立面
   const outerCylGeo = new THREE.CylinderGeometry(OUTER_R, OUTER_R, BUILDING_H, 128, 1, true);
@@ -198,57 +192,12 @@ export function createApplePark(_kit: SurfaceKit): THREE.Group {
   roof.userData.keepUv = true;
   group.add(roof);
 
-  // 4. 建筑环形混凝土地基座
-  const baseGeo = new THREE.RingGeometry(INNER_R - 1.5, OUTER_R + 1.5, 128);
-  baseGeo.rotateX(-Math.PI / 2);
-  const base = new THREE.Mesh(baseGeo, concreteMat);
-  base.position.y = 0.05;
-  group.add(base);
-
-  // 5. 中央生态公园庭院 (Courtyard Park)
-  const lawnGeo = new THREE.CircleGeometry(INNER_R - 0.5, 96);
-  lawnGeo.rotateX(-Math.PI / 2);
+  // 4. 乔布斯剧院丘陵植被材质（移除与地球贴合的 0 厚度庭院薄膜，保留真实卫星庭院步道与水池）
   const lawnMat = new THREE.MeshStandardMaterial({
     color: 0x3d6b35,
     roughness: 0.92,
     metalness: 0.02,
   });
-  const lawn = new THREE.Mesh(lawnGeo, lawnMat);
-  lawn.position.y = 0.1;
-  group.add(lawn);
-
-  // 庭院环形散步步道 (Park Loop Pathways)
-  const pathMat = new THREE.MeshStandardMaterial({
-    color: 0xd8d0c0,
-    roughness: 0.85,
-    metalness: 0.05,
-    side: THREE.DoubleSide,
-  });
-  const pathOuterGeo = new THREE.RingGeometry(116, 120, 64);
-  pathOuterGeo.rotateX(-Math.PI / 2);
-  const pathOuter = new THREE.Mesh(pathOuterGeo, pathMat);
-  pathOuter.position.y = 0.15;
-  group.add(pathOuter);
-
-  const pathInnerGeo = new THREE.RingGeometry(56, 59, 48);
-  pathInnerGeo.rotateX(-Math.PI / 2);
-  const pathInner = new THREE.Mesh(pathInnerGeo, pathMat);
-  pathInner.position.y = 0.15;
-  group.add(pathInner);
-
-  // 中央椭圆反光池 (Reflecting Pond)
-  const pondGeo = new THREE.CircleGeometry(26, 36);
-  pondGeo.rotateX(-Math.PI / 2);
-  pondGeo.scale(1.4, 1.0, 0.9);
-  const pondMat = new THREE.MeshStandardMaterial({
-    color: 0x1d4ed8,
-    roughness: 0.12,
-    metalness: 0.45,
-  });
-  const pond = new THREE.Mesh(pondGeo, pondMat);
-  pond.position.set(-36, 0.2, -42);
-  pond.rotation.y = 0.4;
-  group.add(pond);
 
   // 标志性彩虹拱门舞台 (The Rainbow Stage / Arches by Jony Ive)
   const rainbowColors = [0xef4444, 0xf97316, 0xeab308, 0x22c55e, 0x3b82f6, 0xa855f7];
@@ -304,7 +253,7 @@ export function createApplePark(_kit: SurfaceKit): THREE.Group {
     foliage.scale.set(s, s * 1.1, s);
 
     tree.add(trunk, foliage);
-    tree.position.set(tx, 0.1, tz);
+    tree.position.set(tx, 0, tz);
     group.add(tree);
   }
 

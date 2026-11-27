@@ -6,11 +6,7 @@ export function createHZMB(_kit: SurfaceKit): THREE.Group {
   group.name = "HZMB";
 
   // 1. 材质定义 (Materials)
-  const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x0a3d62,
-    roughness: 0.18,
-    metalness: 0.35,
-  });
+
   const islandConcreteMat = new THREE.MeshStandardMaterial({
     color: 0xe2e8f0,
     roughness: 0.65,
@@ -87,11 +83,6 @@ export function createHZMB(_kit: SurfaceKit): THREE.Group {
     metalness: 0.15,
   });
 
-  // 1. 伶仃洋海平面基座 (Lingdingyang Sea Disc)
-  const sea = new THREE.Mesh(new THREE.CylinderGeometry(1400, 1400, 0.4, 64), waterMat);
-  sea.position.y = -0.2;
-  sea.userData.skipLines = true;
-  group.add(sea);
 
   // 2. 真实蚝贝造型东人工岛 (Aerodynamic Oyster Shell Island Deck)
   const shape = new THREE.Shape();

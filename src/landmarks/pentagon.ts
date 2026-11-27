@@ -104,10 +104,6 @@ export function createPentagon(kit: SurfaceKit): THREE.Group {
     roughness: 0.88,
   });
   const lawnMat = mapped(kit.grass, { color: 0x3d6635, roughness: 0.95, metersPerTile: 12 });
-  const roadMat = new THREE.MeshStandardMaterial({
-    color: 0x484d54,
-    roughness: 0.92,
-  });
 
   const ROT0 = -Math.PI / 2;
   function pXZ(radius: number, rotation = ROT0) {
@@ -118,19 +114,6 @@ export function createPentagon(kit: SurfaceKit): THREE.Group {
     }
     return pts;
   }
-
-  // Outer lawn and road base
-  const outerRoad = new THREE.Mesh(new THREE.CircleGeometry(OUTER_R + 55, 5), roadMat);
-  outerRoad.rotation.x = -Math.PI / 2;
-  outerRoad.rotation.z = Math.PI / 10;
-  outerRoad.position.y = 0.1;
-  group.add(outerRoad);
-
-  const lawnBase = new THREE.Mesh(new THREE.CircleGeometry(OUTER_R + 42, 5), lawnMat);
-  lawnBase.rotation.x = -Math.PI / 2;
-  lawnBase.rotation.z = Math.PI / 10;
-  lawnBase.position.y = 0.2;
-  group.add(lawnBase);
 
   // Pentagon base slab
   function addTrapezoidSlab(

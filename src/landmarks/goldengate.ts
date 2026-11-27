@@ -16,24 +16,13 @@ export function createGoldenGateBridge(_kit: SurfaceKit): THREE.Group {
     roughness: 0.48,
     metalness: 0.28,
   });
-  const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x183755,
-    roughness: 0.15,
-    metalness: 0.45,
-  });
   const roadSurfaceMat = new THREE.MeshStandardMaterial({
     color: 0x334155,
     roughness: 0.9,
     metalness: 0.1,
   });
 
-  // 1. 金门海峡水面基座（真实 1:1 尺度，全长 2737m，主跨 1280m，塔高 227m，净空 67m）
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(1600, 3400), waterMat);
-  sea.rotation.x = -Math.PI / 2;
-  sea.position.y = 0;
-  group.add(sea);
-
-  // 2. 桥梁加劲钢桁架路面板
+  // 1. 桥梁加劲钢桁架路面板（直接以真实金门海峡海水为底，避免超大海面薄膜闪烁）
   const DECK_Y = 67;
   const DECK_LEN = 2737;
   const DECK_W = 27;

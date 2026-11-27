@@ -14,9 +14,6 @@ export function createChichenItza(kit: SurfaceKit) {
   const dark = mapped(kit.chichen, { color: 0xb08050, roughness: 0.9, metersPerTile: 3.2 });
   const accent = mapped(kit.chichen, { color: 0xe8c890, roughness: 0.86, metersPerTile: 3.4 });
   const comb = mapped(kit.chichen, { color: 0xd4a060, roughness: 0.88, metersPerTile: 3 });
-  const plaza = mapped(kit.chichen, { color: 0xdcc8a0, roughness: 0.94, metersPerTile: 8 });
-
-  box(root, plaza, 92, 0.55, 92, 0, -0.5, 0);
 
   let y = 0;
   let size = 55.3;
