@@ -155,9 +155,9 @@ export class DroneOrbitController {
           this.stop();
         }
       };
-      dom.addEventListener("pointerdown", handleUserGesture);
-      dom.addEventListener("wheel", handleUserGesture, { passive: true });
-      dom.addEventListener("touchstart", handleUserGesture, { passive: true });
+      dom.addEventListener("pointerdown", handleUserGesture, { capture: true });
+      dom.addEventListener("wheel", handleUserGesture, { passive: true, capture: true });
+      dom.addEventListener("touchstart", handleUserGesture, { passive: true, capture: true });
     }
   }
 

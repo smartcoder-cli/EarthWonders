@@ -74,6 +74,8 @@ export class LandmarkOrbitManager {
   private _spaceCenter = new THREE.Vector3(0, 0, 0);
   private _projNorth = new THREE.Vector3();
   private _projCenter = new THREE.Vector3();
+  private abortCtrl: AbortController | null =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
 
   constructor(config: LandmarkOrbitConfig) {
     this.viewer = config.viewer;
@@ -91,7 +93,12 @@ export class LandmarkOrbitManager {
   }
 
   public get heading(): number {
-    return this.currentHeading;
+    return ((this.currentHeading % 360) + 360) % 360;
+  }
+
+  private setShortestTargetHeading(targetDeg: number): void {
+    const delta = ((((targetDeg - this.currentHeading) % 360) + 540) % 360) - 180;
+    this.targetHeading = this.currentHeading + delta;
   }
 
   public get pitch(): number {
@@ -226,7 +233,7 @@ export class LandmarkOrbitManager {
     if (!this.currentWonder) return;
 
     if (preset === "golden") {
-      this.targetHeading = this.currentWonder.flyHeading ?? this.currentHeading;
+      this.setShortestTargetHeading(this.currentWonder.flyHeading ?? this.currentHeading);
       this.targetPitch = this.currentWonder.flyPitch ?? -16;
       this.targetDist = this.currentWonder.flyDistance ?? 150;
       this.pivotPos.copy(this.originalPivot);
@@ -249,13 +256,7 @@ export class LandmarkOrbitManager {
       this.onSpaceAlignNorth?.();
       return;
     }
-    // 寻找最近的 0° / 360° 目标
-    const currentNorm = ((this.currentHeading % 360) + 360) % 360;
-    if (currentNorm > 180) {
-      this.targetHeading = this.currentHeading + (360 - currentNorm);
-    } else {
-      this.targetHeading = this.currentHeading - currentNorm;
-    }
+    this.setShortestTargetHeading(0);
   }
 
   /**
@@ -270,7 +271,7 @@ export class LandmarkOrbitManager {
       this.targetPitch = THREE.MathUtils.clamp(pitch, this.minPitch, this.maxPitch);
     }
     if (typeof heading === "number") {
-      this.targetHeading = heading;
+      this.setShortestTargetHeading(heading);
     }
     this.updatePresetActiveState(null);
   }
@@ -284,7 +285,7 @@ export class LandmarkOrbitManager {
     this.computeLocalBasis(this.originalPivot);
     this.targetDist = this.currentWonder.flyDistance ?? 150;
     this.targetPitch = this.currentWonder.flyPitch ?? -16;
-    this.targetHeading = this.currentWonder.flyHeading ?? this.currentHeading;
+    this.setShortestTargetHeading(this.currentWonder.flyHeading ?? this.currentHeading);
     this.updatePresetActiveState("golden");
   }
 
@@ -368,7 +369,7 @@ export class LandmarkOrbitManager {
       this.distLabel.textContent = `${Math.round(this.currentDist)} m`;
     }
 
-    this.onViewChange?.(this.currentHeading, this.currentPitch, this.currentDist);
+    this.onViewChange?.(this.heading, this.currentPitch, this.currentDist);
   }
 
   private updatePresetActiveState(activeKey: ViewPreset | null): void {
@@ -385,6 +386,13 @@ export class LandmarkOrbitManager {
   private bindDOMEvents(): void {
     if (typeof window === "undefined" || !this.container || typeof this.container.addEventListener !== "function") return;
     const el = this.container;
+    const signal = this.abortCtrl?.signal;
+
+    const clearPointerState = () => {
+      this.activePointers.clear();
+      this.isPointerDown = false;
+      this.activePointerId = null;
+    };
 
     // 滚轮推拉
     el.addEventListener(
@@ -401,81 +409,118 @@ export class LandmarkOrbitManager {
         this.targetDist = THREE.MathUtils.clamp(this.targetDist + delta, this.minDistance, this.maxDistance);
         this.updatePresetActiveState(null);
       },
-      { passive: false }
+      { passive: false, signal },
+    );
+
+    // 环视模式下禁止右键触发系统菜单打断拖拽
+    el.addEventListener(
+      "contextmenu",
+      (e) => {
+        if (!this.isActiveState) return;
+        e.preventDefault();
+      },
+      { signal },
     );
 
     // 指针按下 (PointerDown)
-    el.addEventListener("pointerdown", (e) => {
-      if (!this.isActiveState) return;
+    el.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (!this.isActiveState) return;
 
-      // 如果点击在 UI 浮层上，不拦截
-      if ((e.target as HTMLElement).closest(".viewport-controls") || (e.target as HTMLElement).closest(".hud") || (e.target as HTMLElement).closest(".solar-dock")) {
-        return;
-      }
+        // 如果点击在 UI 浮层上，不拦截
+        if ((e.target as HTMLElement).closest(".viewport-controls") || (e.target as HTMLElement).closest(".hud") || (e.target as HTMLElement).closest(".solar-dock")) {
+          return;
+        }
 
-      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        try {
+          el.setPointerCapture?.(e.pointerId);
+        } catch {
+          // 忽略模拟或非标准指针捕获异常
+        }
 
-      if (this.activePointers.size === 1) {
-        this.isPointerDown = true;
-        this.activePointerId = e.pointerId;
-        this.pointerButton = e.button;
-        this.lastPointerPos.x = e.clientX;
-        this.lastPointerPos.y = e.clientY;
-      } else if (this.activePointers.size === 2) {
-        // 双指触控开始 (Pinch / Pan)
-        const pts = Array.from(this.activePointers.values());
-        this.initialPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-        this.initialPinchZoom = this.targetDist;
-      }
-    });
+        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (this.activePointers.size === 1) {
+          this.isPointerDown = true;
+          this.activePointerId = e.pointerId;
+          this.pointerButton = e.button;
+          this.lastPointerPos.x = e.clientX;
+          this.lastPointerPos.y = e.clientY;
+        } else if (this.activePointers.size === 2) {
+          // 双指触控开始 (Pinch / Pan)
+          const pts = Array.from(this.activePointers.values());
+          this.initialPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          this.initialPinchZoom = this.targetDist;
+        }
+      },
+      { signal },
+    );
 
     // 指针移动 (PointerMove)
-    window.addEventListener("pointermove", (e) => {
-      if (!this.isActiveState || !this.isPointerDown) return;
+    window.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!this.isActiveState || !this.isPointerDown) return;
 
-      if (this.activePointers.has(e.pointerId)) {
-        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      }
-
-      // 双指触控：缩放 + 平移
-      if (this.activePointers.size === 2) {
-        const pts = Array.from(this.activePointers.values());
-        const currentPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-        if (this.initialPinchDist > 5) {
-          const ratio = currentPinchDist / this.initialPinchDist;
-          this.targetDist = THREE.MathUtils.clamp(this.initialPinchZoom / ratio, this.minDistance, this.maxDistance);
+        // 鼠标按键已在画布外释放时及时清理，避免恢复悬停后残留黏连拖拽
+        if (e.pointerType === "mouse" && e.buttons === 0) {
+          clearPointerState();
+          return;
         }
-        return;
-      }
 
-      // 单指 / 鼠标单键移动
-      if (e.pointerId !== this.activePointerId) return;
+        if (this.activePointers.has(e.pointerId)) {
+          this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        }
 
-      const dx = e.clientX - this.lastPointerPos.x;
-      const dy = e.clientY - this.lastPointerPos.y;
-      this.lastPointerPos.x = e.clientX;
-      this.lastPointerPos.y = e.clientY;
+        // 双指触控：缩放 + 平移
+        if (this.activePointers.size === 2) {
+          const pts = Array.from(this.activePointers.values());
+          const currentPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          if (this.initialPinchDist > 5) {
+            const ratio = currentPinchDist / this.initialPinchDist;
+            this.targetDist = THREE.MathUtils.clamp(this.initialPinchZoom / ratio, this.minDistance, this.maxDistance);
+          }
+          return;
+        }
 
-      if (Math.abs(dx) > 0 || Math.abs(dy) > 0) {
-        this.updatePresetActiveState(null);
-      }
+        // 单指 / 鼠标单键移动
+        if (e.pointerId !== this.activePointerId) return;
 
-      // 鼠标右键 (2) 或中键 (1) -> 切平面平移 (Pan)
-      if (this.pointerButton === 2 || this.pointerButton === 1) {
-        const panSpeed = this.currentDist * 0.0016;
-        this.pivotPos.addScaledVector(this._right, -dx * panSpeed);
-        this.pivotPos.addScaledVector(this._upCam, dy * panSpeed);
-        return;
-      }
+        const dx = e.clientX - this.lastPointerPos.x;
+        const dy = e.clientY - this.lastPointerPos.y;
+        this.lastPointerPos.x = e.clientX;
+        this.lastPointerPos.y = e.clientY;
 
-      // 默认（鼠标左键或单指触摸）-> 360° 轨道环视 (Orbit)
-      const rotSpeed = 0.35;
-      this.targetHeading = (this.targetHeading - dx * rotSpeed + 3600) % 360;
-      this.targetPitch = THREE.MathUtils.clamp(this.targetPitch - dy * rotSpeed, this.minPitch, this.maxPitch);
-    });
+        if (Math.abs(dx) > 0 || Math.abs(dy) > 0) {
+          this.updatePresetActiveState(null);
+        }
+
+        // 鼠标右键 (2) 或中键 (1) -> 切平面平移 (Pan)
+        if (this.pointerButton === 2 || this.pointerButton === 1) {
+          const panSpeed = this.currentDist * 0.0016;
+          this.pivotPos.addScaledVector(this._right, -dx * panSpeed);
+          this.pivotPos.addScaledVector(this._upCam, dy * panSpeed);
+          return;
+        }
+
+        // 默认（鼠标左键或单指触摸）-> 连续 360° 轨道环视（不做 % 360 截断，避免跨正北 0°/360° 时反向回弹）
+        const rotSpeed = 0.35;
+        this.targetHeading -= dx * rotSpeed;
+        this.targetPitch = THREE.MathUtils.clamp(this.targetPitch - dy * rotSpeed, this.minPitch, this.maxPitch);
+      },
+      { signal },
+    );
 
     // 指针抬起 / 取消
     const handlePointerUp = (e: PointerEvent) => {
+      try {
+        if (el.hasPointerCapture?.(e.pointerId)) {
+          el.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // ignore
+      }
       this.activePointers.delete(e.pointerId);
       if (this.activePointers.size === 0) {
         this.isPointerDown = false;
@@ -491,22 +536,27 @@ export class LandmarkOrbitManager {
       }
     };
 
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", handlePointerUp);
+    window.addEventListener("pointerup", handlePointerUp, { signal });
+    window.addEventListener("pointercancel", handlePointerUp, { signal });
+    window.addEventListener("blur", clearPointerState, { signal });
 
     // 键盘快捷键 (F 键复位, N 键回正正北)
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "n" || e.key === "N") {
-        this.alignNorth();
-        return;
-      }
-      if (!this.isActiveState) return;
-      if (e.key === "f" || e.key === "F") {
-        e.preventDefault();
-        this.setPreset("golden");
-        this.onResetRequested?.();
-      }
-    });
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key === "n" || e.key === "N") {
+          this.alignNorth();
+          return;
+        }
+        if (!this.isActiveState) return;
+        if (e.key === "f" || e.key === "F") {
+          e.preventDefault();
+          this.setPreset("golden");
+          this.onResetRequested?.();
+        }
+      },
+      { signal },
+    );
   }
 
   /**
@@ -570,6 +620,7 @@ export class LandmarkOrbitManager {
 
   public destroy(): void {
     this.deactivate();
+    this.abortCtrl?.abort();
     this.uiRoot?.remove();
   }
 }

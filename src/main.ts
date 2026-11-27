@@ -387,8 +387,37 @@ function wonderIdFromObject(start: THREE.Object3D | null | undefined): string | 
 }
 
 function bindViewerEvents(current: InstanceType<typeof tellux.Viewer>) {
+  const canvasEl = current.renderer?.raw?.domElement;
+  let dragStartPos: { x: number; y: number } | null = null;
+  let maxDragDistSq = 0;
+
+  if (canvasEl && typeof canvasEl.addEventListener === "function") {
+    canvasEl.addEventListener(
+      "pointerdown",
+      (e) => {
+        dragStartPos = { x: e.clientX, y: e.clientY };
+        maxDragDistSq = 0;
+      },
+      { capture: true },
+    );
+    window.addEventListener("pointermove", (e) => {
+      if (!dragStartPos) return;
+      const dx = e.clientX - dragStartPos.x;
+      const dy = e.clientY - dragStartPos.y;
+      maxDragDistSq = Math.max(maxDragDistSq, dx * dx + dy * dy);
+    });
+    window.addEventListener("pointerup", () => {
+      dragStartPos = null;
+    });
+    window.addEventListener("pointercancel", () => {
+      dragStartPos = null;
+      maxDragDistSq = 0;
+    });
+  }
+
   current.on("click", (event) => {
     if (flightController?.isFlying) return;
+    if (maxDragDistSq > 36) return;
     let wonderId: string | undefined;
     const hit = event.pick;
     if (hit?.type === "entity") {

@@ -122,8 +122,17 @@ export class HotspotManager {
     pin.appendChild(dot);
     pin.appendChild(label);
 
+    let pinDownPos: { x: number; y: number } | null = null;
+    pin.addEventListener("pointerdown", (e) => {
+      pinDownPos = { x: e.clientX, y: e.clientY };
+    });
     pin.addEventListener("click", (e) => {
       e.stopPropagation();
+      if (pinDownPos) {
+        const moved = Math.hypot(e.clientX - pinDownPos.x, e.clientY - pinDownPos.y);
+        pinDownPos = null;
+        if (moved > 6) return;
+      }
       this.selectHotspot(hotspot);
     });
 

@@ -127,4 +127,102 @@ describe("LandmarkOrbitManager Unit Tests", () => {
 
     manager.destroy();
   });
+
+  it("should orbit monotonically across 0°/360° north boundary without snapping backwards", () => {
+    type Listener = (e: any) => void;
+    const winListeners = new Map<string, Listener[]>();
+    const elListeners = new Map<string, Listener[]>();
+    const prevWindow = (globalThis as any).window;
+    (globalThis as any).window = {
+      addEventListener: (type: string, fn: Listener) => {
+        const list = winListeners.get(type) ?? [];
+        list.push(fn);
+        winListeners.set(type, list);
+      },
+      removeEventListener: vi.fn(),
+    };
+
+    try {
+      const viewer = createMockViewer();
+      // Place camera slightly west of due South so camera-to-pivot azimuth is ~3.18° (East of North)
+      viewer.camera.raw.position.set(10, 6378137 + 100, -180);
+      const container = {
+        addEventListener: (type: string, fn: Listener) => {
+          const list = elListeners.get(type) ?? [];
+          list.push(fn);
+          elListeners.set(type, list);
+        },
+        removeEventListener: vi.fn(),
+      } as any;
+
+      const manager = new LandmarkOrbitManager({ viewer, container });
+      const taj = WONDERS.find((w) => w.id === "taj") ?? WONDERS[0];
+      const pivot = new THREE.Vector3(0, 6378137, 0);
+      manager.activate(taj, pivot);
+
+      const startHeading = manager.heading;
+      expect(startHeading).toBeGreaterThan(0);
+      expect(startHeading).toBeLessThan(20);
+
+      // Drag right across 0° -> ~335° without rebounding via 180°
+      const downHandlers = elListeners.get("pointerdown") ?? [];
+      const moveHandlers = winListeners.get("pointermove") ?? [];
+      const upHandlers = winListeners.get("pointerup") ?? [];
+      const targetMock = { closest: () => null };
+      downHandlers.forEach((fn) => fn({ pointerId: 1, button: 0, clientX: 200, clientY: 200, target: targetMock }));
+
+      const samples: number[] = [];
+      for (let step = 1; step <= 8; step++) {
+        moveHandlers.forEach((fn) =>
+          fn({ pointerId: 1, pointerType: "mouse", buttons: 1, clientX: 200 + step * 10, clientY: 200 }),
+        );
+        manager.update(0.016);
+        samples.push(manager.heading);
+      }
+      upHandlers.forEach((fn) => fn({ pointerId: 1 }));
+
+      for (let i = 0; i < 30; i++) {
+        manager.update(0.03);
+        samples.push(manager.heading);
+      }
+
+      // Heading must cross 0° -> 359°..320° monotonically, never jumping into (30, 320)
+      for (const h of samples) {
+        expect(h < 30 || h > 320).toBe(true);
+      }
+      expect(samples[samples.length - 1]).toBeGreaterThan(320);
+
+      // Drag back left across 360° -> ~10° without snapping backwards
+      downHandlers.forEach((fn) => fn({ pointerId: 2, button: 0, clientX: 300, clientY: 200, target: targetMock }));
+      const reverseSamples: number[] = [];
+      for (let step = 1; step <= 10; step++) {
+        moveHandlers.forEach((fn) =>
+          fn({ pointerId: 2, pointerType: "mouse", buttons: 1, clientX: 300 - step * 10, clientY: 200 }),
+        );
+        manager.update(0.016);
+        reverseSamples.push(manager.heading);
+      }
+      upHandlers.forEach((fn) => fn({ pointerId: 2 }));
+      for (let i = 0; i < 30; i++) {
+        manager.update(0.03);
+        reverseSamples.push(manager.heading);
+      }
+      for (const h of reverseSamples) {
+        expect(h < 35 || h > 320).toBe(true);
+      }
+      expect(reverseSamples[reverseSamples.length - 1]).toBeLessThan(35);
+
+      // Switching back to golden preset (heading 0°) must take the short path across 0°, not via 180°
+      manager.setPreset("golden");
+      for (let i = 0; i < 15; i++) {
+        manager.update(0.03);
+        const h = manager.heading;
+        expect(h < 35 || h > 320).toBe(true);
+      }
+
+      manager.destroy();
+    } finally {
+      (globalThis as any).window = prevWindow;
+    }
+  });
 });
